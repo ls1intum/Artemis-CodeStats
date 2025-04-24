@@ -34,7 +34,7 @@ export function ChangeDetectionChart({ data }: ChangeDetectionChartProps) {
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={chartData} margin={{ left: 0, right: 20, top: 10, bottom: 40 }} barGap={4}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="module" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 12 }} />
+        <XAxis dataKey="module" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 12 }} interval={0} />
         <YAxis />
         <Tooltip
           formatter={(value, name) => {

@@ -32,7 +32,7 @@ export function TotalComponentsChart({ data }: TotalComponentsChartProps) {
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={chartData} layout="vertical" margin={{ left: 80, right: 20, top: 10, bottom: 10 }}>
         <XAxis type="number" />
-        <YAxis type="category" dataKey="module" width={80} tick={{ fontSize: 12 }} />
+        <YAxis type="category" dataKey="module" width={80} tick={{ fontSize: 12 }} interval={0} />
         <Tooltip
           formatter={(value) => [`${value} artifacts`, "Total"]}
           labelFormatter={(label) => `Module: ${label}`}

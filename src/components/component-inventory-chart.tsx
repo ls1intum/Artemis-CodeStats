@@ -32,7 +32,6 @@ export function ComponentInventoryChart({ data }: ComponentInventoryChartProps) 
       const totalB = b.components + b.directives + b.pipes + b.injectables
       return totalB - totalA
     })
-    .slice(0, 10) // Show only top 10 modules for better visibility
 
   // If no data, return a placeholder
   if (!chartData.length) {
@@ -41,9 +40,9 @@ export function ComponentInventoryChart({ data }: ComponentInventoryChartProps) 
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} margin={{ left: 0, right: 20, top: 10, bottom: 40 }} barGap={0} barCategoryGap={8}>
+      <BarChart data={chartData} margin={{ left: 0, right: 20, top: 10, bottom: 40 }} barGap={0} barCategoryGap={4}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="module" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 12 }} />
+        <XAxis dataKey="module" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 12 }} interval={0} />
         <YAxis />
         <Tooltip />
         <Legend />
