@@ -47,10 +47,10 @@ export function ComponentInventoryChart({ data }: ComponentInventoryChartProps) 
         <YAxis />
         <Tooltip />
         <Legend />
-        <Bar dataKey="components" stackId="a" name="Components" fill="hsl(var(--chart-1))" />
-        <Bar dataKey="directives" stackId="a" name="Directives" fill="hsl(var(--chart-2))" />
-        <Bar dataKey="pipes" stackId="a" name="Pipes" fill="hsl(var(--chart-3))" />
-        <Bar dataKey="injectables" stackId="a" name="Injectables" fill="hsl(var(--chart-4))" />
+        <Bar dataKey="components" stackId="a" name="Components" fill="var(--chart-1)" />
+        <Bar dataKey="directives" stackId="a" name="Directives" fill="var(--chart-2)" />
+        <Bar dataKey="pipes" stackId="a" name="Pipes" fill="var(--chart-3)" />
+        <Bar dataKey="injectables" stackId="a" name="Injectables" fill="var(--chart-4)" />
       </BarChart>
     </ResponsiveContainer>
   )

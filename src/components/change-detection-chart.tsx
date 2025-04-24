@@ -43,8 +43,8 @@ export function ChangeDetectionChart({ data }: ChangeDetectionChartProps) {
           }}
         />
         <Legend />
-        <Bar dataKey="onPush" name="OnPush" fill="hsl(var(--chart-1))" />
-        <Bar dataKey="implicit" name="Implicit" fill="hsl(var(--chart-2))" />
+        <Bar dataKey="onPush" name="OnPush" fill="var(--chart-1)" />
+        <Bar dataKey="implicit" name="Implicit" fill="var(--chart-2)" />
       </BarChart>
     </ResponsiveContainer>
   )

@@ -37,7 +37,7 @@ export function TotalComponentsChart({ data }: TotalComponentsChartProps) {
           formatter={(value) => [`${value} artifacts`, "Total"]}
           labelFormatter={(label) => `Module: ${label}`}
         />
-        <Bar dataKey="total" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} barSize={20} />
+        <Bar dataKey="total" fill="var(--chart-1)" radius={[0, 4, 4, 0]} barSize={20} />
       </BarChart>
     </ResponsiveContainer>
   )
