@@ -1,0 +1,3 @@
+[submodule "artemis"]
+	path = artemis
+	url = https://github.com/ls1intum/Artemis

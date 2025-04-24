@@ -1,0 +1,257 @@
+{
+  "metadata": {
+    "title": "Angular Technical Debt Analysis Report",
+    "generatedAt": "2025-04-24T16:35:47.907Z"
+  },
+  "componentInventory": {
+    "admin": {
+      "components": 1,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 2
+    },
+    "assessment": {
+      "components": 36,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 45
+    },
+    "atlas": {
+      "components": 60,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 7,
+      "total": 67
+    },
+    "buildagent": {
+      "components": 7,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 10
+    },
+    "communication": {
+      "components": 59,
+      "directives": 5,
+      "pipes": 0,
+      "injectables": 18,
+      "total": 82
+    },
+    "core": {
+      "components": 127,
+      "directives": 4,
+      "pipes": 0,
+      "injectables": 66,
+      "total": 197
+    },
+    "exam": {
+      "components": 72,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 87
+    },
+    "exercise": {
+      "components": 75,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 18,
+      "total": 93
+    },
+    "fileupload": {
+      "components": 5,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 10
+    },
+    "iris": {
+      "components": 14,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 6,
+      "total": 20
+    },
+    "lecture": {
+      "components": 39,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 12,
+      "total": 52
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 16
+    },
+    "plagiarism": {
+      "components": 14,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 19
+    },
+    "programming": {
+      "components": 105,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 38,
+      "total": 145
+    },
+    "quiz": {
+      "components": 39,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 10,
+      "total": 51
+    },
+    "shared": {
+      "components": 78,
+      "directives": 18,
+      "pipes": 26,
+      "injectables": 31,
+      "total": 153
+    },
+    "text": {
+      "components": 17,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 10,
+      "total": 28
+    },
+    "tutorialgroup": {
+      "components": 40,
+      "directives": 0,
+      "pipes": 2,
+      "injectables": 6,
+      "total": 48
+    }
+  },
+  "changeDetection": {
+    "admin": {
+      "onPush": 0,
+      "default": 0,
+      "implicit": 1,
+      "total": 1
+    },
+    "assessment": {
+      "onPush": 0,
+      "default": 0,
+      "implicit": 36,
+      "total": 36
+    },
+    "atlas": {
+      "onPush": 14,
+      "default": 0,
+      "implicit": 46,
+      "total": 60
+    },
+    "buildagent": {
+      "onPush": 0,
+      "default": 0,
+      "implicit": 7,
+      "total": 7
+    },
+    "communication": {
+      "onPush": 6,
+      "default": 0,
+      "implicit": 53,
+      "total": 59
+    },
+    "core": {
+      "onPush": 16,
+      "default": 0,
+      "implicit": 111,
+      "total": 127
+    },
+    "exam": {
+      "onPush": 2,
+      "default": 0,
+      "implicit": 70,
+      "total": 72
+    },
+    "exercise": {
+      "onPush": 0,
+      "default": 0,
+      "implicit": 75,
+      "total": 75
+    },
+    "fileupload": {
+      "onPush": 1,
+      "default": 0,
+      "implicit": 4,
+      "total": 5
+    },
+    "iris": {
+      "onPush": 0,
+      "default": 0,
+      "implicit": 14,
+      "total": 14
+    },
+    "lecture": {
+      "onPush": 1,
+      "default": 0,
+      "implicit": 38,
+      "total": 39
+    },
+    "lti": {
+      "onPush": 0,
+      "default": 0,
+      "implicit": 6,
+      "total": 6
+    },
+    "modeling": {
+      "onPush": 1,
+      "default": 0,
+      "implicit": 10,
+      "total": 11
+    },
+    "plagiarism": {
+      "onPush": 0,
+      "default": 0,
+      "implicit": 14,
+      "total": 14
+    },
+    "programming": {
+      "onPush": 8,
+      "default": 0,
+      "implicit": 97,
+      "total": 105
+    },
+    "quiz": {
+      "onPush": 4,
+      "default": 0,
+      "implicit": 35,
+      "total": 39
+    },
+    "shared": {
+      "onPush": 5,
+      "default": 0,
+      "implicit": 73,
+      "total": 78
+    },
+    "text": {
+      "onPush": 1,
+      "default": 0,
+      "implicit": 16,
+      "total": 17
+    },
+    "tutorialgroup": {
+      "onPush": 36,
+      "default": 0,
+      "implicit": 4,
+      "total": 40
+    }
+  }
+}
