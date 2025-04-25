@@ -3,10 +3,10 @@ import { ReportData } from "../../report/types";
 const reportFiles = import.meta.glob("/data/*.json", { eager: true });
 
 const reportData = Object.values(reportFiles).map((file) => {
-  const data = file.default as ReportData;
+  const data = file as { default: ReportData };
   return {
-    ...data,
-    generatedAt: new Date(data.metadata.generatedAt),
+    ...data.default,
+    generatedAt: new Date(data.default.metadata.generatedAt),
   };
 });
 

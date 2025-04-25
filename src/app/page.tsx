@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ComponentInventoryTable } from "@/components/component-inventory-table"
@@ -15,9 +14,6 @@ import reportData from "@/lib/data"
 
 export default function AngularDebtDashboard() {
   const currentReport = reportData[0];
-
-  const [activeTab, setActiveTab] = useState("tables")
-  const [error, setError] = useState<string | null>(null)
 
   // Validate data before rendering
   if (!currentReport || !currentReport.componentInventory || !currentReport.changeDetection) {
@@ -44,15 +40,7 @@ export default function AngularDebtDashboard() {
         </p>
       </div>
 
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <Tabs defaultValue="tables" onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="tables" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="tables">Tables</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
