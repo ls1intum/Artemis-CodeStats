@@ -5,6 +5,7 @@ import { defineConfig } from "vite"
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: "/Artemis-CodeStats/", // GitHub Pages base URL
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

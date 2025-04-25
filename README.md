@@ -2,6 +2,8 @@
 
 A visualization tool for analyzing code statistics and technical debt from the Artemis learning platform.
 
+**[View Online](https://ls1intum.github.io/Artemis-CodeStats/)**
+
 ## Installation
 
 ```bash
