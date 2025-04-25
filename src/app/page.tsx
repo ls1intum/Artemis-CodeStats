@@ -8,16 +8,19 @@ import { ChangeDetectionTable } from "@/components/change-detection-table"
 import { ComponentInventoryChart } from "@/components/component-inventory-chart"
 import { ChangeDetectionChart } from "@/components/change-detection-chart"
 import { TotalComponentsChart } from "@/components/total-components-chart"
-import reportData from "@/../data/angular-debt-report-2025-04-24T16-35-47-908Z.json";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import reportData from "@/lib/data"
+
 
 export default function AngularDebtDashboard() {
+  const currentReport = reportData[0];
+
   const [activeTab, setActiveTab] = useState("tables")
   const [error, setError] = useState<string | null>(null)
 
   // Validate data before rendering
-  if (!reportData || !reportData.componentInventory || !reportData.changeDetection) {
+  if (!currentReport || !currentReport.componentInventory || !currentReport.changeDetection) {
     return (
       <div className="container mx-auto py-8">
         <Alert variant="destructive">
@@ -33,11 +36,11 @@ export default function AngularDebtDashboard() {
     <div className="container mx-auto py-8">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold tracking-tight">
-          {reportData.metadata?.title || "Angular Technical Debt Analysis"}
+          {currentReport.metadata?.title || "Angular Technical Debt Analysis"}
         </h1>
         <p className="text-muted-foreground mt-2">
           Generated on:{" "}
-          {reportData.metadata?.generatedAt ? new Date(reportData.metadata.generatedAt).toLocaleString() : "N/A"}
+          {currentReport.metadata?.generatedAt ? new Date(currentReport.metadata.generatedAt).toLocaleString() : "N/A"}
         </p>
       </div>
 
@@ -61,7 +64,7 @@ export default function AngularDebtDashboard() {
               <CardDescription>Breakdown of Angular artifacts across different modules</CardDescription>
             </CardHeader>
             <CardContent>
-              <ComponentInventoryTable data={reportData.componentInventory} />
+              <ComponentInventoryTable data={currentReport.componentInventory} />
             </CardContent>
           </Card>
 
@@ -71,7 +74,7 @@ export default function AngularDebtDashboard() {
               <CardDescription>Analysis of change detection strategies used across modules</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChangeDetectionTable data={reportData.changeDetection} />
+              <ChangeDetectionTable data={currentReport.changeDetection} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -84,7 +87,7 @@ export default function AngularDebtDashboard() {
                 <CardDescription>Modules sorted by total number of components</CardDescription>
               </CardHeader>
               <CardContent className="h-[400px]">
-                <TotalComponentsChart data={reportData.componentInventory} />
+                <TotalComponentsChart data={currentReport.componentInventory} />
               </CardContent>
             </Card>
 
@@ -94,7 +97,7 @@ export default function AngularDebtDashboard() {
                 <CardDescription>Distribution of components, directives, pipes, and injectables</CardDescription>
               </CardHeader>
               <CardContent className="h-[400px]">
-                <ComponentInventoryChart data={reportData.componentInventory} />
+                <ComponentInventoryChart data={currentReport.componentInventory} />
               </CardContent>
             </Card>
           </div>
@@ -105,7 +108,7 @@ export default function AngularDebtDashboard() {
               <CardDescription>OnPush vs Implicit change detection by module</CardDescription>
             </CardHeader>
             <CardContent className="h-[400px]">
-              <ChangeDetectionChart data={reportData.changeDetection} />
+              <ChangeDetectionChart data={currentReport.changeDetection} />
             </CardContent>
           </Card>
         </TabsContent>

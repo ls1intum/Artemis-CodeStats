@@ -46,6 +46,7 @@
 import { Project } from 'ts-morph';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ModuleStats, ChangeDetectionStats } from './types';
 
 const repoDir = path.join(process.cwd(), 'artemis');
 const basePath = 'src/main/webapp/app';
@@ -83,23 +84,6 @@ modules.forEach(moduleName => {
         project.addSourceFilesAtPaths(path.join(modulePath, '**/*.ts'));
     }
 });
-
-// Define interface for module statistics
-interface ModuleStats {
-    components: number;
-    directives: number;
-    pipes: number;
-    injectables: number;
-    total: number;
-}
-
-// Define interface for change detection statistics
-interface ChangeDetectionStats {
-    onPush: number;
-    default: number;
-    implicit: number; // No explicit strategy specified (also Default)
-    total: number;
-}
 
 // Analyze components, directives, and pipes by module
 function analyzeModules(): Record<string, ModuleStats> {
