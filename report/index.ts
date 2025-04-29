@@ -51,6 +51,7 @@ import { execSync } from "child_process";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
+import { CommitInfo, ReportMetadata } from "./types";
 import { analyzeExistingComponents } from "./client/componentInventory";
 import { analyzeChangeDetection } from "./client/changeDetection";
 import { analyzeDecoratorlessAPI } from "./client/decoratorlessApi";
@@ -100,17 +101,6 @@ const modules = [
   "text",
   "tutorialgroup",
 ];
-
-/**
- * Commit information interface
- */
-interface CommitInfo {
-  commitHash: string;
-  commitTimestamp: string;
-  commitDate: Date;
-  commitAuthor: string;
-  commitMessage: string;
-}
 
 /**
  * Get the current commit hash and timestamp from the artemis submodule
@@ -252,7 +242,7 @@ function cleanupAfterAnalysis() {
       // Try to checkout a common branch name as fallback
       try {
         execSync('git checkout develop || git checkout main || git checkout master', { cwd: repoDir });
-      } catch (fallbackError) {
+      } catch {
         console.error("Could not checkout any default branch");
       }
     }
@@ -291,9 +281,9 @@ function initializeProject(): Project {
  * @param isClient Flag to indicate if the report is for client-side
  * @param commitInfo Optional commit info for historical reports
  */
-function writeReportFile(
+function writeReportFile<T>(
   reportType: string,
-  data: unknown,
+  data: T,
   isClient: boolean,
   commitInfo?: CommitInfo
 ): string {
@@ -319,7 +309,7 @@ function writeReportFile(
     .replace(/-$/, "");
 
   // Create metadata
-  const metadata = {
+  const metadata: ReportMetadata = {
     type: reportType,
     artemis: artemisCommitInfo
   };
@@ -432,9 +422,6 @@ function runHistoricalAnalysis() {
     const interval = argv.interval as number;
     
     console.log(`Will analyze ${commitsToAnalyze.length} commits with interval ${interval}`);
-    
-    // Track the original state to restore later
-    const originalCommitInfo = getArtemisCommitInfo();
     
     try {
       // Analyze selected commits
