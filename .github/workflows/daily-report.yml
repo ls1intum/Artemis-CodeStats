@@ -51,7 +51,12 @@ jobs:
           cd ..
       
       - name: Run report with relative time parameter
-        run: npm run report -- --relative 1h
+        run: |
+          # Force report to use the current state of artemis
+          npm run report
+          
+          # Also generate the relative time report if needed
+          npm run report -- --relative 2h
       
       - name: Commit changes
         run: |
