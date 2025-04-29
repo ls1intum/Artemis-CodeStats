@@ -43,23 +43,23 @@ This generates reports in the `data/client/` directory, organized by report type
 
 ### Historical Analysis
 
-You can analyze codebase changes over time by specifying a date for historical commits:
+You can analyze codebase changes over time by specifying a start date for historical analysis:
 
 ```bash
-# Analyze the most recent commit before March 1, 2025
-npm run report -- --until 2025-03-01
+# Analyze commits from today back to March 1, 2025
+npm run report -- --start 2025-03-01
 
-# Analyze 5 commits before March 1, 2025
-npm run report -- --until 2025-03-01 --commits 5 
+# Analyze 5 most recent commits since March 1, 2025
+npm run report -- --start 2025-03-01 --commits 5 
 
-# Analyze every 3rd commit (up to 10 commits total) before March 1, 2025
-npm run report -- --until 2025-03-01 --commits 10 --interval 3
+# Analyze every 3rd commit (up to 10 commits total) since March 1, 2025
+npm run report -- --start 2025-03-01 --commits 10 --interval 3
 ```
 
 #### Parameters
 
-- `--until` / `-u`: The date in YYYY-MM-DD format to analyze commits up to
-- `--commits` / `-c`: Number of commits to analyze (default: 1)
+- `--start` / `-s`: The date in YYYY-MM-DD format from which to start analyzing commits backward
+- `--commits` / `-c`: Maximum number of commits to analyze (default: all commits since start date)
 - `--interval` / `-i`: Interval between commits to analyze (default: 1)
 
 Reports are stored in the `data/client/` directory, with filenames containing the commit hash and timestamp.

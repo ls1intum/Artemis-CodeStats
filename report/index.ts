@@ -55,22 +55,21 @@ import { analyzeExistingComponents } from "./client/componentInventory";
 import { analyzeChangeDetection } from "./client/changeDetection";
 import { analyzeDecoratorlessAPI } from "./client/decoratorlessApi";
 
-// Parse command line arguments, fixing the --until parameter handling
+// Parse command line arguments, changing from --start parameter
 const argv = yargs(hideBin(process.argv))
-  .option('until', {
-    alias: 'u',
-    description: 'Generate reports up to this date (YYYY-MM-DD format)',
+  .option('start', {
+    alias: 's',
+    description: 'Generate reports starting from this historical date (YYYY-MM-DD format)',
     type: 'string',
   })
   .option('commits', {
     alias: 'c',
-    description: 'Number of commits to analyze (default: 1, only works with --until)',
+    description: 'Number of commits to analyze (default: all commits since start date)',
     type: 'number',
-    default: 1
   })
   .option('interval', {
     alias: 'i',
-    description: 'Interval between commits to analyze (default: 1, only works with --until)',
+    description: 'Interval between commits to analyze (default: 1)',
     type: 'number',
     default: 1
   })
@@ -144,15 +143,15 @@ function getArtemisCommitInfo(): CommitInfo {
 }
 
 /**
- * Get all commit hashes until the specified date
+ * Get all commit hashes from the current date back to the specified start date
  */
-function getCommitsUntilDate(untilDate: Date): CommitInfo[] {
+function getCommitsFromStartDate(startDate: Date): CommitInfo[] {
   try {
     // Format the date as ISO string for git command
-    const dateStr = untilDate.toISOString().split('T')[0];
+    const dateStr = startDate.toISOString().split('T')[0];
     
-    // Get commits until the specified date with details
-    const gitCommand = `git log --until="${dateStr}" --format="%H|%ci|%an|%s" -n 1000`;
+    // Get commits from now back to the specified start date with details
+    const gitCommand = `git log --since="${dateStr}" --format="%H|%ci|%an|%s" -n 1000`;
     const output = execSync(gitCommand, { cwd: repoDir }).toString().trim();
     
     // Parse the output into commit info objects
@@ -169,7 +168,7 @@ function getCommitsUntilDate(untilDate: Date): CommitInfo[] {
       };
     });
   } catch (error) {
-    console.error('Error getting commits until date:', error);
+    console.error('Error getting commits from start date:', error);
     return [];
   }
 }
@@ -405,43 +404,44 @@ function generateReports(commitInfo?: CommitInfo) {
  * Run historical analysis based on command line arguments
  */
 function runHistoricalAnalysis() {
-  // If --until argument is provided, generate reports for commits until that date
-  if (argv.until) {
-    // Fix for command line parsing issue - ensure until is a proper string
-    const untilDate = new Date(typeof argv.until === 'string' ? argv.until : '');
-    console.log(`Analyzing commit history until ${typeof argv.until === 'string' ? argv.until : 'unknown date'}...`);
+  // If --start argument is provided, generate reports for commits starting from that date
+  if (argv.start) {
+    // Fix for command line parsing issue - ensure start is a proper string
+    const startDate = new Date(typeof argv.start === 'string' ? argv.start : '');
+    console.log(`Analyzing commit history starting from ${typeof argv.start === 'string' ? argv.start : 'unknown date'}...`);
     
     // Check if date is valid
-    if (isNaN(untilDate.getTime())) {
-      console.error(`Invalid date format for --until: ${argv.until}`);
+    if (isNaN(startDate.getTime())) {
+      console.error(`Invalid date format for --start: ${argv.start}`);
       console.error('Please provide date in YYYY-MM-DD format');
       return;
     }
     
-    // Get commits until the specified date
-    const commits = getCommitsUntilDate(untilDate);
+    // Get commits from the specified start date
+    const commits = getCommitsFromStartDate(startDate);
     
     if (commits.length === 0) {
-      console.error('No commits found until the specified date');
+      console.error('No commits found from the specified start date');
       return;
     }
     
-    console.log(`Found ${commits.length} commits until ${argv.until}`);
+    console.log(`Found ${commits.length} commits since ${argv.start}`);
     
     // Determine which commits to analyze based on interval and count
-    const commitCount = Math.min(argv.commits as number, commits.length);
+    const commitsToAnalyze = argv.commits ? commits.slice(0, argv.commits) : commits;
     const interval = argv.interval as number;
     
-    console.log(`Will analyze ${commitCount} commits with interval ${interval}`);
+    console.log(`Will analyze ${commitsToAnalyze.length} commits with interval ${interval}`);
     
     // Track the original state to restore later
     const originalCommitInfo = getArtemisCommitInfo();
     
     try {
       // Analyze selected commits
-      for (let i = 0; i < commitCount; i += interval) {
-        const commitInfo = commits[i];
-        console.log(`\n--- Analyzing commit ${i+1}/${commitCount} ---`);
+      const filteredCommits = commitsToAnalyze.filter((_, i) => i % interval === 0);
+      for (let i = 0; i < filteredCommits.length; i++) {
+        const commitInfo = filteredCommits[i];
+        console.log(`\n--- Analyzing commit ${i+1}/${filteredCommits.length} ---`);
         console.log(`Commit: ${commitInfo.commitHash} (${commitInfo.commitTimestamp})`);
         console.log(`Author: ${commitInfo.commitAuthor}`);
         console.log(`Message: ${commitInfo.commitMessage}`);
@@ -458,7 +458,7 @@ function runHistoricalAnalysis() {
       cleanupAfterAnalysis();
     }
     
-    console.log(`\nHistorical analysis completed. Analyzed ${commitCount} commits.`);
+    console.log(`\nHistorical analysis completed. Analyzed ${commitsToAnalyze.length} commits.`);
     return;
   }
   
