@@ -4,14 +4,13 @@ import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, Download, ArrowUp, ArrowDown, Trophy, Target, Info } from "lucide-react"
+import { AlertCircle, ArrowUp, ArrowDown, Trophy, Target, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { decoratorlessAPIReports } from "@/lib/data"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
-// Remove unused import: Separator
 
 import { DecoratorlessAPITable } from "@/components/decoratorless-api-table"
 import { DecoratorlessMigrationProgress } from "@/components/decoratorless-migration-progress"
@@ -102,12 +101,6 @@ export default function DecoratorlessMigrationDashboard() {
             <p className="text-sm text-slate-500">
               Track your team's progress toward modern Angular APIs
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Export Report
-            </Button>
           </div>
         </div>
       </header>

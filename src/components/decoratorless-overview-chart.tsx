@@ -1,7 +1,7 @@
 "use client"
 
 import type { DecoratorlessAPIReport } from "../../report/types"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend, LabelList } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from "recharts"
 
 interface DecoratorlessOverviewChartProps {
   data: DecoratorlessAPIReport
@@ -132,15 +132,11 @@ export function DecoratorlessOverviewChart({ data }: DecoratorlessOverviewChartP
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={chartData}
-          margin={{ top: 10, right: 50, left: 10, bottom: 20 }}
+          margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
           layout="vertical"
         >
-          <CartesianGrid strokeDasharray="3 3" horizontal={true} />
-          <XAxis 
-            type="number" 
-            domain={[0, 100]} 
-            tickFormatter={(value) => `${value}%`}
-          />
+          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+          <XAxis type="number" />
           <YAxis 
             type="category" 
             dataKey="name" 
@@ -148,19 +144,23 @@ export function DecoratorlessOverviewChart({ data }: DecoratorlessOverviewChartP
             tick={{ fontSize: 12 }} 
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend />
+          <Legend 
+            formatter={(value) => {
+              return value === 'percentage' ? 'Migration %' : value.charAt(0).toUpperCase() + value.slice(1)
+            }} 
+          />
           <Bar 
-            dataKey="percentage" 
+            dataKey="decorator" 
+            stackId="a" 
+            fill="var(--chart-1)" 
+            name="Decorator"
+          />
+          <Bar 
+            dataKey="decoratorless" 
+            stackId="a" 
             fill="var(--chart-2)" 
-            name="Migration %" 
-          >
-            <LabelList 
-              dataKey="percentage" 
-              position="right" 
-              formatter={(value: number) => `${value}%`}
-              style={{ fill: '#333', fontSize: '12px', fontWeight: 'bold' }}
-            />
-          </Bar>
+            name="Decoratorless" 
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

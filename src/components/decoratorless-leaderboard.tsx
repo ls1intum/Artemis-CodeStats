@@ -24,16 +24,15 @@ interface DecoratorlessLeaderboardProps {
   compareData: Record<string, DecoratorlessAPIStats>
 }
 
-type SortKey = 'name' | 'percentage' | 'total' | 'change'
+type SortKey = 'name' | 'percentage' | 'total' | 'change' | 'apisMigrated'
 type SortDirection = 'asc' | 'desc'
 
 export function DecoratorlessLeaderboard({
   currentData,
   compareData
 }: DecoratorlessLeaderboardProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('percentage')
+  const [sortKey, setSortKey] = useState<SortKey>('apisMigrated')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [showCount, setShowCount] = useState<number>(10)
 
   // Process data for the leaderboard
   const processData = () => {
@@ -64,6 +63,7 @@ export function DecoratorlessLeaderboard({
       // Get previous data for comparison if available
       let previousPercentage = 0;
       let change = 0;
+      let apisMigrated = 0;
       
       if (compareData[moduleName]) {
         const prevStats = compareData[moduleName];
@@ -91,6 +91,9 @@ export function DecoratorlessLeaderboard({
         
         // Calculate change
         change = percentage - previousPercentage;
+        
+        // Calculate APIs migrated (allow negative values to show regression)
+        apisMigrated = decoratorlessCount - prevDecoratorlessCount;
       }
 
       return {
@@ -101,6 +104,7 @@ export function DecoratorlessLeaderboard({
         total,
         previousPercentage: Math.round(previousPercentage * 10) / 10,
         change: Math.round(change * 10) / 10,
+        apisMigrated,
       };
     });
 
@@ -120,12 +124,39 @@ export function DecoratorlessLeaderboard({
         comparison = a.total - b.total;
       } else if (sortKey === 'change') {
         comparison = a.change - b.change;
+      } else if (sortKey === 'apisMigrated') {
+        comparison = a.apisMigrated - b.apisMigrated;
       }
       
       return sortDirection === 'asc' ? comparison : -comparison;
     });
   };
   
+  // Calculate the true rank based on APIs migrated (regardless of current sort)
+  const calculateRank = (data: ReturnType<typeof processData>) => {
+    // Create a map of module name to its rank based on APIs migrated
+    const rankMap: Record<string, number> = {};
+    
+    // Sort by APIs migrated (always descending for ranking)
+    const sortedByApisMigrated = [...data].sort((a, b) => b.apisMigrated - a.apisMigrated);
+    
+    // Assign ranks (handle ties by giving the same rank)
+    let currentRank = 1;
+    let prevApisMigrated: number | null = null;
+    
+    sortedByApisMigrated.forEach((module, index) => {
+      // If this number of migrated APIs is different from previous, assign a new rank
+      if (prevApisMigrated !== module.apisMigrated) {
+        currentRank = index + 1;
+      }
+      
+      rankMap[module.name] = currentRank;
+      prevApisMigrated = module.apisMigrated;
+    });
+    
+    return rankMap;
+  };
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       // Toggle direction if clicking the same column
@@ -138,45 +169,56 @@ export function DecoratorlessLeaderboard({
   };
   
   const data = sortData(processData());
+  const ranksByApisMigrated = calculateRank(processData());
   
-  // Get rank changes based on percentage
+  // Get rank changes based on APIs migrated
   const getRankChanges = () => {
-    // Sort current data by percentage
+    // Sort current data by APIs migrated
     const currentOrder = processData()
-      .sort((a, b) => b.percentage - a.percentage)
+      .sort((a, b) => b.apisMigrated - a.apisMigrated)
       .map(item => item.name);
       
-    // Sort compare data by percentage
-    const compareOrder = Object.entries(compareData)
-      .map(([moduleName, stats]) => {
-        const decoratorlessCount =
-          stats.inputFunction +
-          stats.inputRequired +
-          stats.outputFunction +
-          stats.modelFunction +
-          stats.viewChildFunction +
-          stats.viewChildRequired +
-          stats.viewChildrenFunction +
-          stats.contentChildFunction +
-          stats.contentChildRequired +
-          stats.contentChildrenFunction;
+    // Sort compare data by APIs migrated (we need to calculate this since it's not stored directly)
+    const compareOrder = Object.entries(currentData)
+      .map(([moduleName, currentStats]) => {
+        let apisMigrated = 0;
+        
+        if (compareData[moduleName]) {
+          const prevStats = compareData[moduleName];
+          
+          const currentDecoratorlessCount =
+            currentStats.inputFunction +
+            currentStats.inputRequired +
+            currentStats.outputFunction +
+            currentStats.modelFunction +
+            currentStats.viewChildFunction +
+            currentStats.viewChildRequired +
+            currentStats.viewChildrenFunction +
+            currentStats.contentChildFunction +
+            currentStats.contentChildRequired +
+            currentStats.contentChildrenFunction;
 
-        const decoratorCount =
-          stats.inputDecorator +
-          stats.outputDecorator +
-          stats.viewChildDecorator +
-          stats.viewChildrenDecorator +
-          stats.contentChildDecorator;
-
-        const total = decoratorlessCount + decoratorCount;
-        const percentage = total > 0 ? (decoratorlessCount / total) * 100 : 0;
+          const prevDecoratorlessCount =
+            prevStats.inputFunction +
+            prevStats.inputRequired +
+            prevStats.outputFunction +
+            prevStats.modelFunction +
+            prevStats.viewChildFunction +
+            prevStats.viewChildRequired +
+            prevStats.viewChildrenFunction +
+            prevStats.contentChildFunction +
+            prevStats.contentChildRequired +
+            prevStats.contentChildrenFunction;
+            
+          apisMigrated = Math.max(0, currentDecoratorlessCount - prevDecoratorlessCount);
+        }
         
         return {
           name: moduleName,
-          percentage
+          apisMigrated
         };
       })
-      .sort((a, b) => b.percentage - a.percentage)
+      .sort((a, b) => b.apisMigrated - a.apisMigrated)
       .map(item => item.name);
     
     // Calculate rank changes
@@ -185,7 +227,9 @@ export function DecoratorlessLeaderboard({
     currentOrder.forEach((name, currentIndex) => {
       const compareIndex = compareOrder.indexOf(name);
       if (compareIndex !== -1) {
-        rankChanges[name] = compareIndex - currentIndex;
+        // Fix: Reverse the order of subtraction to get correct direction 
+        // A module that was ranked 5th and is now 3rd has improved by +2
+        rankChanges[name] = currentIndex - compareIndex;
       } else {
         rankChanges[name] = 0; // New module
       }
@@ -264,6 +308,20 @@ export function DecoratorlessLeaderboard({
               <Button 
                 variant="ghost" 
                 className="p-0 font-medium flex items-center gap-1 ml-auto"
+                onClick={() => handleSort('apisMigrated')}
+              >
+                APIs Migrated
+                {sortKey === 'apisMigrated' ? (
+                  sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="h-4 w-4 ml-1" />
+                )}
+              </Button>
+            </TableHead>
+            <TableHead className="text-right">
+              <Button 
+                variant="ghost" 
+                className="p-0 font-medium flex items-center gap-1 ml-auto"
                 onClick={() => handleSort('total')}
               >
                 Total APIs
@@ -277,35 +335,11 @@ export function DecoratorlessLeaderboard({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.slice(0, showCount).map((module, index) => (
+          {data.map((module, _index) => (
             <TableRow key={module.name}>
               <TableCell className="font-medium flex items-center gap-1">
-                {getMedalIcon(index)}
-                <span>{index + 1}</span>
-                {rankChanges[module.name] > 0 && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <ArrowUp className="h-3 w-3 text-green-500 ml-1" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Moved up {rankChanges[module.name]} positions</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-                {rankChanges[module.name] < 0 && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <ArrowDown className="h-3 w-3 text-red-500 ml-1" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Moved down {Math.abs(rankChanges[module.name])} positions</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
+                {ranksByApisMigrated[module.name] <= 3 && getMedalIcon(ranksByApisMigrated[module.name] - 1)}
+                <span>{ranksByApisMigrated[module.name]}</span>
               </TableCell>
               <TableCell>{module.name}</TableCell>
               <TableCell>
@@ -319,7 +353,7 @@ export function DecoratorlessLeaderboard({
                   <Progress value={module.percentage} className="h-2" />
                 </div>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right w-[200px]">
                 {module.change !== 0 ? (
                   <Badge 
                     variant={module.change > 0 ? "success" : "destructive"}
@@ -332,25 +366,24 @@ export function DecoratorlessLeaderboard({
                   <span className="text-muted-foreground text-sm">No change</span>
                 )}
               </TableCell>
-              <TableCell className="text-right font-medium">{module.total}</TableCell>
+              <TableCell className="text-right w-[100px]">
+                {module.apisMigrated !== 0 ? (
+                  <Badge 
+                    variant={module.apisMigrated > 0 ? "success" : "destructive"}
+                    className="ml-auto"
+                  >
+                    {module.apisMigrated > 0 && '+'}
+                    {module.apisMigrated}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground text-sm">0</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right font-medium w-[100px]">{module.total}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-
-      {data.length > 10 && (
-        <div className="flex justify-center mt-4">
-          {showCount < data.length ? (
-            <Button variant="outline" size="sm" onClick={showAllModules}>
-              Show all {data.length} modules
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" onClick={showLessModules}>
-              Show less
-            </Button>
-          )}
-        </div>
-      )}
     </div>
   )
 }

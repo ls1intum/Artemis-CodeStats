@@ -114,7 +114,10 @@ export function DecoratorlessTimelineChart({ data, currentIndex }: Decoratorless
   const currentDataPoint = chartData.find(d => d.commitHash === data[currentIndex].metadata.artemis.commitHash.substring(0, 8))
   
   // Custom tooltip for the chart
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: {
+    active?: boolean;
+    payload?: Array<any>;
+  }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -152,8 +155,19 @@ export function DecoratorlessTimelineChart({ data, currentIndex }: Decoratorless
             textAnchor="end"
             height={50}
           />
-          <YAxis yAxisId="left" orientation="left" />
-          <YAxis yAxisId="right" orientation="right" domain={[0, 100]} />
+          <YAxis 
+            yAxisId="right" 
+            orientation="right" 
+            domain={[0, 100]}
+            tickFormatter={(value) => `${value}%`}
+            label={{ 
+              value: "Percentage (%)", 
+              angle: -90, 
+              position: "insideRight",
+              offset: 0,
+              style: { textAnchor: "middle" }
+            }}
+          />
           
           {currentDataPoint && (
             <ReferenceLine 
@@ -161,7 +175,7 @@ export function DecoratorlessTimelineChart({ data, currentIndex }: Decoratorless
               stroke="#0284c7" 
               strokeWidth={2} 
               strokeDasharray="3 3"
-              yAxisId="left"
+              yAxisId="right"
               label={{ 
                 value: "Current", 
                 position: "top", 
@@ -180,9 +194,7 @@ export function DecoratorlessTimelineChart({ data, currentIndex }: Decoratorless
                 'percentageDecoratorless': 'Overall %',
                 'inputsPercentage': 'Inputs %',
                 'outputsPercentage': 'Outputs %',
-                'queriesPercentage': 'Queries %',
-                'decoratorless': 'Decoratorless Count',
-                'decorator': 'Decorator Count'
+                'queriesPercentage': 'Queries %'
               }
               return labels[value] || value
             }}
@@ -223,22 +235,6 @@ export function DecoratorlessTimelineChart({ data, currentIndex }: Decoratorless
             strokeWidth={2}
             dot={false}
             strokeDasharray="3 3"
-          />
-          <Line
-            yAxisId="left"
-            type="monotone"
-            dataKey="decoratorless"
-            stroke="#86efac"
-            strokeWidth={1.5}
-            dot={false}
-          />
-          <Line
-            yAxisId="left"
-            type="monotone"
-            dataKey="decorator"
-            stroke="#fca5a5"
-            strokeWidth={1.5}
-            dot={false}
           />
         </LineChart>
       </ResponsiveContainer>

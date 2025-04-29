@@ -22,7 +22,7 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
       decorator: 0,
       total: 0,
       moduleCount: Object.keys(current).length,
-      completedModules: 0 // Modules with >90% decoratorless
+      completedModules: 0
     }
 
     const firstStats = {
@@ -57,9 +57,9 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
       currentStats.decoratorless += moduleDecoratorless;
       currentStats.decorator += moduleDecorator;
       
-      // Calculate if module is "completed" (>90% decoratorless)
+      // Calculate if module is "completed" (100% decoratorless)
       const moduleTotal = moduleDecoratorless + moduleDecorator;
-      if (moduleTotal > 0 && (moduleDecoratorless / moduleTotal > 0.9)) {
+      if (moduleTotal > 0 && (moduleDecoratorless / moduleTotal === 1)) {
         currentStats.completedModules++;
       }
     })
@@ -163,7 +163,7 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
             <Trophy className="h-4 w-4 text-amber-500" />
             <CardTitle className="text-sm font-medium">Module Completion</CardTitle>
           </div>
-          <CardDescription>Modules with &gt;90% decoratorless APIs</CardDescription>
+          <CardDescription>Modules with 100% decoratorless APIs</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold">
@@ -207,13 +207,18 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
             )}
             <span className="ml-1 text-slate-500">since first report</span>
           </div>
-          <div className="mt-4 h-10 flex items-center">
-            <div className="bg-slate-100 w-full p-2 rounded-md text-center text-sm font-medium">
-              {stats.currentStats.decoratorless > 0 ? (
-                `${Math.round((stats.currentStats.decoratorless / (stats.currentStats.decoratorless + stats.remaining)) * 100)}% Complete`
-              ) : (
+          <div className="mt-4">
+            <Progress 
+              value={stats.currentStats.decoratorless > 0 ? 
+                Math.round((stats.currentStats.decoratorless / (stats.currentStats.decoratorless + stats.remaining)) * 100) : 0
+              } 
+              className="h-2" 
+            />
+            <div className="mt-3 text-xs text-slate-500">
+              {stats.currentStats.decoratorless > 0 ? 
+                `${Math.round((stats.currentStats.decoratorless / (stats.currentStats.decoratorless + stats.remaining)) * 100)}% Complete` : 
                 'No migration started'
-              )}
+              }
             </div>
           </div>
         </CardContent>

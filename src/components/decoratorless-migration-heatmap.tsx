@@ -103,8 +103,7 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
       activeModules.sort((a, b) => b.overallPercentage - a.overallPercentage)
     }
 
-    // Take top 12 modules
-    return activeModules.slice(0, 12)
+    return activeModules
   }
 
   const getColorClass = (percentage: number, total: number) => {
