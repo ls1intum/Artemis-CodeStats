@@ -179,14 +179,29 @@ function getCommitsUntilDate(untilDate: Date): CommitInfo[] {
  */
 function checkoutToCommit(commitHash: string): boolean {
   try {
-    // Save uncommitted changes if any
-    try {
-      execSync('git stash', { cwd: repoDir });
-    } catch (error) {
-      // It's okay if stashing fails (e.g., no changes to stash)
+    console.log("Checking repository status...");
+    
+    // Check for uncommitted changes first
+    const status = execSync('git status --porcelain', { cwd: repoDir }).toString();
+    if (status.trim()) {
+      console.log("Repository has uncommitted changes. Attempting cleanup...");
+      
+      // Try to reset the repository to a clean state
+      try {
+        // Discard changes in working directory
+        execSync('git reset --hard', { cwd: repoDir });
+        console.log("Reset working directory to HEAD");
+        
+        // Clean untracked files
+        execSync('git clean -fd', { cwd: repoDir });
+        console.log("Cleaned untracked files");
+      } catch (cleanupError) {
+        console.error("Failed to clean repository:", cleanupError);
+        return false;
+      }
     }
 
-    // Checkout to the specific commit
+    // Now checkout to the specific commit
     execSync(`git checkout ${commitHash}`, { cwd: repoDir });
     
     console.log(`Successfully checked out to commit: ${commitHash}`);
@@ -202,14 +217,45 @@ function checkoutToCommit(commitHash: string): boolean {
  */
 function cleanupAfterAnalysis() {
   try {
-    // Go back to the original branch
-    execSync('git checkout -', { cwd: repoDir });
+    console.log("Checking repository before cleanup...");
     
-    // Try to apply stashed changes if any
+    // Check current branch
+    const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: repoDir }).toString().trim();
+    console.log(`Current branch: ${currentBranch}`);
+    
+    // Go back to the original branch - use main/master/develop as fallback
     try {
-      execSync('git stash pop', { cwd: repoDir });
+      if (currentBranch === 'HEAD') {
+        // We're in detached HEAD state, try to determine the default branch
+        const branches = execSync('git branch', { cwd: repoDir }).toString().split('\n');
+        let defaultBranch = '';
+        
+        // Look for main branches in order of preference
+        for (const branch of ['develop', 'main', 'master']) {
+          if (branches.some(b => b.includes(branch))) {
+            defaultBranch = branch;
+            break;
+          }
+        }
+        
+        if (defaultBranch) {
+          console.log(`Checking out to default branch: ${defaultBranch}`);
+          execSync(`git checkout ${defaultBranch}`, { cwd: repoDir });
+        } else {
+          console.log("Could not determine default branch, staying in detached HEAD state");
+        }
+      } else {
+        // We can use git checkout - to go back to the previous branch
+        execSync('git checkout -', { cwd: repoDir });
+      }
     } catch (error) {
-      // It's okay if popping stash fails (e.g., no stash to pop)
+      console.warn("Warning: Could not return to original branch:", error);
+      // Try to checkout a common branch name as fallback
+      try {
+        execSync('git checkout develop || git checkout main || git checkout master', { cwd: repoDir });
+      } catch (fallbackError) {
+        console.error("Could not checkout any default branch");
+      }
     }
     
     console.log('Successfully cleaned up after analysis');
@@ -282,7 +328,7 @@ function writeReportFile(
   // Create the file path and write file
   const reportFilePath = path.join(
     reportDir,
-    `${reportType}-${artemisCommitInfo.commitHash.substring(0, 8)}-${formattedTimestamp}.json`
+    `${reportType}_${formattedTimestamp}_${artemisCommitInfo.commitHash.substring(0, 8)}.json`
   );
   
   fs.writeFileSync(
