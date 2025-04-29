@@ -43,194 +43,193 @@
  * - Team/feature comparisons to focus refactoring efforts
  */
 
-import { Project } from 'ts-morph';
-import * as path from 'path';
-import * as fs from 'fs';
-import { ModuleStats, ChangeDetectionStats } from './types';
+import { Project } from "ts-morph";
+import * as path from "path";
+import * as fs from "fs";
+import { execSync } from "child_process";
 
-const repoDir = path.join(process.cwd(), 'artemis');
-const basePath = 'src/main/webapp/app';
+import { analyzeExistingComponents } from "./client/componentInventory";
+import { analyzeChangeDetection } from "./client/changeDetection";
+import { analyzeDecoratorlessAPI } from "./client/decoratorlessApi";
+
+const repoDir = path.join(process.cwd(), "artemis");
+const basePath = "src/main/webapp/app";
 const modules = [
-    'admin',
-    'assessment',
-    'atlas',
-    'buildagent',
-    'communication',
-    'core',
-    'exam',
-    'exercise',
-    'fileupload',
-    'iris',
-    'lecture',
-    'lti',
-    'modeling',
-    'plagiarism',
-    'programming',
-    'quiz',
-    'shared',
-    'text',
-    'tutorialgroup'
+  "admin",
+  "assessment",
+  "atlas",
+  "buildagent",
+  "communication",
+  "core",
+  "exam",
+  "exercise",
+  "fileupload",
+  "iris",
+  "lecture",
+  "lti",
+  "modeling",
+  "plagiarism",
+  "programming",
+  "quiz",
+  "shared",
+  "text",
+  "tutorialgroup",
 ];
 
-// Initialize the project
-const project = new Project({
-    tsConfigFilePath: path.join(repoDir, 'tsconfig.json'),
-});
+/**
+ * Get the current commit hash and timestamp from the artemis submodule
+ */
+function getArtemisCommitInfo() {
+  try {
+    const commitHash = execSync('git rev-parse HEAD', { cwd: repoDir }).toString().trim();
+    const commitTimestamp = execSync('git show -s --format=%ci HEAD', { cwd: repoDir }).toString().trim();
+    
+    return {
+      commitHash,
+      commitTimestamp
+    };
+  } catch (error) {
+    console.error('Error getting artemis commit info:', error);
+    return {
+      commitHash: 'unknown',
+      commitTimestamp: 'unknown'
+    };
+  }
+}
 
-// Add source files from each module
-modules.forEach(moduleName => {
+/**
+ * Initialize the ts-morph project and add source files
+ */
+function initializeProject(): Project {
+  const project = new Project({
+    tsConfigFilePath: path.join(repoDir, "tsconfig.json"),
+  });
+
+  // Add source files from each module
+  modules.forEach((moduleName) => {
     const modulePath = path.join(repoDir, moduleName);
     if (fs.existsSync(modulePath)) {
-        project.addSourceFilesAtPaths(path.join(modulePath, '**/*.ts'));
+      project.addSourceFilesAtPaths(path.join(modulePath, "**/*.ts"));
     }
-});
+  });
 
-// Analyze components, directives, and pipes by module
-function analyzeModules(): Record<string, ModuleStats> {
-    const stats: Record<string, ModuleStats> = {};
-
-    // Initialize stats for each module
-    modules.forEach(module => {
-        stats[module] = { components: 0, directives: 0, pipes: 0, injectables: 0, total: 0 };
-    });
-
-    // Process each source file
-    const sourceFiles = project.getSourceFiles();
-    sourceFiles.forEach(file => {
-        const filePath = file.getFilePath();
-
-        // Determine which module this file belongs to
-        const moduleName = modules.find(module =>
-            filePath.includes(path.join(basePath, module))
-        );
-
-        if (!moduleName) return;
-
-        // Find all classes with decorators
-        const classes = file.getClasses();
-        classes.forEach(cls => {
-            const decorators = cls.getDecorators();
-
-            decorators.forEach(decorator => {
-                const decoratorName = decorator.getName();
-                const decoratorText = decorator.getText();
-
-                if (decoratorName === 'Component' || decoratorText.includes('@Component')) {
-                    stats[moduleName].components++;
-                } else if (decoratorName === 'Directive' || decoratorText.includes('@Directive')) {
-                    stats[moduleName].directives++;
-                } else if (decoratorName === 'Pipe' || decoratorText.includes('@Pipe')) {
-                    stats[moduleName].pipes++;
-                } else if (decoratorName === 'Injectable' || decoratorText.includes('@Injectable')) {
-                    stats[moduleName].injectables++;
-                }
-            });
-        });
-    });
-
-    // Calculate totals
-    for (const module in stats) {
-        stats[module].total =
-            stats[module].components +
-            stats[module].directives +
-            stats[module].pipes +
-            stats[module].injectables;
-    }
-
-    return stats;
+  return project;
 }
 
-// Analyze change detection strategies by module
-function analyzeChangeDetection(): Record<string, ChangeDetectionStats> {
-    const stats: Record<string, ChangeDetectionStats> = {};
+/**
+ * Helper function to write a report file
+ * @param reportType The type of report (used for directory name)
+ * @param data The data to write to the file
+ * @param isClient Flag to indicate if the report is for client-side
+ */
+function writeReportFile(
+  reportType: string,
+  data: unknown,
+  isClient: boolean
+): string {
+  // Create report-specific directory
+  const reportDir = path.join(process.cwd(), "data", reportType);
+  if (!fs.existsSync(reportDir)) {
+    fs.mkdirSync(reportDir, { recursive: true });
+  }
 
-    // Initialize stats for each module
-    modules.forEach(module => {
-        stats[module] = { onPush: 0, default: 0, implicit: 0, total: 0 };
-    });
+  // Get artemis commit info
+  const artemisCommitInfo = getArtemisCommitInfo();
+  
+  // Format commit timestamp for filename (replace spaces and colons with dashes)
+  const formattedTimestamp = artemisCommitInfo.commitTimestamp
+    .replace(/[\s:]/g, "-")
+    .replace(/\+\d{4}/, "") // Remove timezone offset
+    .replace(/-$/, "");
 
-    // Process each source file
-    const sourceFiles = project.getSourceFiles();
-    sourceFiles.forEach(file => {
-        const filePath = file.getFilePath();
+  // Create metadata
+  const metadata = {
+    type: reportType,
+    artemis: artemisCommitInfo
+  };
 
-        // Determine which module this file belongs to
-        const moduleName = modules.find(module =>
-            filePath.includes(path.join(basePath, module))
-        );
+  // Create complete report path with subdirectories
+  const fullReportPath = path.join(
+    reportDir,
+    isClient ? "client" : "server",
+    reportType
+  );
+  
+  // Ensure all directories in the path exist
+  if (!fs.existsSync(fullReportPath)) {
+    fs.mkdirSync(fullReportPath, { recursive: true });
+  }
 
-        if (!moduleName) return;
+  // Create the file path and write file
+  const reportFilePath = path.join(
+    fullReportPath,
+    `${reportType}-${formattedTimestamp}.json`
+  );
+  fs.writeFileSync(
+    reportFilePath,
+    JSON.stringify(
+      {
+        metadata,
+        [reportType]: data,
+      },
+      null,
+      2
+    )
+  );
 
-        // Find all component decorators
-        const classes = file.getClasses();
-        classes.forEach(cls => {
-            const decorators = cls.getDecorators();
-
-            decorators.forEach(decorator => {
-                if (decorator.getName() === 'Component' || decorator.getText().includes('@Component')) {
-                    // Get the decorator arguments
-                    const callExpr = decorator.getCallExpression();
-                    if (!callExpr) return;
-
-                    const args = callExpr.getArguments();
-                    if (args.length === 0) return;
-
-                    // Look for changeDetection property in the component decorator
-                    const arg = args[0];
-                    const text = arg.getText();
-
-                    if (text.includes('ChangeDetectionStrategy.OnPush')) {
-                        stats[moduleName].onPush++;
-                    } else if (text.includes('ChangeDetectionStrategy.Default')) {
-                        stats[moduleName].default++;
-                    } else {
-                        stats[moduleName].implicit++;
-                    }
-                }
-            });
-        });
-    });
-
-    // Calculate totals
-    for (const module in stats) {
-        stats[module].total =
-            stats[module].onPush +
-            stats[module].default +
-            stats[module].implicit;
-    }
-
-    return stats;
+  return reportFilePath;
 }
 
-function saveReportToData() {
-    // Get the module stats
-    const componentStats = analyzeModules();
-    const changeDetectionStats = analyzeChangeDetection();
-    
-    // Create a JSON structure
-    const reportData = {
-        metadata: {
-            title: "Angular Technical Debt Analysis Report",
-            generatedAt: new Date().toISOString()
-        },
-        componentInventory: componentStats,
-        changeDetection: changeDetectionStats
-    };
+/**
+ * Generate report data and save to files
+ */
+function generateReports() {
+  // Initialize project
+  const project = initializeProject();
 
-    // Convert to JSON string
-    const jsonContent = JSON.stringify(reportData, null, 2);
-    
-    // Output handling - always to file
-    const reportsDir = path.join(process.cwd(), 'data');
-    // Create reports directory if it doesn't exist
-    if (!fs.existsSync(reportsDir)) {
-        fs.mkdirSync(reportsDir);
-    }
+  // Run analyzers
+  const componentStats = analyzeExistingComponents(project, modules, basePath);
+  const changeDetectionStats = analyzeChangeDetection(
+    project,
+    modules,
+    basePath
+  );
+  const decoratorlessAPIStats = analyzeDecoratorlessAPI(
+    project,
+    modules,
+    basePath
+  );
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const reportFilePath = path.join(reportsDir, `angular-debt-report-${timestamp}.json`);
-    fs.writeFileSync(reportFilePath, jsonContent);
-    console.log(`Report saved to: ${reportFilePath}`);
+  // Ensure base reports directory exists
+  const reportsBaseDir = path.join(process.cwd(), "data");
+  if (!fs.existsSync(reportsBaseDir)) {
+    fs.mkdirSync(reportsBaseDir);
+  }
+
+  // Save individual reports using the helper function
+  const componentReportPath = writeReportFile(
+    "componentInventory",
+    componentStats,
+    true
+  );
+  console.log(`Component inventory report saved to: ${componentReportPath}`);
+
+  const changeDetectionReportPath = writeReportFile(
+    "changeDetection",
+    changeDetectionStats,
+    true
+  );
+  console.log(`Change detection report saved to: ${changeDetectionReportPath}`);
+
+  const decoratorlessAPIReportPath = writeReportFile(
+    "decoratorlessAPI",
+    decoratorlessAPIStats,
+    true
+  );
+  console.log(
+    `Decoratorless API report saved to: ${decoratorlessAPIReportPath}`
+  );
 }
 
-saveReportToData();
+// Run the reports
+generateReports();

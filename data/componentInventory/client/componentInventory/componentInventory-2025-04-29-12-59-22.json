@@ -1,7 +1,10 @@
 {
   "metadata": {
-    "title": "Angular Technical Debt Analysis Report",
-    "generatedAt": "2025-04-25T08:26:34.110Z"
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "d26723a22a497cf1221a64d8279e1e974baefa5d",
+      "commitTimestamp": "2025-04-29 12:59:22 +0200"
+    }
   },
   "componentInventory": {
     "admin": {
@@ -118,10 +121,10 @@
     },
     "shared": {
       "components": 78,
-      "directives": 16,
+      "directives": 17,
       "pipes": 26,
       "injectables": 31,
-      "total": 151
+      "total": 152
     },
     "text": {
       "components": 17,
@@ -136,122 +139,6 @@
       "pipes": 2,
       "injectables": 6,
       "total": 48
-    }
-  },
-  "changeDetection": {
-    "admin": {
-      "onPush": 0,
-      "default": 0,
-      "implicit": 1,
-      "total": 1
-    },
-    "assessment": {
-      "onPush": 0,
-      "default": 0,
-      "implicit": 36,
-      "total": 36
-    },
-    "atlas": {
-      "onPush": 14,
-      "default": 0,
-      "implicit": 46,
-      "total": 60
-    },
-    "buildagent": {
-      "onPush": 0,
-      "default": 0,
-      "implicit": 7,
-      "total": 7
-    },
-    "communication": {
-      "onPush": 6,
-      "default": 0,
-      "implicit": 53,
-      "total": 59
-    },
-    "core": {
-      "onPush": 16,
-      "default": 0,
-      "implicit": 114,
-      "total": 130
-    },
-    "exam": {
-      "onPush": 2,
-      "default": 0,
-      "implicit": 70,
-      "total": 72
-    },
-    "exercise": {
-      "onPush": 0,
-      "default": 0,
-      "implicit": 78,
-      "total": 78
-    },
-    "fileupload": {
-      "onPush": 1,
-      "default": 0,
-      "implicit": 4,
-      "total": 5
-    },
-    "iris": {
-      "onPush": 0,
-      "default": 0,
-      "implicit": 14,
-      "total": 14
-    },
-    "lecture": {
-      "onPush": 1,
-      "default": 0,
-      "implicit": 38,
-      "total": 39
-    },
-    "lti": {
-      "onPush": 0,
-      "default": 0,
-      "implicit": 6,
-      "total": 6
-    },
-    "modeling": {
-      "onPush": 1,
-      "default": 0,
-      "implicit": 10,
-      "total": 11
-    },
-    "plagiarism": {
-      "onPush": 0,
-      "default": 0,
-      "implicit": 14,
-      "total": 14
-    },
-    "programming": {
-      "onPush": 8,
-      "default": 0,
-      "implicit": 96,
-      "total": 104
-    },
-    "quiz": {
-      "onPush": 4,
-      "default": 0,
-      "implicit": 35,
-      "total": 39
-    },
-    "shared": {
-      "onPush": 5,
-      "default": 0,
-      "implicit": 73,
-      "total": 78
-    },
-    "text": {
-      "onPush": 1,
-      "default": 0,
-      "implicit": 16,
-      "total": 17
-    },
-    "tutorialgroup": {
-      "onPush": 36,
-      "default": 0,
-      "implicit": 4,
-      "total": 40
     }
   }
 }
