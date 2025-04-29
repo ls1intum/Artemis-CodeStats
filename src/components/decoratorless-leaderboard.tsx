@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { 
-  Trophy, Medal, ArrowUp, ArrowDown,
+  Trophy, Medal,
   ChevronDown, ChevronUp, ArrowUpDown
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface DecoratorlessLeaderboardProps {
   currentData: Record<string, DecoratorlessAPIStats>
@@ -171,89 +170,12 @@ export function DecoratorlessLeaderboard({
   const data = sortData(processData());
   const ranksByApisMigrated = calculateRank(processData());
   
-  // Get rank changes based on APIs migrated
-  const getRankChanges = () => {
-    // Sort current data by APIs migrated
-    const currentOrder = processData()
-      .sort((a, b) => b.apisMigrated - a.apisMigrated)
-      .map(item => item.name);
-      
-    // Sort compare data by APIs migrated (we need to calculate this since it's not stored directly)
-    const compareOrder = Object.entries(currentData)
-      .map(([moduleName, currentStats]) => {
-        let apisMigrated = 0;
-        
-        if (compareData[moduleName]) {
-          const prevStats = compareData[moduleName];
-          
-          const currentDecoratorlessCount =
-            currentStats.inputFunction +
-            currentStats.inputRequired +
-            currentStats.outputFunction +
-            currentStats.modelFunction +
-            currentStats.viewChildFunction +
-            currentStats.viewChildRequired +
-            currentStats.viewChildrenFunction +
-            currentStats.contentChildFunction +
-            currentStats.contentChildRequired +
-            currentStats.contentChildrenFunction;
-
-          const prevDecoratorlessCount =
-            prevStats.inputFunction +
-            prevStats.inputRequired +
-            prevStats.outputFunction +
-            prevStats.modelFunction +
-            prevStats.viewChildFunction +
-            prevStats.viewChildRequired +
-            prevStats.viewChildrenFunction +
-            prevStats.contentChildFunction +
-            prevStats.contentChildRequired +
-            prevStats.contentChildrenFunction;
-            
-          apisMigrated = Math.max(0, currentDecoratorlessCount - prevDecoratorlessCount);
-        }
-        
-        return {
-          name: moduleName,
-          apisMigrated
-        };
-      })
-      .sort((a, b) => b.apisMigrated - a.apisMigrated)
-      .map(item => item.name);
-    
-    // Calculate rank changes
-    const rankChanges: Record<string, number> = {};
-    
-    currentOrder.forEach((name, currentIndex) => {
-      const compareIndex = compareOrder.indexOf(name);
-      if (compareIndex !== -1) {
-        // Fix: Reverse the order of subtraction to get correct direction 
-        // A module that was ranked 5th and is now 3rd has improved by +2
-        rankChanges[name] = currentIndex - compareIndex;
-      } else {
-        rankChanges[name] = 0; // New module
-      }
-    });
-    
-    return rankChanges;
-  };
-  
-  const rankChanges = getRankChanges();
-  
   // Get medal icon for top 3
   const getMedalIcon = (index: number) => {
     if (index === 0) return <Trophy className="h-4 w-4 text-yellow-500" />;
     if (index === 1) return <Medal className="h-4 w-4 text-slate-400" />;
     if (index === 2) return <Medal className="h-4 w-4 text-amber-700" />;
     return null;
-  };
-  
-  const showAllModules = () => {
-    setShowCount(data.length);
-  };
-  
-  const showLessModules = () => {
-    setShowCount(10);
   };
   
   return (
