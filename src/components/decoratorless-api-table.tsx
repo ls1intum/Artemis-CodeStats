@@ -37,7 +37,6 @@ export function DecoratorlessAPITable({ data }: DecoratorlessAPITableProps) {
     contentChildRequired: 0,
     contentChildrenFunction: 0,
     contentChildDecorator: 0,
-    contentChildrenDecorator: 0,
     total: 0,
   }
 

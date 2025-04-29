@@ -14,7 +14,6 @@ export interface DecoratorlessAPIStats {
   contentChildRequired: number // contentChild.required(...)
   contentChildrenFunction: number // contentChildren(...)
   contentChildDecorator: number // @ContentChild()
-  contentChildrenDecorator: number // @ContentChildren()
   total: number
 }
 

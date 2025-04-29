@@ -1,0 +1,146 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "e30bf0808fcf639500376315b5a030ef6a1fe2e8",
+      "commitDate": "2025-04-02T07:56:17.000Z",
+      "commitAuthor": "Ole Vester",
+      "commitMessage": "Development: Introduce fileupload module API (#10258)"
+    }
+  },
+  "componentInventory": {
+    "admin": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "assessment": {
+      "components": 36,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 45
+    },
+    "atlas": {
+      "components": 60,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 7,
+      "total": 67
+    },
+    "buildagent": {
+      "components": 7,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 10
+    },
+    "communication": {
+      "components": 58,
+      "directives": 5,
+      "pipes": 0,
+      "injectables": 18,
+      "total": 81
+    },
+    "core": {
+      "components": 127,
+      "directives": 4,
+      "pipes": 0,
+      "injectables": 64,
+      "total": 195
+    },
+    "exam": {
+      "components": 72,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 87
+    },
+    "exercise": {
+      "components": 75,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 20,
+      "total": 95
+    },
+    "fileupload": {
+      "components": 5,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 10
+    },
+    "iris": {
+      "components": 14,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 6,
+      "total": 20
+    },
+    "lecture": {
+      "components": 38,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 12,
+      "total": 51
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 16
+    },
+    "plagiarism": {
+      "components": 14,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 19
+    },
+    "programming": {
+      "components": 105,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 37,
+      "total": 144
+    },
+    "quiz": {
+      "components": 39,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 10,
+      "total": 51
+    },
+    "shared": {
+      "components": 80,
+      "directives": 18,
+      "pipes": 26,
+      "injectables": 32,
+      "total": 156
+    },
+    "text": {
+      "components": 17,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 10,
+      "total": 28
+    },
+    "tutorialgroup": {
+      "components": 40,
+      "directives": 0,
+      "pipes": 2,
+      "injectables": 6,
+      "total": 48
+    }
+  }
+}

@@ -56,8 +56,7 @@ export function DecoratorlessLeaderboard({
         stats.outputDecorator +
         stats.viewChildDecorator +
         stats.viewChildrenDecorator +
-        stats.contentChildDecorator +
-        stats.contentChildrenDecorator;
+        stats.contentChildDecorator;
 
       const total = decoratorlessCount + decoratorCount;
       const percentage = total > 0 ? (decoratorlessCount / total) * 100 : 0;
@@ -85,8 +84,7 @@ export function DecoratorlessLeaderboard({
           prevStats.outputDecorator +
           prevStats.viewChildDecorator +
           prevStats.viewChildrenDecorator +
-          prevStats.contentChildDecorator +
-          prevStats.contentChildrenDecorator;
+          prevStats.contentChildDecorator;
 
         const prevTotal = prevDecoratorlessCount + prevDecoratorCount;
         previousPercentage = prevTotal > 0 ? (prevDecoratorlessCount / prevTotal) * 100 : 0;
@@ -168,8 +166,7 @@ export function DecoratorlessLeaderboard({
           stats.outputDecorator +
           stats.viewChildDecorator +
           stats.viewChildrenDecorator +
-          stats.contentChildDecorator +
-          stats.contentChildrenDecorator;
+          stats.contentChildDecorator;
 
         const total = decoratorlessCount + decoratorCount;
         const percentage = total > 0 ? (decoratorlessCount / total) * 100 : 0;
@@ -325,7 +322,7 @@ export function DecoratorlessLeaderboard({
               <TableCell className="text-right">
                 {module.change !== 0 ? (
                   <Badge 
-                    variant={module.change > 0 ? "default" : "destructive"}
+                    variant={module.change > 0 ? "success" : "destructive"}
                     className="ml-auto"
                   >
                     {module.change > 0 && '+'}

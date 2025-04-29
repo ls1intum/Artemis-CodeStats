@@ -42,10 +42,6 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
             ? ((stats.contentChildFunction + stats.contentChildRequired) / contentChildTotal) * 100
             : 0
 
-        const contentChildrenTotal = stats.contentChildrenFunction + stats.contentChildrenDecorator
-        const contentChildrenPercentage =
-          contentChildrenTotal > 0 ? (stats.contentChildrenFunction / contentChildrenTotal) * 100 : 0
-          
         // Calculate overall percentage
         const totalDecoratorless = 
           stats.inputFunction +
@@ -94,13 +90,7 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
             percentage: Math.round(contentChildPercentage * 10) / 10,
             decorator: stats.contentChildDecorator,
             decoratorless: stats.contentChildFunction + stats.contentChildRequired,
-          },
-          contentChildren: {
-            total: contentChildrenTotal,
-            percentage: Math.round(contentChildrenPercentage * 10) / 10,
-            decorator: stats.contentChildrenDecorator,
-            decoratorless: stats.contentChildrenFunction,
-          },
+          }
         }
       })
 
@@ -117,8 +107,9 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
     return activeModules.slice(0, 12)
   }
 
-  const getColorClass = (percentage: number) => {
-    if (percentage === 0) return "bg-slate-200"
+  const getColorClass = (percentage: number, total: number) => {
+    if (total === 0) return "bg-slate-200" // Only gray if there are no APIs to migrate
+    if (percentage === 0) return "bg-red-500" // 0% progress should be red
     if (percentage < 20) return "bg-red-500"
     if (percentage < 40) return "bg-orange-500"
     if (percentage < 60) return "bg-yellow-500"
@@ -171,10 +162,6 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
                 <div>ContentChild</div>
                 <div className="text-xs font-normal text-slate-500">@ContentChild() → contentChild()</div>
               </th>
-              <th className="p-2 text-center font-medium text-slate-700">
-                <div>ContentChildren</div>
-                <div className="text-xs font-normal text-slate-500">@ContentChildren() → contentChildren()</div>
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -184,7 +171,7 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
                 <td className="p-2 border-t border-slate-200">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-full h-6 ${getColorClass(module.inputs.percentage)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
+                      className={`w-full h-6 ${getColorClass(module.inputs.percentage, module.inputs.total)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
                     >
                       {module.inputs.percentage}%
                     </div>
@@ -196,7 +183,7 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
                 <td className="p-2 border-t border-slate-200">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-full h-6 ${getColorClass(module.outputs.percentage)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
+                      className={`w-full h-6 ${getColorClass(module.outputs.percentage, module.outputs.total)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
                     >
                       {module.outputs.percentage}%
                     </div>
@@ -208,7 +195,7 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
                 <td className="p-2 border-t border-slate-200">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-full h-6 ${getColorClass(module.viewChild.percentage)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
+                      className={`w-full h-6 ${getColorClass(module.viewChild.percentage, module.viewChild.total)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
                     >
                       {module.viewChild.percentage}%
                     </div>
@@ -220,7 +207,7 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
                 <td className="p-2 border-t border-slate-200">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-full h-6 ${getColorClass(module.viewChildren.percentage)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
+                      className={`w-full h-6 ${getColorClass(module.viewChildren.percentage, module.viewChildren.total)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
                     >
                       {module.viewChildren.percentage}%
                     </div>
@@ -232,24 +219,12 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
                 <td className="p-2 border-t border-slate-200">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-full h-6 ${getColorClass(module.contentChild.percentage)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
+                      className={`w-full h-6 ${getColorClass(module.contentChild.percentage, module.contentChild.total)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
                     >
                       {module.contentChild.percentage}%
                     </div>
                     <div className="text-xs text-slate-500 mt-1">
                       {module.contentChild.decoratorless}/{module.contentChild.total}
-                    </div>
-                  </div>
-                </td>
-                <td className="p-2 border-t border-slate-200">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-full h-6 ${getColorClass(module.contentChildren.percentage)} rounded-sm flex items-center justify-center text-white text-xs font-medium`}
-                    >
-                      {module.contentChildren.percentage}%
-                    </div>
-                    <div className="text-xs text-slate-500 mt-1">
-                      {module.contentChildren.decoratorless}/{module.contentChildren.total}
                     </div>
                   </div>
                 </td>

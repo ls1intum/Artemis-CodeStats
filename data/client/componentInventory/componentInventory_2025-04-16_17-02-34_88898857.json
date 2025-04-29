@@ -1,0 +1,146 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "888988574a41f2715fd083443563fea38e2b1e85",
+      "commitDate": "2025-04-16T17:02:34.000Z",
+      "commitAuthor": "Marlon Nienaber",
+      "commitMessage": "Lectures: Fix broken pdf preview for lecture attachments and attachment units (#10660)"
+    }
+  },
+  "componentInventory": {
+    "admin": {
+      "components": 1,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 2
+    },
+    "assessment": {
+      "components": 36,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 45
+    },
+    "atlas": {
+      "components": 64,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 7,
+      "total": 71
+    },
+    "buildagent": {
+      "components": 7,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 10
+    },
+    "communication": {
+      "components": 61,
+      "directives": 8,
+      "pipes": 0,
+      "injectables": 18,
+      "total": 87
+    },
+    "core": {
+      "components": 134,
+      "directives": 4,
+      "pipes": 0,
+      "injectables": 63,
+      "total": 201
+    },
+    "exam": {
+      "components": 75,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 90
+    },
+    "exercise": {
+      "components": 75,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 18,
+      "total": 93
+    },
+    "fileupload": {
+      "components": 5,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 10
+    },
+    "iris": {
+      "components": 14,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 6,
+      "total": 20
+    },
+    "lecture": {
+      "components": 43,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 12,
+      "total": 56
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 16
+    },
+    "plagiarism": {
+      "components": 15,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 20
+    },
+    "programming": {
+      "components": 106,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 38,
+      "total": 146
+    },
+    "quiz": {
+      "components": 40,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 10,
+      "total": 52
+    },
+    "shared": {
+      "components": 90,
+      "directives": 18,
+      "pipes": 26,
+      "injectables": 31,
+      "total": 165
+    },
+    "text": {
+      "components": 17,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 10,
+      "total": 28
+    },
+    "tutorialgroup": {
+      "components": 50,
+      "directives": 1,
+      "pipes": 2,
+      "injectables": 6,
+      "total": 59
+    }
+  }
+}

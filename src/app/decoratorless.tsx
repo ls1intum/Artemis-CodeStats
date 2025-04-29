@@ -82,8 +82,7 @@ export default function DecoratorlessMigrationDashboard() {
         module.outputDecorator +
         module.viewChildDecorator +
         module.viewChildrenDecorator +
-        module.contentChildDecorator +
-        module.contentChildrenDecorator;
+        module.contentChildDecorator;
     });
     
     const total = totalDecoratorless + totalDecorators;

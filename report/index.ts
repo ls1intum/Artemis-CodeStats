@@ -389,9 +389,46 @@ function generateReports(commitInfo?: CommitInfo) {
 }
 
 /**
+ * Update the artemis submodule to the latest state
+ * @returns true if the update was successful, false otherwise
+ */
+function updateArtemisSubmodule(): boolean {
+  try {
+    console.log("Updating artemis submodule to the latest state...");
+    
+    // Update the submodule
+    execSync('git submodule update --init --recursive', { cwd: repoDir });
+    console.log("Updating to latest remote changes...");
+    
+    // Make sure we're on the main branch (or another default branch)
+    try {
+      execSync('git checkout develop || git checkout main || git checkout master', { cwd: repoDir });
+      console.log("Checked out default branch");
+    } catch (error) {
+      console.warn("Warning: Could not checkout a default branch:", error);
+    }
+    
+    // Pull the latest changes
+    execSync('git pull', { cwd: repoDir });
+    console.log("Successfully updated artemis submodule to the latest state");
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating artemis submodule:', error);
+    return false;
+  }
+}
+
+/**
  * Run historical analysis based on command line arguments
  */
 function runHistoricalAnalysis() {
+  // First update the artemis submodule to the latest state
+  if (!updateArtemisSubmodule()) {
+    console.error("Failed to update artemis submodule. Aborting analysis.");
+    return;
+  }
+  
   // If --start argument is provided, generate reports for commits starting from that date
   if (argv.start) {
     // Fix for command line parsing issue - ensure start is a proper string

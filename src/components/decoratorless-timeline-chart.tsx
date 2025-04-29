@@ -51,8 +51,7 @@ export function DecoratorlessTimelineChart({ data, currentIndex }: Decoratorless
         apiCounts.queries.decorator +=
           module.viewChildDecorator +
           module.viewChildrenDecorator +
-          module.contentChildDecorator +
-          module.contentChildrenDecorator
+          module.contentChildDecorator
           
         // Total decoratorless APIs
         decoratorlessCount +=
@@ -73,8 +72,7 @@ export function DecoratorlessTimelineChart({ data, currentIndex }: Decoratorless
           module.outputDecorator +
           module.viewChildDecorator +
           module.viewChildrenDecorator +
-          module.contentChildDecorator +
-          module.contentChildrenDecorator
+          module.contentChildDecorator
       })
 
       const total = decoratorlessCount + decoratorCount
@@ -163,6 +161,7 @@ export function DecoratorlessTimelineChart({ data, currentIndex }: Decoratorless
               stroke="#0284c7" 
               strokeWidth={2} 
               strokeDasharray="3 3"
+              yAxisId="left"
               label={{ 
                 value: "Current", 
                 position: "top", 

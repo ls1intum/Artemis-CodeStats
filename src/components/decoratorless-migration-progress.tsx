@@ -52,8 +52,7 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
         module.outputDecorator +
         module.viewChildDecorator +
         module.viewChildrenDecorator +
-        module.contentChildDecorator +
-        module.contentChildrenDecorator;
+        module.contentChildDecorator;
         
       currentStats.decoratorless += moduleDecoratorless;
       currentStats.decorator += moduleDecorator;
@@ -88,8 +87,7 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
         module.outputDecorator +
         module.viewChildDecorator +
         module.viewChildrenDecorator +
-        module.contentChildDecorator +
-        module.contentChildrenDecorator;
+        module.contentChildDecorator;
     })
 
     firstStats.total = firstStats.decoratorless + firstStats.decorator

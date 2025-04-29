@@ -20,7 +20,6 @@ export interface DecoratorlessAPIStats {
     contentChildRequired: number; // contentChild.required(...)
     contentChildrenFunction: number; // contentChildren(...)
     contentChildDecorator: number; // @ContentChild()
-    contentChildrenDecorator: number; // @ContentChildren()
     total: number;
 }
 
@@ -56,7 +55,6 @@ export function analyzeDecoratorlessAPI(
           contentChildRequired: 0,
           contentChildrenFunction: 0,
           contentChildDecorator: 0,
-          contentChildrenDecorator: 0,
           total: 0
       };
   });
@@ -107,10 +105,6 @@ export function analyzeDecoratorlessAPI(
                   stats[moduleName].contentChildDecorator++;
               }
 
-              if (property.getDecorator('ContentChildren')) {
-                  stats[moduleName].contentChildrenDecorator++;
-              }
-              
               // Check for function-based APIs in property initializers
               const initializer = property.getInitializer();
               if (initializer) {
@@ -177,8 +171,7 @@ export function analyzeDecoratorlessAPI(
           stats[module].contentChildFunction +
           stats[module].contentChildRequired +
           stats[module].contentChildrenFunction +
-          stats[module].contentChildDecorator +
-          stats[module].contentChildrenDecorator;
+          stats[module].contentChildDecorator;
   }
 
   return stats;

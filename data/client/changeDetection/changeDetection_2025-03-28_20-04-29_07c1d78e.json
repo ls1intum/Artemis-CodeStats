@@ -1,0 +1,127 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "07c1d78e59fec8feaa6ca2877bf0519a4895f5f3",
+      "commitDate": "2025-03-28T20:04:29.000Z",
+      "commitAuthor": "Paul Rangger",
+      "commitMessage": "Communication: Add new course wide notifications (#10597)"
+    }
+  },
+  "changeDetection": {
+    "admin": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 36,
+      "total": 36
+    },
+    "atlas": {
+      "explicitOnPush": 14,
+      "explicitDefault": 0,
+      "implicitDefault": 46,
+      "total": 60
+    },
+    "buildagent": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 7,
+      "total": 7
+    },
+    "communication": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 52,
+      "total": 58
+    },
+    "core": {
+      "explicitOnPush": 16,
+      "explicitDefault": 0,
+      "implicitDefault": 111,
+      "total": 127
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 70,
+      "total": 72
+    },
+    "exercise": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 75,
+      "total": 75
+    },
+    "fileupload": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 5
+    },
+    "iris": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 14,
+      "total": 14
+    },
+    "lecture": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 38,
+      "total": 38
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 10,
+      "total": 11
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 14,
+      "total": 14
+    },
+    "programming": {
+      "explicitOnPush": 8,
+      "explicitDefault": 0,
+      "implicitDefault": 97,
+      "total": 105
+    },
+    "quiz": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 35,
+      "total": 39
+    },
+    "shared": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 75,
+      "total": 80
+    },
+    "text": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 16,
+      "total": 17
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 36,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 40
+    }
+  }
+}
