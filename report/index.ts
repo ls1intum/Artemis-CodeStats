@@ -63,6 +63,11 @@ const argv = yargs(hideBin(process.argv))
     description: 'Generate reports starting from this historical date (YYYY-MM-DD format)',
     type: 'string',
   })
+  .option('relative', {
+    alias: 'r',
+    description: 'Generate reports for a relative time period (e.g., "24h", "7d", "1m", "1y")',
+    type: 'string',
+  })
   .option('commits', {
     alias: 'c',
     description: 'Number of commits to analyze (default: all commits since start date)',
@@ -420,12 +425,102 @@ function updateArtemisSubmodule(): boolean {
 }
 
 /**
+ * Parse a relative time string into a Date object representing that time in the past
+ * Formats: Xh (hours), Xd (days), Xw (weeks), Xm (months), Xy (years)
+ * @param relativeTime The relative time string to parse
+ * @returns Date object representing the time in the past, or null if invalid format
+ */
+function parseRelativeTime(relativeTime: string): Date | null {
+  const now = new Date();
+  const match = relativeTime.match(/^(\d+)([hdwmy])$/);
+  
+  if (!match) {
+    console.error(`Invalid relative time format: ${relativeTime}`);
+    console.error('Valid formats: Xh (hours), Xd (days), Xw (weeks), Xm (months), Xy (years)');
+    return null;
+  }
+  
+  const [, amount, unit] = match;
+  const value = parseInt(amount, 10);
+  
+  switch (unit) {
+    case 'h': // hours
+      return new Date(now.getTime() - value * 60 * 60 * 1000);
+    case 'd': // days
+      return new Date(now.getTime() - value * 24 * 60 * 60 * 1000);
+    case 'w': // weeks
+      return new Date(now.getTime() - value * 7 * 24 * 60 * 60 * 1000);
+    case 'm': // months (approximated)
+      const monthDate = new Date(now);
+      monthDate.setMonth(monthDate.getMonth() - value);
+      return monthDate;
+    case 'y': // years
+      const yearDate = new Date(now);
+      yearDate.setFullYear(yearDate.getFullYear() - value);
+      return yearDate;
+    default:
+      return null;
+  }
+}
+
+/**
  * Run historical analysis based on command line arguments
  */
 function runHistoricalAnalysis() {
   // First update the artemis submodule to the latest state
   if (!updateArtemisSubmodule()) {
     console.error("Failed to update artemis submodule. Aborting analysis.");
+    return;
+  }
+  
+  // If --relative argument is provided, calculate the start date from it
+  if (argv.relative) {
+    const startDate = parseRelativeTime(argv.relative as string);
+    if (!startDate) {
+      return; // Error already logged in parseRelativeTime
+    }
+    
+    console.log(`Analyzing commit history starting from ${startDate.toISOString()} (${argv.relative} ago)...`);
+    
+    // Get commits from the calculated start date
+    const commits = getCommitsFromStartDate(startDate);
+    
+    if (commits.length === 0) {
+      console.error(`No commits found from ${startDate.toISOString()} (${argv.relative} ago)`);
+      return;
+    }
+    
+    console.log(`Found ${commits.length} commits in the last ${argv.relative}`);
+    
+    // Determine which commits to analyze based on interval and count
+    const commitsToAnalyze = argv.commits ? commits.slice(0, argv.commits) : commits;
+    const interval = argv.interval as number;
+    
+    console.log(`Will analyze ${commitsToAnalyze.length} commits with interval ${interval}`);
+    
+    try {
+      // Analyze selected commits
+      const filteredCommits = commitsToAnalyze.filter((_, i) => i % interval === 0);
+      for (let i = 0; i < filteredCommits.length; i++) {
+        const commitInfo = filteredCommits[i];
+        console.log(`\n--- Analyzing commit ${i+1}/${filteredCommits.length} ---`);
+        console.log(`Commit: ${commitInfo.commitHash} (${commitInfo.commitDate.toISOString()})`);
+        console.log(`Author: ${commitInfo.commitAuthor}`);
+        console.log(`Message: ${commitInfo.commitMessage}`);
+        
+        // Checkout to this commit
+        if (checkoutToCommit(commitInfo.commitHash)) {
+          // Generate reports for this commit state
+          generateReports(commitInfo);
+        }
+      }
+    } finally {
+      // Always clean up afterward
+      console.log('\nCleaning up after historical analysis...');
+      cleanupAfterAnalysis();
+    }
+    
+    console.log(`\nHistorical analysis completed. Analyzed ${commitsToAnalyze.length} commits.`);
     return;
   }
   

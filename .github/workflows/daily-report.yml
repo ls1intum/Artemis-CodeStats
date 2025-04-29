@@ -1,0 +1,77 @@
+name: Hourly Report Generator
+
+on:
+  schedule:
+    # Run every hour at minute 0
+    - cron: '0 * * * *'
+  # Allow manual trigger for testing
+  workflow_dispatch:
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Full git history for reports
+          fetch-depth: 0
+          # Include submodules for artemis folder
+          submodules: true
+          # Use PAT instead of GITHUB_TOKEN
+          persist-credentials: false
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup Git identity
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+      
+      - name: Update artemis submodule
+        run: |
+          # Navigate into the artemis submodule directory
+          cd artemis
+          
+          # Make sure we're on the main branch (or default branch)
+          git checkout develop || git checkout main || git checkout master
+          
+          # Pull the latest changes
+          git pull
+          
+          # Go back to the main repo directory
+          cd ..
+      
+      - name: Run report with relative time parameter
+        run: npm run report -- --relative 1h
+      
+      - name: Commit changes
+        run: |
+          # Add artemis submodule changes
+          git add artemis
+          
+          # Add any new report files
+          git add data/
+          
+          # Check if there are any changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          # Commit with current timestamp
+          git commit -m "chore: update code stats report and artemis submodule for $(date +'%Y-%m-%d %H:%M')"
+      
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          branch: ${{ github.ref_name }}
