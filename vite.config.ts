@@ -5,7 +5,7 @@ import { defineConfig } from "vite"
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: "/Artemis-CodeStats/", // GitHub Pages base URL
+  base: process.env.NODE_ENV === 'production' ? "/Artemis-CodeStats/" : "/", // GitHub Pages base URL only in production
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

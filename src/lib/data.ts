@@ -14,8 +14,8 @@ function processReportData<T>(files: Record<string, unknown>): T[] {
 
   // Sort by commit date, newest first
   data.sort((a, b) => {
-    return new Date((b as BaseReport).metadata.artemis.commitDate).getTime() - 
-           new Date((a as BaseReport).metadata.artemis.commitDate).getTime();
+    return new Date((a as BaseReport).metadata.artemis.commitDate).getTime() - 
+           new Date((b as BaseReport).metadata.artemis.commitDate).getTime();
   });
 
   return data;
