@@ -5,15 +5,23 @@ interface DecoratorlessAPITableProps {
   data: Record<string, DecoratorlessAPIStats>
 }
 
+// Create a type that adds module name to DecoratorlessAPIStats
+type TableRowData = DecoratorlessAPIStats & { module: string }
+
+// Create a type that includes index signatures for the totals object
+type TotalsType = {
+  [key: string]: number;
+} & DecoratorlessAPIStats;
+
 export function DecoratorlessAPITable({ data }: DecoratorlessAPITableProps) {
   // Transform the data for table presentation
-  const tableData = Object.entries(data).map(([module, stats]) => ({
+  const tableData: TableRowData[] = Object.entries(data).map(([module, stats]) => ({
     module,
     ...stats
   })).sort((a, b) => b.total - a.total) // Sort by total usage count, descending
 
   // Calculate aggregates across all modules
-  const totals = {
+  const totals: TotalsType = {
     inputFunction: 0,
     inputRequired: 0,
     inputDecorator: 0,
@@ -36,7 +44,7 @@ export function DecoratorlessAPITable({ data }: DecoratorlessAPITableProps) {
   tableData.forEach(row => {
     Object.keys(totals).forEach(key => {
       if (key !== 'module') {
-        totals[key] += row[key]
+        totals[key] += (row as any)[key];
       }
     })
   })

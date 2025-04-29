@@ -37,7 +37,7 @@ export function ChangeDetectionChart({ data }: ChangeDetectionChartProps) {
         <YAxis yAxisId="left" />
         <YAxis yAxisId="right" orientation="right" domain={[0, 100]} unit="%" />
         <Tooltip formatter={(value, name) => {
-          if (name === "onPushPercentage") {
+          if (name === "onPushPercentage" && typeof value === "number") {
             return [`${value.toFixed(1)}%`, 'OnPush %']
           }
           return [value, name]
