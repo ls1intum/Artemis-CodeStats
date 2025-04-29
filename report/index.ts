@@ -147,14 +147,32 @@ function getCommitsFromStartDate(startDate: Date): CommitInfo[] {
     const gitCommand = `git log --since="${dateStr}" --format="%H|%ci|%an|%s" -n 1000`;
     const output = execSync(gitCommand, { cwd: repoDir }).toString().trim();
     
+    // Handle empty output to avoid errors on split
+    if (!output) {
+      return [];
+    }
+    
     // Parse the output into commit info objects
     return output.split('\n').map(line => {
       const [commitHash, commitTimestamp, commitAuthor, ...messageParts] = line.split('|');
       const commitMessage = messageParts.join('|'); // In case commit message contained the delimiter
       
+      // Create date safely
+      let commitDate: Date;
+      try {
+        commitDate = new Date(commitTimestamp);
+        // Validate date is not invalid
+        if (isNaN(commitDate.getTime())) {
+          commitDate = new Date(); // Use current date as fallback
+        }
+      } catch (error) {
+        console.warn(`Warning: Invalid date format in commit: ${commitTimestamp}`);
+        commitDate = new Date(); // Use current date as fallback
+      }
+      
       return {
         commitHash,
-        commitDate: new Date(commitTimestamp),
+        commitDate,
         commitAuthor,
         commitMessage
       };
