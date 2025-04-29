@@ -7,7 +7,6 @@ import { DecoratorlessAPIStats } from './client/decoratorlessApi';
  */
 export interface CommitInfo {
   commitHash: string;
-  commitTimestamp: string;
   commitDate: Date;
   commitAuthor: string;
   commitMessage: string;

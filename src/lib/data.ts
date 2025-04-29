@@ -6,16 +6,24 @@ const componentInventoryFiles = import.meta.glob("/data/client/componentInventor
 const decoratorlessAPIFiles = import.meta.glob("/data/client/decoratorlessAPI/*.json", { eager: true });
 
 // Helper function to process and sort report data
-function processReportData<T>(files: Record<string, unknown>): T[] {
+function processReportData<T extends BaseReport>(files: Record<string, unknown>): T[] {
   const data = Object.values(files).map((file) => {
-    const reportData = file as { default: T };
-    return reportData.default;
+    const reportData = file as { default: BaseReport };
+    return {
+      ...reportData.default,
+      metadata: {
+        type: reportData.default.metadata.type,
+        artemis: {
+          ...reportData.default.metadata.artemis,
+          commitDate: new Date(reportData.default.metadata.artemis.commitDate)
+        },
+      },
+    } as T;
   });
 
   // Sort by commit date, newest first
   data.sort((a, b) => {
-    return new Date((a as BaseReport).metadata.artemis.commitDate).getTime() - 
-           new Date((b as BaseReport).metadata.artemis.commitDate).getTime();
+    return a.metadata.artemis.commitDate.getTime() - b.metadata.artemis.commitDate.getTime();
   });
 
   return data;

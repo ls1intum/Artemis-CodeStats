@@ -1,0 +1,146 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "755f12d275f4a5259e52fb1b11f4a2b72d2ca702",
+      "commitDate": "2025-03-19T10:48:34.000Z",
+      "commitAuthor": "Ege Kocabas",
+      "commitMessage": "Development: Store triggering workflow info and add workflow notice for E2E tests (#10523)"
+    }
+  },
+  "componentInventory": {
+    "admin": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "assessment": {
+      "components": 30,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 35
+    },
+    "atlas": {
+      "components": 53,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 6,
+      "total": 59
+    },
+    "buildagent": {
+      "components": 7,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 10
+    },
+    "communication": {
+      "components": 49,
+      "directives": 5,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 67
+    },
+    "core": {
+      "components": 58,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 37,
+      "total": 96
+    },
+    "exam": {
+      "components": 72,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 87
+    },
+    "exercise": {
+      "components": 77,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 23,
+      "total": 100
+    },
+    "fileupload": {
+      "components": 5,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 10
+    },
+    "iris": {
+      "components": 14,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 6,
+      "total": 20
+    },
+    "lecture": {
+      "components": 38,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 12,
+      "total": 51
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 10,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 15
+    },
+    "plagiarism": {
+      "components": 15,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 20
+    },
+    "programming": {
+      "components": 104,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 36,
+      "total": 142
+    },
+    "quiz": {
+      "components": 42,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 10,
+      "total": 54
+    },
+    "shared": {
+      "components": 111,
+      "directives": 21,
+      "pipes": 26,
+      "injectables": 53,
+      "total": 211
+    },
+    "text": {
+      "components": 17,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 10,
+      "total": 28
+    },
+    "tutorialgroup": {
+      "components": 38,
+      "directives": 0,
+      "pipes": 2,
+      "injectables": 6,
+      "total": 46
+    }
+  }
+}

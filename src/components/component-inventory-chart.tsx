@@ -1,56 +1,76 @@
 "use client"
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts"
-
-interface ComponentInventoryData {
-  [module: string]: {
-    components: number
-    directives: number
-    pipes: number
-    injectables: number
-    total: number
-  }
-}
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { ModuleStats } from "../../report/client/componentInventory"
 
 interface ComponentInventoryChartProps {
-  data: ComponentInventoryData
+  data: Record<string, ModuleStats>
 }
 
 export function ComponentInventoryChart({ data }: ComponentInventoryChartProps) {
-  // Transform data for the chart with null check
-  const chartData = Object.entries(data || {})
-    .map(([module, values]) => ({
-      module,
-      components: values.components || 0,
-      directives: values.directives || 0,
-      pipes: values.pipes || 0,
-      injectables: values.injectables || 0,
-    }))
-    .sort((a, b) => {
-      // Calculate total for sorting
-      const totalA = a.components + a.directives + a.pipes + a.injectables
-      const totalB = b.components + b.directives + b.pipes + b.injectables
-      return totalB - totalA
-    })
+  // Calculate totals across all modules
+  const totals = {
+    components: 0,
+    directives: 0,
+    pipes: 0,
+    injectables: 0,
+  }
 
-  // If no data, return a placeholder
-  if (!chartData.length) {
-    return <div className="flex h-full items-center justify-center">No data available</div>
+  Object.values(data).forEach(stats => {
+    totals.components += stats.components
+    totals.directives += stats.directives
+    totals.pipes += stats.pipes
+    totals.injectables += stats.injectables
+  })
+
+  const chartData = [
+    { name: 'Components', value: totals.components, color: '#0088FE' },
+    { name: 'Directives', value: totals.directives, color: '#00C49F' },
+    { name: 'Pipes', value: totals.pipes, color: '#FFBB28' },
+    { name: 'Injectables', value: totals.injectables, color: '#FF8042' }
+  ]
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']
+
+  const RADIAN = Math.PI / 180
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    )
   }
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} margin={{ left: 0, right: 20, top: 10, bottom: 40 }} barGap={0} barCategoryGap={4}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="module" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 12 }} interval={0} />
-        <YAxis />
-        <Tooltip />
+      <PieChart>
+        <Pie
+          data={chartData}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          label={renderCustomizedLabel}
+          outerRadius={150}
+          fill="#8884d8"
+          dataKey="value"
+        >
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip formatter={(value) => [`${value} items`, '']} />
         <Legend />
-        <Bar dataKey="components" stackId="a" name="Components" fill="var(--chart-1)" />
-        <Bar dataKey="directives" stackId="a" name="Directives" fill="var(--chart-2)" />
-        <Bar dataKey="pipes" stackId="a" name="Pipes" fill="var(--chart-3)" />
-        <Bar dataKey="injectables" stackId="a" name="Injectables" fill="var(--chart-4)" />
-      </BarChart>
+      </PieChart>
     </ResponsiveContainer>
   )
 }

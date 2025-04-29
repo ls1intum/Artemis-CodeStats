@@ -1,79 +1,72 @@
 "use client"
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-interface ChangeDetectionData {
-  [module: string]: {
-    onPush: number
-    default: number
-    implicit: number
-    total: number
-  }
-}
+import { ChangeDetectionStats } from "../../report/client/changeDetection"
 
 interface ChangeDetectionTableProps {
-  data: ChangeDetectionData
+  data: Record<string, ChangeDetectionStats>
 }
 
 export function ChangeDetectionTable({ data }: ChangeDetectionTableProps) {
-  // Handle empty data
-  if (!data || Object.keys(data).length === 0) {
-    return <div className="p-4 text-center">No change detection data available</div>
+  // Transform the data for table presentation
+  const tableData = Object.entries(data).map(([module, stats]) => ({
+    module,
+    ...stats,
+    onPushPercentage: stats.total > 0 ? (stats.explicitOnPush / stats.total) * 100 : 0
+  })).sort((a, b) => b.total - a.total) // Sort by total components, descending
+
+  // Calculate aggregates across all modules
+  const totals = {
+    explicitOnPush: 0,
+    explicitDefault: 0,
+    implicitDefault: 0,
+    total: 0
   }
 
-  // Calculate totals
-  const totals = Object.values(data).reduce(
-    (acc, curr) => {
-      acc.onPush += curr.onPush || 0
-      acc.default += curr.default || 0
-      acc.implicit += curr.implicit || 0
-      acc.total += curr.total || 0
-      return acc
-    },
-    { onPush: 0, default: 0, implicit: 0, total: 0 },
-  )
+  tableData.forEach(row => {
+    totals.explicitOnPush += row.explicitOnPush
+    totals.explicitDefault += row.explicitDefault
+    totals.implicitDefault += row.implicitDefault
+    totals.total += row.total
+  })
 
-  // Sort modules by total count (descending)
-  const sortedModules = Object.keys(data).sort((a, b) => (data[b].total || 0) - (data[a].total || 0))
-
-  // Calculate percentages for OnPush
-  const calculateOnPushPercentage = (module: string) => {
-    const { onPush = 0, total = 0 } = data[module]
-    return total > 0 ? Math.round((onPush / total) * 100) : 0
-  }
+  const totalOnPushPercentage = totals.total > 0 ? (totals.explicitOnPush / totals.total) * 100 : 0
 
   return (
-    <div className="overflow-x-auto">
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[180px]">Module</TableHead>
-            <TableHead className="text-right">OnPush</TableHead>
-            <TableHead className="text-right">Default</TableHead>
-            <TableHead className="text-right">Implicit</TableHead>
-            <TableHead className="text-right">Total</TableHead>
-            <TableHead className="text-right">OnPush %</TableHead>
+            <TableHead className="text-center">OnPush Strategy</TableHead>
+            <TableHead className="text-center">Default Strategy</TableHead>
+            <TableHead className="text-center">Implicit Default</TableHead>
+            <TableHead className="text-center">Total Components</TableHead>
+            <TableHead className="text-center">OnPush %</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedModules.map((module) => (
-            <TableRow key={module}>
-              <TableCell className="font-medium">{module}</TableCell>
-              <TableCell className="text-right">{data[module].onPush || 0}</TableCell>
-              <TableCell className="text-right">{data[module].default || 0}</TableCell>
-              <TableCell className="text-right">{data[module].implicit || 0}</TableCell>
-              <TableCell className="text-right">{data[module].total || 0}</TableCell>
-              <TableCell className="text-right">{calculateOnPushPercentage(module)}%</TableCell>
+          {tableData.map((row) => (
+            <TableRow key={row.module}>
+              <TableCell className="font-medium">{row.module}</TableCell>
+              <TableCell className="text-center">{row.explicitOnPush}</TableCell>
+              <TableCell className="text-center">{row.explicitDefault}</TableCell>
+              <TableCell className="text-center">{row.implicitDefault}</TableCell>
+              <TableCell className="text-center">{row.total}</TableCell>
+              <TableCell className="text-center">
+                {row.onPushPercentage.toFixed(1)}%
+              </TableCell>
             </TableRow>
           ))}
+          {/* Totals row */}
           <TableRow className="bg-muted/50">
-            <TableCell className="font-bold">TOTAL</TableCell>
-            <TableCell className="text-right font-bold">{totals.onPush}</TableCell>
-            <TableCell className="text-right font-bold">{totals.default}</TableCell>
-            <TableCell className="text-right font-bold">{totals.implicit}</TableCell>
-            <TableCell className="text-right font-bold">{totals.total}</TableCell>
-            <TableCell className="text-right font-bold">
-              {totals.total > 0 ? Math.round((totals.onPush / totals.total) * 100) : 0}%
+            <TableCell className="font-bold">Totals</TableCell>
+            <TableCell className="text-center font-bold">{totals.explicitOnPush}</TableCell>
+            <TableCell className="text-center font-bold">{totals.explicitDefault}</TableCell>
+            <TableCell className="text-center font-bold">{totals.implicitDefault}</TableCell>
+            <TableCell className="text-center font-bold">{totals.total}</TableCell>
+            <TableCell className="text-center font-bold">
+              {totalOnPushPercentage.toFixed(1)}%
             </TableCell>
           </TableRow>
         </TableBody>

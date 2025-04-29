@@ -1,43 +1,37 @@
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
+"use client"
 
-interface ComponentInventoryData {
-  [module: string]: {
-    components: number
-    directives: number
-    pipes: number
-    injectables: number
-    total: number
-  }
-}
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { ModuleStats } from "../../report/client/componentInventory"
 
 interface TotalComponentsChartProps {
-  data: ComponentInventoryData
+  data: Record<string, ModuleStats>
 }
 
 export function TotalComponentsChart({ data }: TotalComponentsChartProps) {
-  // Transform data for the chart
-  const chartData = Object.entries(data || {})
-    .map(([module, values]) => ({
-      module,
-      total: values.total,
+  // Transform data for chart display
+  const chartData = Object.entries(data)
+    .map(([module, stats]) => ({
+      name: module,
+      total: stats.total
     }))
-    .sort((a, b) => b.total - a.total)
-
-  // If no data, return a placeholder
-  if (!chartData.length) {
-    return <div className="flex h-full items-center justify-center">No data available</div>
-  }
+    .sort((a, b) => b.total - a.total) // Sort by total components descending
+    .slice(0, 15) // Only show top 15 modules for readability
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} layout="vertical" margin={{ left: 80, right: 20, top: 10, bottom: 10 }}>
+      <BarChart
+        data={chartData}
+        layout="vertical"
+        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
         <XAxis type="number" />
-        <YAxis type="category" dataKey="module" width={80} tick={{ fontSize: 12 }} interval={0} />
-        <Tooltip
-          formatter={(value) => [`${value} artifacts`, "Total"]}
-          labelFormatter={(label) => `Module: ${label}`}
+        <YAxis type="category" width={150} dataKey="name" />
+        <Tooltip 
+          formatter={(value) => [`${value} components`, 'Total']}
+          labelFormatter={(name) => `Module: ${name}`}
         />
-        <Bar dataKey="total" fill="var(--chart-1)" radius={[0, 4, 4, 0]} barSize={20} />
+        <Bar dataKey="total" fill="#8884d8" name="Total Components" />
       </BarChart>
     </ResponsiveContainer>
   )

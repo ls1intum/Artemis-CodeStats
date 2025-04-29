@@ -115,7 +115,6 @@ function getArtemisCommitInfo(): CommitInfo {
     
     return {
       commitHash,
-      commitTimestamp,
       commitDate,
       commitAuthor,
       commitMessage
@@ -124,7 +123,6 @@ function getArtemisCommitInfo(): CommitInfo {
     console.error('Error getting artemis commit info:', error);
     return {
       commitHash: 'unknown',
-      commitTimestamp: 'unknown',
       commitDate: new Date(),
       commitAuthor: 'unknown',
       commitMessage: 'unknown'
@@ -151,7 +149,6 @@ function getCommitsFromStartDate(startDate: Date): CommitInfo[] {
       
       return {
         commitHash,
-        commitTimestamp,
         commitDate: new Date(commitTimestamp),
         commitAuthor,
         commitMessage
@@ -302,11 +299,12 @@ function writeReportFile<T>(
   // Use provided commit info or get current commit info
   const artemisCommitInfo = commitInfo || getArtemisCommitInfo();
   
-  // Format commit timestamp for filename (replace spaces and colons with dashes)
-  const formattedTimestamp = artemisCommitInfo.commitTimestamp
-    .replace(/[\s:]/g, "-")
-    .replace(/\+\d{4}/, "") // Remove timezone offset
-    .replace(/-$/, "");
+  // Format commit date for filename
+  const formattedTimestamp = artemisCommitInfo.commitDate
+    .toISOString()
+    .replace("T", "_")
+    .replace(/:/g, "-")
+    .split(".")[0]; // Remove milliseconds
 
   // Create metadata
   const metadata: ReportMetadata = {
@@ -429,7 +427,7 @@ function runHistoricalAnalysis() {
       for (let i = 0; i < filteredCommits.length; i++) {
         const commitInfo = filteredCommits[i];
         console.log(`\n--- Analyzing commit ${i+1}/${filteredCommits.length} ---`);
-        console.log(`Commit: ${commitInfo.commitHash} (${commitInfo.commitTimestamp})`);
+        console.log(`Commit: ${commitInfo.commitHash} (${commitInfo.commitDate.toISOString()})`);
         console.log(`Author: ${commitInfo.commitAuthor}`);
         console.log(`Message: ${commitInfo.commitMessage}`);
         

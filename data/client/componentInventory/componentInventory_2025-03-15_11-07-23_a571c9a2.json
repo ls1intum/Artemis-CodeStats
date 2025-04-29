@@ -1,0 +1,146 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "a571c9a2046467db82e7a210792c289ee8c7d77b",
+      "commitDate": "2025-03-15T11:07:23.000Z",
+      "commitAuthor": "Mohamed Bilel Besrour",
+      "commitMessage": "Development: Isolate build agent server integration tests (#10460)"
+    }
+  },
+  "componentInventory": {
+    "admin": {
+      "components": 39,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 12,
+      "total": 51
+    },
+    "assessment": {
+      "components": 12,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 13
+    },
+    "atlas": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "buildagent": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "communication": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "core": {
+      "components": 6,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 22,
+      "total": 29
+    },
+    "exam": {
+      "components": 71,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 86
+    },
+    "exercise": {
+      "components": 259,
+      "directives": 7,
+      "pipes": 0,
+      "injectables": 89,
+      "total": 355
+    },
+    "fileupload": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "iris": {
+      "components": 14,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 6,
+      "total": 20
+    },
+    "lecture": {
+      "components": 29,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 12,
+      "total": 41
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "plagiarism": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "programming": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "quiz": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "shared": {
+      "components": 131,
+      "directives": 25,
+      "pipes": 26,
+      "injectables": 61,
+      "total": 243
+    },
+    "text": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "tutorialgroup": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    }
+  }
+}
