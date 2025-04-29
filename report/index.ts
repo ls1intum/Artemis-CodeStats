@@ -47,10 +47,36 @@ import { Project } from "ts-morph";
 import * as path from "path";
 import * as fs from "fs";
 import { execSync } from "child_process";
+// Fix yargs import for ESM
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
 
 import { analyzeExistingComponents } from "./client/componentInventory";
 import { analyzeChangeDetection } from "./client/changeDetection";
 import { analyzeDecoratorlessAPI } from "./client/decoratorlessApi";
+
+// Parse command line arguments, fixing the --until parameter handling
+const argv = yargs(hideBin(process.argv))
+  .option('until', {
+    alias: 'u',
+    description: 'Generate reports up to this date (YYYY-MM-DD format)',
+    type: 'string',
+  })
+  .option('commits', {
+    alias: 'c',
+    description: 'Number of commits to analyze (default: 1, only works with --until)',
+    type: 'number',
+    default: 1
+  })
+  .option('interval', {
+    alias: 'i',
+    description: 'Interval between commits to analyze (default: 1, only works with --until)',
+    type: 'number',
+    default: 1
+  })
+  .help()
+  .alias('help', 'h')
+  .parseSync();
 
 const repoDir = path.join(process.cwd(), "artemis");
 const basePath = "src/main/webapp/app";
@@ -77,23 +103,120 @@ const modules = [
 ];
 
 /**
+ * Commit information interface
+ */
+interface CommitInfo {
+  commitHash: string;
+  commitTimestamp: string;
+  commitDate: Date;
+  commitAuthor: string;
+  commitMessage: string;
+}
+
+/**
  * Get the current commit hash and timestamp from the artemis submodule
  */
-function getArtemisCommitInfo() {
+function getArtemisCommitInfo(): CommitInfo {
   try {
     const commitHash = execSync('git rev-parse HEAD', { cwd: repoDir }).toString().trim();
     const commitTimestamp = execSync('git show -s --format=%ci HEAD', { cwd: repoDir }).toString().trim();
+    const commitDate = new Date(commitTimestamp);
+    const commitAuthor = execSync('git show -s --format=%an HEAD', { cwd: repoDir }).toString().trim();
+    const commitMessage = execSync('git show -s --format=%s HEAD', { cwd: repoDir }).toString().trim();
     
     return {
       commitHash,
-      commitTimestamp
+      commitTimestamp,
+      commitDate,
+      commitAuthor,
+      commitMessage
     };
   } catch (error) {
     console.error('Error getting artemis commit info:', error);
     return {
       commitHash: 'unknown',
-      commitTimestamp: 'unknown'
+      commitTimestamp: 'unknown',
+      commitDate: new Date(),
+      commitAuthor: 'unknown',
+      commitMessage: 'unknown'
     };
+  }
+}
+
+/**
+ * Get all commit hashes until the specified date
+ */
+function getCommitsUntilDate(untilDate: Date): CommitInfo[] {
+  try {
+    // Format the date as ISO string for git command
+    const dateStr = untilDate.toISOString().split('T')[0];
+    
+    // Get commits until the specified date with details
+    const gitCommand = `git log --until="${dateStr}" --format="%H|%ci|%an|%s" -n 1000`;
+    const output = execSync(gitCommand, { cwd: repoDir }).toString().trim();
+    
+    // Parse the output into commit info objects
+    return output.split('\n').map(line => {
+      const [commitHash, commitTimestamp, commitAuthor, ...messageParts] = line.split('|');
+      const commitMessage = messageParts.join('|'); // In case commit message contained the delimiter
+      
+      return {
+        commitHash,
+        commitTimestamp,
+        commitDate: new Date(commitTimestamp),
+        commitAuthor,
+        commitMessage
+      };
+    });
+  } catch (error) {
+    console.error('Error getting commits until date:', error);
+    return [];
+  }
+}
+
+/**
+ * Checkout to a specific commit
+ */
+function checkoutToCommit(commitHash: string): boolean {
+  try {
+    // Save uncommitted changes if any
+    try {
+      execSync('git stash', { cwd: repoDir });
+    } catch (error) {
+      // It's okay if stashing fails (e.g., no changes to stash)
+    }
+
+    // Checkout to the specific commit
+    execSync(`git checkout ${commitHash}`, { cwd: repoDir });
+    
+    console.log(`Successfully checked out to commit: ${commitHash}`);
+    return true;
+  } catch (error) {
+    console.error(`Error checking out to commit ${commitHash}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Clean up after commit history analysis
+ */
+function cleanupAfterAnalysis() {
+  try {
+    // Go back to the original branch
+    execSync('git checkout -', { cwd: repoDir });
+    
+    // Try to apply stashed changes if any
+    try {
+      execSync('git stash pop', { cwd: repoDir });
+    } catch (error) {
+      // It's okay if popping stash fails (e.g., no stash to pop)
+    }
+    
+    console.log('Successfully cleaned up after analysis');
+    return true;
+  } catch (error) {
+    console.error('Error cleaning up after analysis:', error);
+    return false;
   }
 }
 
@@ -107,7 +230,7 @@ function initializeProject(): Project {
 
   // Add source files from each module
   modules.forEach((moduleName) => {
-    const modulePath = path.join(repoDir, moduleName);
+    const modulePath = path.join(repoDir, basePath, moduleName);
     if (fs.existsSync(modulePath)) {
       project.addSourceFilesAtPaths(path.join(modulePath, "**/*.ts"));
     }
@@ -121,20 +244,28 @@ function initializeProject(): Project {
  * @param reportType The type of report (used for directory name)
  * @param data The data to write to the file
  * @param isClient Flag to indicate if the report is for client-side
+ * @param commitInfo Optional commit info for historical reports
  */
 function writeReportFile(
   reportType: string,
   data: unknown,
-  isClient: boolean
+  isClient: boolean,
+  commitInfo?: CommitInfo
 ): string {
-  // Create report-specific directory
-  const reportDir = path.join(process.cwd(), "data", reportType);
+  // Create base directory structure first (client or server)
+  const baseDir = path.join(process.cwd(), "data", isClient ? "client" : "server");
+  if (!fs.existsSync(baseDir)) {
+    fs.mkdirSync(baseDir, { recursive: true });
+  }
+  
+  // Then create report-specific directory within client/server
+  const reportDir = path.join(baseDir, reportType);
   if (!fs.existsSync(reportDir)) {
     fs.mkdirSync(reportDir, { recursive: true });
   }
 
-  // Get artemis commit info
-  const artemisCommitInfo = getArtemisCommitInfo();
+  // Use provided commit info or get current commit info
+  const artemisCommitInfo = commitInfo || getArtemisCommitInfo();
   
   // Format commit timestamp for filename (replace spaces and colons with dashes)
   const formattedTimestamp = artemisCommitInfo.commitTimestamp
@@ -148,23 +279,12 @@ function writeReportFile(
     artemis: artemisCommitInfo
   };
 
-  // Create complete report path with subdirectories
-  const fullReportPath = path.join(
-    reportDir,
-    isClient ? "client" : "server",
-    reportType
-  );
-  
-  // Ensure all directories in the path exist
-  if (!fs.existsSync(fullReportPath)) {
-    fs.mkdirSync(fullReportPath, { recursive: true });
-  }
-
   // Create the file path and write file
   const reportFilePath = path.join(
-    fullReportPath,
-    `${reportType}-${formattedTimestamp}.json`
+    reportDir,
+    `${reportType}-${artemisCommitInfo.commitHash.substring(0, 8)}-${formattedTimestamp}.json`
   );
+  
   fs.writeFileSync(
     reportFilePath,
     JSON.stringify(
@@ -182,8 +302,9 @@ function writeReportFile(
 
 /**
  * Generate report data and save to files
+ * @param commitInfo Optional commit info for historical reports
  */
-function generateReports() {
+function generateReports(commitInfo?: CommitInfo) {
   // Initialize project
   const project = initializeProject();
 
@@ -210,26 +331,94 @@ function generateReports() {
   const componentReportPath = writeReportFile(
     "componentInventory",
     componentStats,
-    true
+    true,
+    commitInfo
   );
   console.log(`Component inventory report saved to: ${componentReportPath}`);
 
   const changeDetectionReportPath = writeReportFile(
     "changeDetection",
     changeDetectionStats,
-    true
+    true,
+    commitInfo
   );
   console.log(`Change detection report saved to: ${changeDetectionReportPath}`);
 
   const decoratorlessAPIReportPath = writeReportFile(
     "decoratorlessAPI",
     decoratorlessAPIStats,
-    true
+    true,
+    commitInfo
   );
   console.log(
     `Decoratorless API report saved to: ${decoratorlessAPIReportPath}`
   );
 }
 
-// Run the reports
-generateReports();
+/**
+ * Run historical analysis based on command line arguments
+ */
+function runHistoricalAnalysis() {
+  // If --until argument is provided, generate reports for commits until that date
+  if (argv.until) {
+    // Fix for command line parsing issue - ensure until is a proper string
+    const untilDate = new Date(typeof argv.until === 'string' ? argv.until : '');
+    console.log(`Analyzing commit history until ${typeof argv.until === 'string' ? argv.until : 'unknown date'}...`);
+    
+    // Check if date is valid
+    if (isNaN(untilDate.getTime())) {
+      console.error(`Invalid date format for --until: ${argv.until}`);
+      console.error('Please provide date in YYYY-MM-DD format');
+      return;
+    }
+    
+    // Get commits until the specified date
+    const commits = getCommitsUntilDate(untilDate);
+    
+    if (commits.length === 0) {
+      console.error('No commits found until the specified date');
+      return;
+    }
+    
+    console.log(`Found ${commits.length} commits until ${argv.until}`);
+    
+    // Determine which commits to analyze based on interval and count
+    const commitCount = Math.min(argv.commits as number, commits.length);
+    const interval = argv.interval as number;
+    
+    console.log(`Will analyze ${commitCount} commits with interval ${interval}`);
+    
+    // Track the original state to restore later
+    const originalCommitInfo = getArtemisCommitInfo();
+    
+    try {
+      // Analyze selected commits
+      for (let i = 0; i < commitCount; i += interval) {
+        const commitInfo = commits[i];
+        console.log(`\n--- Analyzing commit ${i+1}/${commitCount} ---`);
+        console.log(`Commit: ${commitInfo.commitHash} (${commitInfo.commitTimestamp})`);
+        console.log(`Author: ${commitInfo.commitAuthor}`);
+        console.log(`Message: ${commitInfo.commitMessage}`);
+        
+        // Checkout to this commit
+        if (checkoutToCommit(commitInfo.commitHash)) {
+          // Generate reports for this commit state
+          generateReports(commitInfo);
+        }
+      }
+    } finally {
+      // Always clean up afterward
+      console.log('\nCleaning up after historical analysis...');
+      cleanupAfterAnalysis();
+    }
+    
+    console.log(`\nHistorical analysis completed. Analyzed ${commitCount} commits.`);
+    return;
+  }
+  
+  // If no historical analysis requested, just generate reports for current state
+  generateReports();
+}
+
+// Run the reports with historical analysis if specified
+runHistoricalAnalysis();
