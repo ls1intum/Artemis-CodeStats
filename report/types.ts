@@ -1,25 +1,49 @@
-// Define interface for module statistics
-export interface ModuleStats {
-    components: number;
-    directives: number;
-    pipes: number;
-    injectables: number;
-    total: number;
+import { ChangeDetectionStats } from './client/changeDetection';
+import { ModuleStats } from './client/componentInventory';
+import { DecoratorlessAPIStats } from './client/decoratorlessApi';
+
+/**
+ * Commit information interface
+ */
+export interface CommitInfo {
+  commitHash: string;
+  commitDate: Date;
+  commitAuthor: string;
+  commitMessage: string;
 }
 
-// Define interface for change detection statistics
-export interface ChangeDetectionStats {
-    onPush: number;
-    default: number;
-    implicit: number; // No explicit strategy specified (also Default)
-    total: number;
+/**
+ * Metadata for all reports
+ */
+export interface ReportMetadata {
+  type: string;
+  artemis: CommitInfo;
 }
 
-export interface ReportData {
-  metadata: {
-      title: string;
-      generatedAt: string;
-  };
-  componentInventory: Record<string, ModuleStats>;
+/**
+ * Base report interface
+ */
+export interface BaseReport {
+  metadata: ReportMetadata;
+}
+
+/**
+ * Change Detection Report
+ */
+export interface ChangeDetectionReport extends BaseReport {
   changeDetection: Record<string, ChangeDetectionStats>;
+}
+
+/**
+ * Component Inventory Report
+ */
+export interface ComponentInventoryReport extends BaseReport {
+  componentInventory: Record<string, ModuleStats>;
+}
+
+/**
+ * Decoratorless API Report
+ */
+export interface DecoratorlessAPIReport extends BaseReport {
+  decoratorlessAPI: Record<string, DecoratorlessAPIStats>;
 }

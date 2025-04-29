@@ -1,17 +1,35 @@
-import { ReportData } from "../../report/types";
+import { BaseReport, ChangeDetectionReport, ComponentInventoryReport, DecoratorlessAPIReport } from "../../report/types";
 
-const reportFiles = import.meta.glob("/data/*.json", { eager: true });
+// Import files from each report type directory
+const changeDetectionFiles = import.meta.glob("/data/client/changeDetection/*.json", { eager: true });
+const componentInventoryFiles = import.meta.glob("/data/client/componentInventory/*.json", { eager: true });
+const decoratorlessAPIFiles = import.meta.glob("/data/client/decoratorlessAPI/*.json", { eager: true });
 
-const reportData = Object.values(reportFiles).map((file) => {
-  const data = file as { default: ReportData };
-  return {
-    ...data.default,
-    generatedAt: new Date(data.default.metadata.generatedAt),
-  };
-});
+// Helper function to process and sort report data
+function processReportData<T extends BaseReport>(files: Record<string, unknown>): T[] {
+  const data = Object.values(files).map((file) => {
+    const reportData = file as { default: BaseReport };
+    return {
+      ...reportData.default,
+      metadata: {
+        type: reportData.default.metadata.type,
+        artemis: {
+          ...reportData.default.metadata.artemis,
+          commitDate: new Date(reportData.default.metadata.artemis.commitDate)
+        },
+      },
+    } as T;
+  });
 
-reportData.sort((a, b) => {
-  return new Date(b.metadata.generatedAt).getTime() - new Date(a.metadata.generatedAt).getTime();
-});
+  // Sort by commit date, newest first
+  data.sort((a, b) => {
+    return a.metadata.artemis.commitDate.getTime() - b.metadata.artemis.commitDate.getTime();
+  });
 
-export default reportData;
+  return data;
+}
+
+// Process each report type
+export const changeDetectionReports = processReportData<ChangeDetectionReport>(changeDetectionFiles);
+export const componentInventoryReports = processReportData<ComponentInventoryReport>(componentInventoryFiles);
+export const decoratorlessAPIReports = processReportData<DecoratorlessAPIReport>(decoratorlessAPIFiles);

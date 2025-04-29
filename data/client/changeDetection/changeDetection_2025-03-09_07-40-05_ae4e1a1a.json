@@ -1,0 +1,127 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "ae4e1a1a02dbbae19ea995f53426b38e2034acb4",
+      "commitDate": "2025-03-09T07:40:05.000Z",
+      "commitAuthor": "Mohamed Bilel Besrour",
+      "commitMessage": "Integrated code lifecycle: Allow instructors to configure docker performance flags (#10356)"
+    }
+  },
+  "changeDetection": {
+    "admin": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 28,
+      "total": 39
+    },
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 12,
+      "total": 12
+    },
+    "atlas": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "buildagent": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "communication": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "core": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 5,
+      "total": 6
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 69,
+      "total": 71
+    },
+    "exercise": {
+      "explicitOnPush": 16,
+      "explicitDefault": 0,
+      "implicitDefault": 243,
+      "total": 259
+    },
+    "fileupload": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "iris": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 14,
+      "total": 14
+    },
+    "lecture": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 29,
+      "total": 29
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "programming": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "quiz": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "shared": {
+      "explicitOnPush": 13,
+      "explicitDefault": 0,
+      "implicitDefault": 118,
+      "total": 131
+    },
+    "text": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    }
+  }
+}

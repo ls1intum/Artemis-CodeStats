@@ -1,0 +1,127 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "1229f34cc21cebe74eb28495ba7949ecf19cee3f",
+      "commitDate": "2025-03-25T07:38:21.000Z",
+      "commitAuthor": "Tobias Lippert",
+      "commitMessage": "Development: Rename plagiarism types directory to entities for consistency with other client modules (#10563)"
+    }
+  },
+  "changeDetection": {
+    "admin": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 30,
+      "total": 30
+    },
+    "atlas": {
+      "explicitOnPush": 14,
+      "explicitDefault": 0,
+      "implicitDefault": 39,
+      "total": 53
+    },
+    "buildagent": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 7,
+      "total": 7
+    },
+    "communication": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 44,
+      "total": 49
+    },
+    "core": {
+      "explicitOnPush": 15,
+      "explicitDefault": 0,
+      "implicitDefault": 88,
+      "total": 103
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 70,
+      "total": 72
+    },
+    "exercise": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 77,
+      "total": 77
+    },
+    "fileupload": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 5
+    },
+    "iris": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 14,
+      "total": 14
+    },
+    "lecture": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 38,
+      "total": 38
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 9,
+      "total": 10
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 15,
+      "total": 15
+    },
+    "programming": {
+      "explicitOnPush": 8,
+      "explicitDefault": 0,
+      "implicitDefault": 96,
+      "total": 104
+    },
+    "quiz": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 37,
+      "total": 42
+    },
+    "shared": {
+      "explicitOnPush": 8,
+      "explicitDefault": 0,
+      "implicitDefault": 109,
+      "total": 117
+    },
+    "text": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 16,
+      "total": 17
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 35,
+      "explicitDefault": 0,
+      "implicitDefault": 3,
+      "total": 38
+    }
+  }
+}
