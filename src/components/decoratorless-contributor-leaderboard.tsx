@@ -79,14 +79,14 @@ export function DecoratorlessContributorLeaderboard({
     
     if (currentIndex === -1 || compareIndex === -1) return [];
     
-    // Determine the range of reports between compare and current
+    // Determine the range of reports between compare and current (inclusive)
     const startIndex = Math.min(currentIndex, compareIndex);
     const endIndex = Math.max(currentIndex, compareIndex);
     
     // Get all reports in the range
     const relevantReports = allReports.slice(startIndex, endIndex + 1);
     
-    // Sort reports chronologically
+    // Sort reports chronologically (oldest first)
     relevantReports.sort((a, b) => 
       a.metadata.artemis.commitDate.getTime() - b.metadata.artemis.commitDate.getTime()
     );
@@ -94,54 +94,23 @@ export function DecoratorlessContributorLeaderboard({
     // Map to track contributors and their stats
     const contributorMap = new Map<string, ContributorStats>();
     
-    // For each pair of consecutive reports, calculate the migration changes
-    for (let i = 0; i < relevantReports.length - 1; i++) {
-      const currentReport = relevantReports[i + 1]; // newer report
-      const previousReport = relevantReports[i];    // older report
+    // Process reports sequentially to track API migrations
+    let previousReport = relevantReports[0];
+    
+    for (let i = 1; i < relevantReports.length; i++) {
+      const report = relevantReports[i];
+      const author = report.metadata.artemis.commitAuthor;
       
-      // Get the commit author for this change
-      const author = currentReport.metadata.artemis.commitAuthor;
+      // Skip if no author (shouldn't happen normally)
       if (!author) continue;
       
-      // For each module in the current report, calculate the change in decoratorless APIs
-      let totalApisMigrated = 0;
-      
-      // Go through each module
-      Object.keys(currentReport.decoratorlessAPI).forEach(moduleName => {
-        const currentModule = currentReport.decoratorlessAPI[moduleName];
-        const previousModule = previousReport.decoratorlessAPI[moduleName];
-        
-        // If module didn't exist before, count all of its decoratorless APIs
-        if (!previousModule) {
-          totalApisMigrated += 
-            currentModule.inputFunction +
-            currentModule.inputRequired +
-            currentModule.outputFunction +
-            currentModule.modelFunction +
-            currentModule.viewChildFunction +
-            currentModule.viewChildRequired +
-            currentModule.viewChildrenFunction +
-            currentModule.contentChildFunction +
-            currentModule.contentChildRequired +
-            currentModule.contentChildrenFunction;
-          return;
-        }
-        
-        // Compare each decoratorless API type separately
-        totalApisMigrated += (currentModule.inputFunction - previousModule.inputFunction);
-        totalApisMigrated += (currentModule.inputRequired - previousModule.inputRequired);
-        totalApisMigrated += (currentModule.outputFunction - previousModule.outputFunction);
-        totalApisMigrated += (currentModule.modelFunction - previousModule.modelFunction);
-        totalApisMigrated += (currentModule.viewChildFunction - previousModule.viewChildFunction);
-        totalApisMigrated += (currentModule.viewChildRequired - previousModule.viewChildRequired);
-        totalApisMigrated += (currentModule.viewChildrenFunction - previousModule.viewChildrenFunction);
-        totalApisMigrated += (currentModule.contentChildFunction - previousModule.contentChildFunction);
-        totalApisMigrated += (currentModule.contentChildRequired - previousModule.contentChildRequired);
-        totalApisMigrated += (currentModule.contentChildrenFunction - previousModule.contentChildrenFunction);
-      });
+      // Calculate API migrations in this commit
+      const currentTotal = calculateDecoratorlessTotal(report.decoratorlessAPI);
+      const previousTotal = calculateDecoratorlessTotal(previousReport.decoratorlessAPI);
+      const apisMigrated = currentTotal - previousTotal;
       
       // Only count if there was an actual migration change
-      if (totalApisMigrated !== 0) {
+      if (apisMigrated !== 0) {
         // Create or update contributor stats
         if (!contributorMap.has(author)) {
           contributorMap.set(author, {
@@ -153,10 +122,12 @@ export function DecoratorlessContributorLeaderboard({
         }
         
         const stats = contributorMap.get(author)!;
-        stats.apisMigrated += totalApisMigrated;
+        stats.apisMigrated += apisMigrated;
         stats.totalContributions += 1;
-        stats.lastMigrationDate = currentReport.metadata.artemis.commitDate;
+        stats.lastMigrationDate = report.metadata.artemis.commitDate;
       }
+      
+      previousReport = report;
     }
     
     // Return only contributors who made migration changes
