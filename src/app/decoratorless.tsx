@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, ArrowUp, ArrowDown, Trophy, Target, Info } from "lucide-react"
+import { AlertCircle, ArrowUp, ArrowDown, Trophy, Target, Info, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
@@ -18,6 +18,7 @@ import { DecoratorlessLeaderboard } from "@/components/decoratorless-leaderboard
 import { DecoratorlessMigrationHeatmap } from "@/components/decoratorless-migration-heatmap"
 import { DecoratorlessOverviewChart } from "@/components/decoratorless-overview-chart"
 import { DecoratorlessTimelineChart } from "@/components/decoratorless-timeline-chart"
+import { DecoratorlessContributorLeaderboard } from "@/components/decoratorless-contributor-leaderboard"
 
 export default function DecoratorlessMigrationDashboard() {
   const [selectedReportIndex, setSelectedReportIndex] = useState(decoratorlessAPIReports.length - 1); // Start with most recent
@@ -41,6 +42,11 @@ export default function DecoratorlessMigrationDashboard() {
 
   // Validate data before rendering
   const hasDecoratorlessAPI = currentReport && currentReport.decoratorlessAPI;
+
+  // Make reports available globally for the contributor leaderboard
+  if (typeof window !== 'undefined') {
+    (window as any).decoratorlessAPIReports = decoratorlessAPIReports;
+  }
 
   if (!hasDecoratorlessAPI) {
     return (
@@ -169,8 +175,9 @@ export default function DecoratorlessMigrationDashboard() {
 
         <div className="mt-6">
           <Tabs defaultValue="competition">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="competition">Module Challenge</TabsTrigger>
+              <TabsTrigger value="contributors">Contributors</TabsTrigger>
               <TabsTrigger value="progress">Timeline Progress</TabsTrigger>
               <TabsTrigger value="heatmap">Migration Heatmap</TabsTrigger>
               <TabsTrigger value="data">Raw Data</TabsTrigger>
@@ -228,6 +235,43 @@ export default function DecoratorlessMigrationDashboard() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            <TabsContent value="contributors" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-purple-500" />
+                      <div>
+                        <CardTitle>Contributor Leaderboard</CardTitle>
+                        <CardDescription>Who's contributing most to the decoratorless migration?</CardDescription>
+                      </div>
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <Info className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">
+                            This leaderboard shows who's contributing most to the decoratorless migration effort.
+                            Contributors are ranked by the number of APIs they've migrated from decorators to modern syntax.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <DecoratorlessContributorLeaderboard 
+                    currentData={currentReport}
+                    compareData={compareReport}
+                  />
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="progress" className="mt-0">

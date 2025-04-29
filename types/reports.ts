@@ -22,7 +22,6 @@ export interface DecoratorlessAPIStats {
  */
 export interface CommitInfo {
   commitHash: string
-  commitTimestamp: string
   commitDate: Date
   commitAuthor: string
   commitMessage: string

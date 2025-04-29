@@ -259,9 +259,11 @@ export function DecoratorlessLeaderboard({
         <TableBody>
           {data.map((module, _index) => (
             <TableRow key={module.name}>
-              <TableCell className="font-medium flex items-center gap-1">
-                {ranksByApisMigrated[module.name] <= 3 && getMedalIcon(ranksByApisMigrated[module.name] - 1)}
-                <span>{ranksByApisMigrated[module.name]}</span>
+              <TableCell className="text-center">
+                <div className="inline-flex items-center gap-1">
+                  {ranksByApisMigrated[module.name] <= 3 && getMedalIcon(ranksByApisMigrated[module.name] - 1)}
+                  <span>{ranksByApisMigrated[module.name]}</span>
+                </div>
               </TableCell>
               <TableCell>{module.name}</TableCell>
               <TableCell>
