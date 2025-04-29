@@ -24,7 +24,7 @@ export interface ReportMetadata {
 /**
  * Base report interface
  */
-interface BaseReport {
+export interface BaseReport {
   metadata: ReportMetadata;
 }
 
