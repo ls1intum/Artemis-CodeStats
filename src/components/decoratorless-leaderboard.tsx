@@ -107,8 +107,8 @@ export function DecoratorlessLeaderboard({
       };
     });
 
-    // Include all modules (don't filter by total)
-    return moduleData;
+    // Filter out modules with no APIs
+    return moduleData.filter(module => module.total > 0);
   };
 
   const sortData = (data: ReturnType<typeof processData>) => {
