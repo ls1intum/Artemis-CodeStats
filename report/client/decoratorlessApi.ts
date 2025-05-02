@@ -111,42 +111,42 @@ export function analyzeDecoratorlessAPI(
                   const initText = initializer.getText();
                   
                   // Input APIs
-                  if (initText.match(/\binput\s*\(/)) {
+                  if (initText.match(/\binput\s*(<[^>]*>)?\s*\(/)) {
                       stats[moduleName].inputFunction++;
                   }
-                  else if (initText.match(/\binput\.required\s*\(/)) {
+                  else if (initText.match(/\binput\.required\s*(<[^>]*>)?\s*\(/)) {
                       stats[moduleName].inputRequired++;
                   }
                   
                   // Output APIs
-                  else if (initText.match(/\boutput\s*\(/)) {
+                  else if (initText.match(/\boutput\s*(<[^>]*>)?\s*\(/)) {
                       stats[moduleName].outputFunction++;
                   }
                   
                   // Model API
-                  else if (initText.match(/\bmodel\s*\(/)) {
+                  else if (initText.match(/\bmodel\s*(<[^>]*>)?\s*\(/)) {
                       stats[moduleName].modelFunction++;
                   }
                   
                   // View Query APIs
-                  else if (initText.match(/\bviewChild\s*\(/)) {
+                  else if (initText.match(/\bviewChild\s*(<[^>]*>)?\s*\(/)) {
                       stats[moduleName].viewChildFunction++;
                   }
-                  else if (initText.match(/\bviewChild\.required\s*\(/)) {
+                  else if (initText.match(/\bviewChild\.required\s*(<[^>]*>)?\s*\(/)) {
                       stats[moduleName].viewChildRequired++;
                   }
-                  else if (initText.match(/\bviewChildren\s*\(/)) {
+                  else if (initText.match(/\bviewChildren\s*(<[^>]*>)?\s*\(/)) {
                       stats[moduleName].viewChildrenFunction++;
                   }
                   
                   // Content Query APIs
-                  else if (initText.match(/\bcontentChild\s*\(/)) {
+                  else if (initText.match(/\bcontentChild\s*(<[^>]*>)?\s*\(/)) {
                       stats[moduleName].contentChildFunction++;
                   }
-                  else if (initText.match(/\bcontentChild\.required\s*\(/)) {
+                  else if (initText.match(/\bcontentChild\.required\s*(<[^>]*>)?\s*\(/)) {
                       stats[moduleName].contentChildRequired++;
                   }
-                  else if (initText.match(/\bcontentChildren\s*\(/)) {
+                  else if (initText.match(/\bcontentChildren\s*(<[^>]*>)?\s*\(/)) {
                       stats[moduleName].contentChildrenFunction++;
                   }
               }

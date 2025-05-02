@@ -61,7 +61,12 @@ export function DecoratorlessAPITable({ data }: DecoratorlessAPITableProps) {
             <TableHead className="text-center">@Output()</TableHead>
             <TableHead className="text-center">model()</TableHead>
             <TableHead className="text-center">viewChild()</TableHead>
+            <TableHead className="text-center">viewChild.required()</TableHead>
+            <TableHead className="text-center">viewChildren()</TableHead>
             <TableHead className="text-center">@ViewChild()</TableHead>
+            <TableHead className="text-center">@ViewChildren()</TableHead>
+            <TableHead className="text-center">contentChild()</TableHead>
+            <TableHead className="text-center">@ContentChild()</TableHead>
             <TableHead className="text-center">Total</TableHead>
           </TableRow>
         </TableHeader>
@@ -75,8 +80,13 @@ export function DecoratorlessAPITable({ data }: DecoratorlessAPITableProps) {
               <TableCell className="text-center">{row.outputFunction}</TableCell>
               <TableCell className="text-center">{row.outputDecorator}</TableCell>
               <TableCell className="text-center">{row.modelFunction}</TableCell>
-              <TableCell className="text-center">{row.viewChildFunction + row.viewChildRequired}</TableCell>
+              <TableCell className="text-center">{row.viewChildFunction}</TableCell>
+              <TableCell className="text-center">{row.viewChildRequired}</TableCell>
+              <TableCell className="text-center">{row.viewChildrenFunction}</TableCell>
               <TableCell className="text-center">{row.viewChildDecorator}</TableCell>
+              <TableCell className="text-center">{row.viewChildrenDecorator}</TableCell>
+              <TableCell className="text-center">{row.contentChildFunction + row.contentChildRequired}</TableCell>
+              <TableCell className="text-center">{row.contentChildDecorator}</TableCell>
               <TableCell className="text-center font-bold">{row.total}</TableCell>
             </TableRow>
           ))}
@@ -89,8 +99,13 @@ export function DecoratorlessAPITable({ data }: DecoratorlessAPITableProps) {
             <TableCell className="text-center font-bold">{totals.outputFunction}</TableCell>
             <TableCell className="text-center font-bold">{totals.outputDecorator}</TableCell>
             <TableCell className="text-center font-bold">{totals.modelFunction}</TableCell>
-            <TableCell className="text-center font-bold">{totals.viewChildFunction + totals.viewChildRequired}</TableCell>
+            <TableCell className="text-center font-bold">{totals.viewChildFunction}</TableCell>
+            <TableCell className="text-center font-bold">{totals.viewChildRequired}</TableCell>
+            <TableCell className="text-center font-bold">{totals.viewChildrenFunction}</TableCell>
             <TableCell className="text-center font-bold">{totals.viewChildDecorator}</TableCell>
+            <TableCell className="text-center font-bold">{totals.viewChildrenDecorator}</TableCell>
+            <TableCell className="text-center font-bold">{totals.contentChildFunction + totals.contentChildRequired}</TableCell>
+            <TableCell className="text-center font-bold">{totals.contentChildDecorator}</TableCell>
             <TableCell className="text-center font-bold">{totals.total}</TableCell>
           </TableRow>
         </TableBody>

@@ -85,6 +85,9 @@ const argv = yargs(hideBin(process.argv))
 
 const repoDir = path.join(process.cwd(), "artemis");
 const basePath = "src/main/webapp/app";
+// Cutoff commit - won't analyze commits earlier than this
+const CUTOFF_COMMIT_HASH = "8642dc7346910327ba48368e6883db447c8e8a29";
+const CUTOFF_COMMIT_DATE = new Date("2025-03-27");
 const modules = [
   "admin",
   "assessment",
@@ -153,7 +156,7 @@ function getCommitsFromStartDate(startDate: Date): CommitInfo[] {
     }
     
     // Parse the output into commit info objects
-    return output.split('\n').map(line => {
+    const commits = output.split('\n').map(line => {
       const [commitHash, commitTimestamp, commitAuthor, ...messageParts] = line.split('|');
       const commitMessage = messageParts.join('|'); // In case commit message contained the delimiter
       
@@ -177,6 +180,23 @@ function getCommitsFromStartDate(startDate: Date): CommitInfo[] {
         commitMessage
       };
     });
+    
+    // Filter out commits that are earlier than the cutoff commit date
+    console.log(`Filtering out commits earlier than ${CUTOFF_COMMIT_DATE.toISOString()} (cutoff commit: ${CUTOFF_COMMIT_HASH})`);
+    const filteredCommits = commits.filter(commit => {
+      // Stop at the cutoff commit or earlier dates
+      if (commit.commitHash === CUTOFF_COMMIT_HASH || commit.commitDate < CUTOFF_COMMIT_DATE) {
+        return false;
+      }
+      return true;
+    });
+    
+    // Log filtering results
+    if (filteredCommits.length < commits.length) {
+      console.log(`Filtered out ${commits.length - filteredCommits.length} commits that were earlier than the cutoff date`);
+    }
+    
+    return filteredCommits;
   } catch (error) {
     console.error('Error getting commits from start date:', error);
     return [];

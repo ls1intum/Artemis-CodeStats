@@ -2,10 +2,10 @@
   "metadata": {
     "type": "decoratorlessAPI",
     "artemis": {
-      "commitHash": "1d0212f762bb32e9a366dc9d0f2d1ef318542963",
-      "commitDate": "2025-04-15T16:34:09.000Z",
-      "commitAuthor": "Florian Glombik",
-      "commitMessage": "Development: Improve development docker multinode setup documentation (#10685)"
+      "commitHash": "5d9914921a33b64a451a6fadc6716ceb774534c2",
+      "commitDate": "2025-03-27T07:33:56.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Delete compass and modeling plagiarism (#10587)"
     }
   },
   "decoratorlessAPI": {
@@ -30,27 +30,27 @@
     "assessment": {
       "inputFunction": 0,
       "inputRequired": 1,
-      "inputDecorator": 109,
+      "inputDecorator": 105,
       "outputFunction": 0,
-      "outputDecorator": 23,
+      "outputDecorator": 21,
       "modelFunction": 0,
       "viewChildFunction": 0,
       "viewChildRequired": 0,
       "viewChildrenFunction": 0,
-      "viewChildDecorator": 2,
+      "viewChildDecorator": 1,
       "viewChildrenDecorator": 1,
       "contentChildFunction": 0,
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
       "contentChildDecorator": 0,
-      "total": 136
+      "total": 129
     },
     "atlas": {
-      "inputFunction": 7,
-      "inputRequired": 24,
-      "inputDecorator": 64,
-      "outputFunction": 6,
-      "outputDecorator": 16,
+      "inputFunction": 6,
+      "inputRequired": 23,
+      "inputDecorator": 53,
+      "outputFunction": 5,
+      "outputDecorator": 12,
       "modelFunction": 1,
       "viewChildFunction": 0,
       "viewChildRequired": 2,
@@ -60,8 +60,8 @@
       "contentChildFunction": 0,
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
-      "contentChildDecorator": 3,
-      "total": 124
+      "contentChildDecorator": 1,
+      "total": 104
     },
     "buildagent": {
       "inputFunction": 1,
@@ -82,40 +82,40 @@
       "total": 3
     },
     "communication": {
-      "inputFunction": 100,
-      "inputRequired": 17,
-      "inputDecorator": 89,
+      "inputFunction": 88,
+      "inputRequired": 15,
+      "inputDecorator": 54,
       "outputFunction": 53,
-      "outputDecorator": 20,
+      "outputDecorator": 15,
       "modelFunction": 1,
       "viewChildFunction": 12,
       "viewChildRequired": 2,
       "viewChildrenFunction": 3,
-      "viewChildDecorator": 12,
+      "viewChildDecorator": 9,
       "viewChildrenDecorator": 1,
       "contentChildFunction": 0,
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
       "contentChildDecorator": 0,
-      "total": 310
+      "total": 253
     },
     "core": {
-      "inputFunction": 29,
+      "inputFunction": 25,
       "inputRequired": 14,
-      "inputDecorator": 92,
-      "outputFunction": 5,
-      "outputDecorator": 22,
+      "inputDecorator": 69,
+      "outputFunction": 4,
+      "outputDecorator": 18,
       "modelFunction": 0,
       "viewChildFunction": 0,
       "viewChildRequired": 1,
       "viewChildrenFunction": 0,
-      "viewChildDecorator": 20,
-      "viewChildrenDecorator": 2,
+      "viewChildDecorator": 16,
+      "viewChildrenDecorator": 3,
       "contentChildFunction": 0,
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
       "contentChildDecorator": 0,
-      "total": 185
+      "total": 150
     },
     "exam": {
       "inputFunction": 20,
@@ -138,20 +138,20 @@
     "exercise": {
       "inputFunction": 7,
       "inputRequired": 3,
-      "inputDecorator": 198,
+      "inputDecorator": 192,
       "outputFunction": 2,
-      "outputDecorator": 37,
+      "outputDecorator": 39,
       "modelFunction": 0,
       "viewChildFunction": 0,
       "viewChildRequired": 0,
       "viewChildrenFunction": 0,
-      "viewChildDecorator": 10,
+      "viewChildDecorator": 11,
       "viewChildrenDecorator": 1,
       "contentChildFunction": 0,
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
       "contentChildDecorator": 0,
-      "total": 258
+      "total": 255
     },
     "fileupload": {
       "inputFunction": 0,
@@ -174,7 +174,7 @@
     "iris": {
       "inputFunction": 2,
       "inputRequired": 0,
-      "inputDecorator": 29,
+      "inputDecorator": 30,
       "outputFunction": 0,
       "outputDecorator": 4,
       "modelFunction": 0,
@@ -187,17 +187,17 @@
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
       "contentChildDecorator": 0,
-      "total": 43
+      "total": 44
     },
     "lecture": {
-      "inputFunction": 32,
+      "inputFunction": 24,
       "inputRequired": 6,
-      "inputDecorator": 24,
-      "outputFunction": 21,
+      "inputDecorator": 18,
+      "outputFunction": 18,
       "outputDecorator": 2,
       "modelFunction": 1,
       "viewChildFunction": 12,
-      "viewChildRequired": 4,
+      "viewChildRequired": 3,
       "viewChildrenFunction": 1,
       "viewChildDecorator": 5,
       "viewChildrenDecorator": 0,
@@ -205,7 +205,7 @@
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
       "contentChildDecorator": 0,
-      "total": 108
+      "total": 90
     },
     "lti": {
       "inputFunction": 0,
@@ -228,7 +228,7 @@
     "modeling": {
       "inputFunction": 0,
       "inputRequired": 0,
-      "inputDecorator": 31,
+      "inputDecorator": 29,
       "outputFunction": 0,
       "outputDecorator": 6,
       "modelFunction": 0,
@@ -241,7 +241,7 @@
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
       "contentChildDecorator": 0,
-      "total": 52
+      "total": 50
     },
     "plagiarism": {
       "inputFunction": 1,
@@ -263,8 +263,8 @@
     },
     "programming": {
       "inputFunction": 38,
-      "inputRequired": 29,
-      "inputDecorator": 231,
+      "inputRequired": 30,
+      "inputDecorator": 233,
       "outputFunction": 18,
       "outputDecorator": 66,
       "modelFunction": 1,
@@ -277,43 +277,43 @@
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
       "contentChildDecorator": 3,
-      "total": 448
+      "total": 451
     },
     "quiz": {
       "inputFunction": 0,
       "inputRequired": 0,
-      "inputDecorator": 78,
+      "inputDecorator": 83,
       "outputFunction": 0,
-      "outputDecorator": 40,
+      "outputDecorator": 43,
       "modelFunction": 0,
       "viewChildFunction": 0,
       "viewChildRequired": 0,
       "viewChildrenFunction": 0,
-      "viewChildDecorator": 13,
+      "viewChildDecorator": 15,
       "viewChildrenDecorator": 7,
       "contentChildFunction": 0,
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
       "contentChildDecorator": 0,
-      "total": 138
+      "total": 148
     },
     "shared": {
-      "inputFunction": 54,
+      "inputFunction": 62,
       "inputRequired": 9,
-      "inputDecorator": 313,
-      "outputFunction": 12,
-      "outputDecorator": 46,
+      "inputDecorator": 373,
+      "outputFunction": 13,
+      "outputDecorator": 50,
       "modelFunction": 1,
       "viewChildFunction": 1,
       "viewChildRequired": 0,
       "viewChildrenFunction": 0,
-      "viewChildDecorator": 27,
+      "viewChildDecorator": 29,
       "viewChildrenDecorator": 0,
       "contentChildFunction": 0,
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
-      "contentChildDecorator": 3,
-      "total": 466
+      "contentChildDecorator": 5,
+      "total": 543
     },
     "text": {
       "inputFunction": 7,
@@ -334,22 +334,22 @@
       "total": 71
     },
     "tutorialgroup": {
-      "inputFunction": 5,
+      "inputFunction": 3,
       "inputRequired": 19,
-      "inputDecorator": 91,
+      "inputDecorator": 60,
       "outputFunction": 0,
-      "outputDecorator": 18,
+      "outputDecorator": 16,
       "modelFunction": 0,
       "viewChildFunction": 0,
       "viewChildRequired": 0,
       "viewChildrenFunction": 0,
-      "viewChildDecorator": 11,
-      "viewChildrenDecorator": 2,
+      "viewChildDecorator": 7,
+      "viewChildrenDecorator": 0,
       "contentChildFunction": 0,
       "contentChildRequired": 0,
       "contentChildrenFunction": 0,
       "contentChildDecorator": 3,
-      "total": 149
+      "total": 108
     }
   }
 }
