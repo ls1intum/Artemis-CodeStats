@@ -46,8 +46,8 @@ This generates reports in the `data/client/` directory, organized by report type
 You can analyze codebase changes over time by specifying a start date or relative time period:
 
 ```bash
-# Analyze commits from today back to March 27, 2025
-npm run report -- --start 2025-03-27
+# Analyze commits from today back to March 28, 2025
+npm run report -- --start 2025-03-28
 
 # Analyze commits from the last 24 hours
 npm run report -- --relative 24h
@@ -55,14 +55,14 @@ npm run report -- --relative 24h
 # Analyze commits from the last 7 days
 npm run report -- --relative 7d
 
-# Analyze 5 most recent commits since March 27, 2025
-npm run report -- --start 2025-03-27 --commits 5 
+# Analyze 5 most recent commits since March 28, 2025
+npm run report -- --start 2025-03-28 --commits 5 
 
 # Analyze 5 most recent commits in the last week
 npm run report -- --relative 7d --commits 5
 
-# Analyze every 3rd commit (up to 10 commits total) since March 27, 2025
-npm run report -- --start 2025-03-27 --commits 10 --interval 3
+# Analyze every 3rd commit (up to 10 commits total) since March 28, 2025
+npm run report -- --start 2025-03-28 --commits 10 --interval 3
 ```
 
 #### Parameters

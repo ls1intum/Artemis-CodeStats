@@ -85,9 +85,8 @@ const argv = yargs(hideBin(process.argv))
 
 const repoDir = path.join(process.cwd(), "artemis");
 const basePath = "src/main/webapp/app";
-// Cutoff commit - won't analyze commits earlier than this
-const CUTOFF_COMMIT_HASH = "8642dc7346910327ba48368e6883db447c8e8a29";
-const CUTOFF_COMMIT_DATE = new Date("2025-03-27");
+// Cutoff date - won't analyze commits earlier than this
+const CUTOFF_COMMIT_DATE = new Date("2025-03-28");
 const modules = [
   "admin",
   "assessment",
@@ -185,7 +184,7 @@ function getCommitsFromStartDate(startDate: Date): CommitInfo[] {
     console.log(`Filtering out commits earlier than ${CUTOFF_COMMIT_DATE.toISOString()} (cutoff commit: ${CUTOFF_COMMIT_HASH})`);
     const filteredCommits = commits.filter(commit => {
       // Stop at the cutoff commit or earlier dates
-      if (commit.commitHash === CUTOFF_COMMIT_HASH || commit.commitDate < CUTOFF_COMMIT_DATE) {
+      if (commit.commitDate < CUTOFF_COMMIT_DATE) {
         return false;
       }
       return true;
@@ -481,6 +480,10 @@ function parseRelativeTime(relativeTime: string): Date | null {
   const [, amount, unit] = match;
   const value = parseInt(amount, 10);
   
+  // Declare variables outside of case blocks to avoid ESLint no-case-declarations error
+  let monthDate: Date;
+  let yearDate: Date;
+  
   switch (unit) {
     case 'h': // hours
       return new Date(now.getTime() - value * 60 * 60 * 1000);
@@ -489,11 +492,11 @@ function parseRelativeTime(relativeTime: string): Date | null {
     case 'w': // weeks
       return new Date(now.getTime() - value * 7 * 24 * 60 * 60 * 1000);
     case 'm': // months (approximated)
-      const monthDate = new Date(now);
+      monthDate = new Date(now);
       monthDate.setMonth(monthDate.getMonth() - value);
       return monthDate;
     case 'y': // years
-      const yearDate = new Date(now);
+      yearDate = new Date(now);
       yearDate.setFullYear(yearDate.getFullYear() - value);
       return yearDate;
     default:

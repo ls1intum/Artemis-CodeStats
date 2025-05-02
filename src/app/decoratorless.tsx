@@ -27,7 +27,6 @@ export default function DecoratorlessMigrationDashboard() {
   // Get the current reports based on selected indexes
   const currentReport = decoratorlessAPIReports[selectedReportIndex];
   const compareReport = decoratorlessAPIReports[compareReportIndex];
-  const firstReport = decoratorlessAPIReports[0]; // First report for baseline comparison
 
   // Format date for display
   const formatDate = (date: Date) => {

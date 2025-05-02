@@ -102,10 +102,8 @@ export function DecoratorlessOverviewChart({ data, compareData }: DecoratorlessO
 
     // Calculate changes
     const calculateChange = (current: { decoratorless: number, decorator: number }, previous: { decoratorless: number, decorator: number }) => {
-      const currentTotal = current.decoratorless + current.decorator;
       const currentPercentage = calculatePercentage(current.decoratorless, current.decorator);
       
-      const prevTotal = previous.decoratorless + previous.decorator;
       const prevPercentage = calculatePercentage(previous.decoratorless, previous.decorator);
       
       return currentPercentage - prevPercentage;
