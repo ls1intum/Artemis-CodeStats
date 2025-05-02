@@ -5,94 +5,158 @@ import type { DecoratorlessAPIReport } from "../../report/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface DecoratorlessMigrationHeatmapProps {
-  data: DecoratorlessAPIReport
+  data: DecoratorlessAPIReport;
+  compareData: DecoratorlessAPIReport;
 }
 
 type SortBy = 'alphabetical' | 'total' | 'progress'
 
-export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHeatmapProps) {
+export function DecoratorlessMigrationHeatmap({ data, compareData }: DecoratorlessMigrationHeatmapProps) {
   const [sortBy, setSortBy] = useState<SortBy>('progress')
 
   // Process data for the heatmap
   const processData = () => {
-    const decoratorlessAPI = data.decoratorlessAPI
+    const currentAPI = data.decoratorlessAPI;
+    const compareAPI = compareData.decoratorlessAPI;
 
-    // Filter out modules with no usage
-    const activeModules = Object.entries(decoratorlessAPI)
-      .filter(([_, stats]) => stats.total > 0)
-      .map(([moduleName, stats]) => {
-        // Calculate percentages for each API type
-        const inputTotal = stats.inputFunction + stats.inputRequired + stats.inputDecorator
-        const inputPercentage = inputTotal > 0 ? ((stats.inputFunction + stats.inputRequired) / inputTotal) * 100 : 0
+    // Helper to get all modules from both reports
+    const allModules = new Set([
+      ...Object.keys(currentAPI),
+      ...Object.keys(compareAPI)
+    ]);
 
-        const outputTotal = stats.outputFunction + stats.outputDecorator
-        const outputPercentage = outputTotal > 0 ? (stats.outputFunction / outputTotal) * 100 : 0
+    // Include all modules, even those with no usage
+    const activeModules = Array.from(allModules).map(moduleName => {
+      const module = currentAPI[moduleName] || {
+        inputFunction: 0, inputRequired: 0, inputDecorator: 0,
+        outputFunction: 0, outputDecorator: 0,
+        modelFunction: 0,
+        viewChildFunction: 0, viewChildRequired: 0, viewChildDecorator: 0,
+        viewChildrenFunction: 0, viewChildrenDecorator: 0,
+        contentChildFunction: 0, contentChildRequired: 0, contentChildrenFunction: 0,
+        contentChildDecorator: 0,
+        total: 0
+      };
+      
+      // Get comparison module data
+      const compareModule = compareAPI[moduleName] || {
+        inputFunction: 0, inputRequired: 0, inputDecorator: 0,
+        outputFunction: 0, outputDecorator: 0,
+        modelFunction: 0,
+        viewChildFunction: 0, viewChildRequired: 0, viewChildDecorator: 0,
+        viewChildrenFunction: 0, viewChildrenDecorator: 0,
+        contentChildFunction: 0, contentChildRequired: 0, contentChildrenFunction: 0,
+        contentChildDecorator: 0,
+        total: 0
+      };
 
-        const viewChildTotal = stats.viewChildFunction + stats.viewChildRequired + stats.viewChildDecorator
-        const viewChildPercentage =
-          viewChildTotal > 0 ? ((stats.viewChildFunction + stats.viewChildRequired) / viewChildTotal) * 100 : 0
+      // Calculate percentages for each API type
+      const inputTotal = module.inputFunction + module.inputRequired + module.inputDecorator
+      const inputPercentage = inputTotal > 0 ? ((module.inputFunction + module.inputRequired) / inputTotal) * 100 : 100
 
-        const viewChildrenTotal = stats.viewChildrenFunction + stats.viewChildrenDecorator
-        const viewChildrenPercentage =
-          viewChildrenTotal > 0 ? (stats.viewChildrenFunction / viewChildrenTotal) * 100 : 0
+      const outputTotal = module.outputFunction + module.outputDecorator
+      const outputPercentage = outputTotal > 0 ? (module.outputFunction / outputTotal) * 100 : 100
 
-        const contentChildTotal = stats.contentChildFunction + stats.contentChildRequired + stats.contentChildDecorator
-        const contentChildPercentage =
-          contentChildTotal > 0
-            ? ((stats.contentChildFunction + stats.contentChildRequired) / contentChildTotal) * 100
-            : 0
+      const viewChildTotal = module.viewChildFunction + module.viewChildRequired + module.viewChildDecorator
+      const viewChildPercentage =
+        viewChildTotal > 0 ? ((module.viewChildFunction + module.viewChildRequired) / viewChildTotal) * 100 : 100
 
-        // Calculate overall percentage
-        const totalDecoratorless = 
-          stats.inputFunction +
-          stats.inputRequired +
-          stats.outputFunction +
-          stats.modelFunction +
-          stats.viewChildFunction +
-          stats.viewChildRequired +
-          stats.viewChildrenFunction +
-          stats.contentChildFunction +
-          stats.contentChildRequired +
-          stats.contentChildrenFunction
-          
-        const overallPercentage = stats.total > 0 ? (totalDecoratorless / stats.total) * 100 : 0
+      const viewChildrenTotal = module.viewChildrenFunction + module.viewChildrenDecorator
+      const viewChildrenPercentage =
+        viewChildrenTotal > 0 ? (module.viewChildrenFunction / viewChildrenTotal) * 100 : 100
 
-        return {
-          name: moduleName,
-          total: stats.total,
-          overallPercentage: Math.round(overallPercentage * 10) / 10,
-          inputs: {
-            total: inputTotal,
-            percentage: Math.round(inputPercentage * 10) / 10,
-            decorator: stats.inputDecorator,
-            decoratorless: stats.inputFunction + stats.inputRequired,
-          },
-          outputs: {
-            total: outputTotal,
-            percentage: Math.round(outputPercentage * 10) / 10,
-            decorator: stats.outputDecorator,
-            decoratorless: stats.outputFunction,
-          },
-          viewChild: {
-            total: viewChildTotal,
-            percentage: Math.round(viewChildPercentage * 10) / 10,
-            decorator: stats.viewChildDecorator,
-            decoratorless: stats.viewChildFunction + stats.viewChildRequired,
-          },
-          viewChildren: {
-            total: viewChildrenTotal,
-            percentage: Math.round(viewChildrenPercentage * 10) / 10,
-            decorator: stats.viewChildrenDecorator,
-            decoratorless: stats.viewChildrenFunction,
-          },
-          contentChild: {
-            total: contentChildTotal,
-            percentage: Math.round(contentChildPercentage * 10) / 10,
-            decorator: stats.contentChildDecorator,
-            decoratorless: stats.contentChildFunction + stats.contentChildRequired,
-          }
+      const contentChildTotal = module.contentChildFunction + module.contentChildRequired + module.contentChildDecorator
+      const contentChildPercentage =
+        contentChildTotal > 0
+          ? ((module.contentChildFunction + module.contentChildRequired) / contentChildTotal) * 100
+          : 100
+
+      // Calculate overall percentage for current
+      const totalDecoratorless = 
+        module.inputFunction +
+        module.inputRequired +
+        module.outputFunction +
+        module.modelFunction +
+        module.viewChildFunction +
+        module.viewChildRequired +
+        module.viewChildrenFunction +
+        module.contentChildFunction +
+        module.contentChildRequired +
+        module.contentChildrenFunction
+        
+      const totalDecorators = 
+        module.inputDecorator +
+        module.outputDecorator +
+        module.viewChildDecorator +
+        module.viewChildrenDecorator +
+        module.contentChildDecorator
+
+      const total = totalDecoratorless + totalDecorators
+      const overallPercentage = total > 0 ? (totalDecoratorless / total) * 100 : 100
+      
+      // Calculate overall percentage for compare version
+      const compareTotalDecoratorless = 
+        compareModule.inputFunction +
+        compareModule.inputRequired +
+        compareModule.outputFunction +
+        compareModule.modelFunction +
+        compareModule.viewChildFunction +
+        compareModule.viewChildRequired +
+        compareModule.viewChildrenFunction +
+        compareModule.contentChildFunction +
+        compareModule.contentChildRequired +
+        compareModule.contentChildrenFunction
+        
+      const compareTotalDecorators = 
+        compareModule.inputDecorator +
+        compareModule.outputDecorator +
+        compareModule.viewChildDecorator +
+        compareModule.viewChildrenDecorator +
+        compareModule.contentChildDecorator
+
+      const compareTotal = compareTotalDecoratorless + compareTotalDecorators
+      const compareOverallPercentage = compareTotal > 0 ? (compareTotalDecoratorless / compareTotal) * 100 : 100
+      
+      // Calculate change
+      const changePercentage = overallPercentage - compareOverallPercentage
+
+      return {
+        name: moduleName,
+        total,
+        overallPercentage: Math.round(overallPercentage * 10) / 10,
+        changePercentage: Math.round(changePercentage * 10) / 10,
+        inputs: {
+          total: inputTotal,
+          percentage: Math.round(inputPercentage * 10) / 10,
+          decorator: module.inputDecorator,
+          decoratorless: module.inputFunction + module.inputRequired,
+        },
+        outputs: {
+          total: outputTotal,
+          percentage: Math.round(outputPercentage * 10) / 10,
+          decorator: module.outputDecorator,
+          decoratorless: module.outputFunction,
+        },
+        viewChild: {
+          total: viewChildTotal,
+          percentage: Math.round(viewChildPercentage * 10) / 10,
+          decorator: module.viewChildDecorator,
+          decoratorless: module.viewChildFunction + module.viewChildRequired,
+        },
+        viewChildren: {
+          total: viewChildrenTotal,
+          percentage: Math.round(viewChildrenPercentage * 10) / 10,
+          decorator: module.viewChildrenDecorator,
+          decoratorless: module.viewChildrenFunction,
+        },
+        contentChild: {
+          total: contentChildTotal,
+          percentage: Math.round(contentChildPercentage * 10) / 10,
+          decorator: module.contentChildDecorator,
+          decoratorless: module.contentChildFunction + module.contentChildRequired,
         }
-      })
+      }
+    })
 
     // Sort based on selected criteria
     if (sortBy === 'alphabetical') {
@@ -107,7 +171,7 @@ export function DecoratorlessMigrationHeatmap({ data }: DecoratorlessMigrationHe
   }
 
   const getColorClass = (percentage: number, total: number) => {
-    if (total === 0) return "bg-slate-200" // Only gray if there are no APIs to migrate
+    if (total === 0) return "bg-green-500" // If there are no APIs to migrate, mark as green (fully migrated)
     if (percentage === 0) return "bg-red-500" // 0% progress should be red
     if (percentage < 20) return "bg-red-500"
     if (percentage < 40) return "bg-orange-500"

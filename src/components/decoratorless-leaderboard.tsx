@@ -57,7 +57,7 @@ export function DecoratorlessLeaderboard({
         stats.contentChildDecorator;
 
       const total = decoratorlessCount + decoratorCount;
-      const percentage = total > 0 ? (decoratorlessCount / total) * 100 : 0;
+      const percentage = total > 0 ? (decoratorlessCount / total) * 100 : 100; // If no APIs, consider it 100% migrated
 
       // Get previous data for comparison if available
       let previousPercentage = 0;
@@ -86,7 +86,7 @@ export function DecoratorlessLeaderboard({
           prevStats.contentChildDecorator;
 
         const prevTotal = prevDecoratorlessCount + prevDecoratorCount;
-        previousPercentage = prevTotal > 0 ? (prevDecoratorlessCount / prevTotal) * 100 : 0;
+        previousPercentage = prevTotal > 0 ? (prevDecoratorlessCount / prevTotal) * 100 : 100; // If no APIs, consider it 100% migrated
         
         // Calculate change
         change = percentage - previousPercentage;
@@ -107,8 +107,8 @@ export function DecoratorlessLeaderboard({
       };
     });
 
-    // Filter out modules with no APIs
-    return moduleData.filter(module => module.total > 0);
+    // Include all modules (don't filter by total)
+    return moduleData;
   };
 
   const sortData = (data: ReturnType<typeof processData>) => {

@@ -7,14 +7,14 @@ import { Progress } from "@/components/ui/progress"
 
 interface MigrationProgressProps {
   currentReport: DecoratorlessAPIReport
-  firstReport: DecoratorlessAPIReport
+  compareReport: DecoratorlessAPIReport  // Change from firstReport to compareReport
 }
 
-export function DecoratorlessMigrationProgress({ currentReport, firstReport }: MigrationProgressProps) {
+export function DecoratorlessMigrationProgress({ currentReport, compareReport }: MigrationProgressProps) {
   // Calculate summary statistics
   const calculateStats = () => {
     const current = currentReport.decoratorlessAPI
-    const first = firstReport.decoratorlessAPI
+    const compare = compareReport.decoratorlessAPI  // Renamed from "first" to "compare"
 
     // Aggregate data across all modules
     const currentStats = {
@@ -25,14 +25,32 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
       completedModules: 0
     }
 
-    const firstStats = {
+    const compareStats = {  // Renamed from "firstStats" to "compareStats"
       decoratorless: 0,
       decorator: 0,
       total: 0,
     }
 
+    // Helper to get all modules from both reports
+    const allModules = new Set([
+      ...Object.keys(current),
+      ...Object.keys(compare)
+    ]);
+
     // Process current report
-    Object.values(current).forEach((module) => {
+    Array.from(allModules).forEach((moduleName) => {
+      // Get module data or default to empty values if module doesn't exist
+      const module = current[moduleName] || {
+        inputFunction: 0, inputRequired: 0, inputDecorator: 0,
+        outputFunction: 0, outputDecorator: 0,
+        modelFunction: 0,
+        viewChildFunction: 0, viewChildRequired: 0, viewChildDecorator: 0,
+        viewChildrenFunction: 0, viewChildrenDecorator: 0,
+        contentChildFunction: 0, contentChildRequired: 0, contentChildrenFunction: 0,
+        contentChildDecorator: 0,
+        total: 0
+      };
+      
       // Decoratorless APIs
       const moduleDecoratorless = 
         module.inputFunction +
@@ -59,45 +77,51 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
       
       // Calculate if module is "completed" (100% decoratorless)
       const moduleTotal = moduleDecoratorless + moduleDecorator;
-      if (moduleTotal > 0 && (moduleDecoratorless / moduleTotal === 1)) {
+      if (moduleTotal === 0 || moduleDecoratorless / moduleTotal === 1) {
         currentStats.completedModules++;
       }
+      
+      // Get module data from comparison report
+      const compareModule = compare[moduleName] || {
+        inputFunction: 0, inputRequired: 0, inputDecorator: 0,
+        outputFunction: 0, outputDecorator: 0,
+        modelFunction: 0,
+        viewChildFunction: 0, viewChildRequired: 0, viewChildDecorator: 0,
+        viewChildrenFunction: 0, viewChildrenDecorator: 0,
+        contentChildFunction: 0, contentChildRequired: 0, contentChildrenFunction: 0,
+        contentChildDecorator: 0,
+        total: 0
+      };
+      
+      // Decoratorless APIs in comparison report
+      compareStats.decoratorless +=
+        compareModule.inputFunction +
+        compareModule.inputRequired +
+        compareModule.outputFunction +
+        compareModule.modelFunction +
+        compareModule.viewChildFunction +
+        compareModule.viewChildRequired +
+        compareModule.viewChildrenFunction +
+        compareModule.contentChildFunction +
+        compareModule.contentChildRequired +
+        compareModule.contentChildrenFunction;
+
+      // Decorator APIs in comparison report
+      compareStats.decorator +=
+        compareModule.inputDecorator +
+        compareModule.outputDecorator +
+        compareModule.viewChildDecorator +
+        compareModule.viewChildrenDecorator +
+        compareModule.contentChildDecorator;
     })
 
     currentStats.total = currentStats.decoratorless + currentStats.decorator
-
-    // Process first report
-    Object.values(first).forEach((module) => {
-      // Decoratorless APIs
-      firstStats.decoratorless +=
-        module.inputFunction +
-        module.inputRequired +
-        module.outputFunction +
-        module.modelFunction +
-        module.viewChildFunction +
-        module.viewChildRequired +
-        module.viewChildrenFunction +
-        module.contentChildFunction +
-        module.contentChildRequired +
-        module.contentChildrenFunction;
-
-      // Decorator APIs
-      firstStats.decorator +=
-        module.inputDecorator +
-        module.outputDecorator +
-        module.viewChildDecorator +
-        module.viewChildrenDecorator +
-        module.contentChildDecorator;
-    })
-
-    firstStats.total = firstStats.decoratorless + firstStats.decorator
+    compareStats.total = compareStats.decoratorless + compareStats.decorator
 
     // Calculate percentages and changes
-    const currentPercentage = currentStats.total > 0 ? (currentStats.decoratorless / currentStats.total) * 100 : 0
-
-    const firstPercentage = firstStats.total > 0 ? (firstStats.decoratorless / firstStats.total) * 100 : 0
-
-    const percentageChange = currentPercentage - firstPercentage
+    const currentPercentage = currentStats.total > 0 ? (currentStats.decoratorless / currentStats.total) * 100 : 100
+    const comparePercentage = compareStats.total > 0 ? (compareStats.decoratorless / compareStats.total) * 100 : 100
+    const percentageChange = currentPercentage - comparePercentage
     
     // Calculate how many API usages still need migration
     const remaining = currentStats.decorator;
@@ -107,12 +131,12 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
 
     return {
       currentStats,
-      firstStats,
+      compareStats,  // Renamed from firstStats
       currentPercentage: Math.round(currentPercentage * 10) / 10,
-      firstPercentage: Math.round(firstPercentage * 10) / 10,
+      comparePercentage: Math.round(comparePercentage * 10) / 10,  // Renamed from firstPercentage
       percentageChange: Math.round(percentageChange * 10) / 10,
-      decoratorlessChange: currentStats.decoratorless - firstStats.decoratorless,
-      decoratorChange: currentStats.decorator - firstStats.decorator,
+      decoratorlessChange: currentStats.decoratorless - compareStats.decoratorless,
+      decoratorChange: currentStats.decorator - compareStats.decorator,
       remaining,
       moduleCompletionPercentage: Math.round(moduleCompletionPercentage)
     }
@@ -146,7 +170,7 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
                 <span className="text-slate-500">No change</span>
               </>
             )}
-            <span className="ml-1 text-slate-500">since first report</span>
+            <span className="ml-1 text-slate-500">since comparison report</span>
           </div>
           <div className="mt-4">
             <Progress value={stats.currentPercentage} className="h-2" />
@@ -205,7 +229,7 @@ export function DecoratorlessMigrationProgress({ currentReport, firstReport }: M
                 <span className="text-slate-500">No change</span>
               </>
             )}
-            <span className="ml-1 text-slate-500">since first report</span>
+            <span className="ml-1 text-slate-500">since comparison report</span>
           </div>
           <div className="mt-4">
             <Progress 

@@ -79,17 +79,24 @@ export function DecoratorlessContributorLeaderboard({
     
     if (currentIndex === -1 || compareIndex === -1) return [];
     
-    // Determine the range of reports between compare and current (inclusive)
+    // Important: Ensure we're analyzing reports in chronological order
+    // We want to track from older report to newer report
     const startIndex = Math.min(currentIndex, compareIndex);
     const endIndex = Math.max(currentIndex, compareIndex);
     
-    // Get all reports in the range
-    const relevantReports = allReports.slice(startIndex, endIndex + 1);
+    // Get reports in the correct time range
+    const relevantReportIndices = [];
+    for (let i = startIndex; i <= endIndex; i++) {
+      relevantReportIndices.push(i);
+    }
     
-    // Sort reports chronologically (oldest first)
-    relevantReports.sort((a, b) => 
-      a.metadata.artemis.commitDate.getTime() - b.metadata.artemis.commitDate.getTime()
+    // Sort by date (oldest first)
+    relevantReportIndices.sort((a, b) => 
+      allReports[a].metadata.artemis.commitDate.getTime() - 
+      allReports[b].metadata.artemis.commitDate.getTime()
     );
+    
+    const relevantReports = relevantReportIndices.map(idx => allReports[idx]);
     
     // Map to track contributors and their stats
     const contributorMap = new Map<string, ContributorStats>();
@@ -130,7 +137,7 @@ export function DecoratorlessContributorLeaderboard({
       previousReport = report;
     }
     
-    // Return only contributors who made migration changes
+    // Return only contributors who made migration changes in the selected range
     return Array.from(contributorMap.values())
       .filter(contributor => contributor.apisMigrated !== 0);
   }, [currentData, compareData]);

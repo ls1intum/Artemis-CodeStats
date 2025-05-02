@@ -169,7 +169,7 @@ export default function DecoratorlessMigrationDashboard() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <DecoratorlessMigrationProgress 
             currentReport={currentReport} 
-            firstReport={firstReport} 
+            compareReport={compareReport} 
           />
         </div>
 
@@ -231,7 +231,10 @@ export default function DecoratorlessMigrationDashboard() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <DecoratorlessOverviewChart data={currentReport} />
+                    <DecoratorlessOverviewChart 
+                      data={currentReport} 
+                      compareData={compareReport}
+                    />
                   </CardContent>
                 </Card>
               </div>
@@ -334,7 +337,10 @@ export default function DecoratorlessMigrationDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <DecoratorlessMigrationHeatmap data={currentReport} />
+                  <DecoratorlessMigrationHeatmap 
+                    data={currentReport} 
+                    compareData={compareReport} 
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
