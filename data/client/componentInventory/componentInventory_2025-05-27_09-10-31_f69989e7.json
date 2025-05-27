@@ -1,0 +1,146 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "f69989e7f9ec194c891e79a7849f5757043b2c1f",
+      "commitDate": "2025-05-27T09:10:31.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Bump version to 8.1.2 (bugfix update)"
+    }
+  },
+  "componentInventory": {
+    "admin": {
+      "components": 1,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 2
+    },
+    "assessment": {
+      "components": 36,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 45
+    },
+    "atlas": {
+      "components": 66,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 7,
+      "total": 73
+    },
+    "buildagent": {
+      "components": 7,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 10
+    },
+    "communication": {
+      "components": 63,
+      "directives": 8,
+      "pipes": 0,
+      "injectables": 18,
+      "total": 89
+    },
+    "core": {
+      "components": 145,
+      "directives": 6,
+      "pipes": 0,
+      "injectables": 67,
+      "total": 218
+    },
+    "exam": {
+      "components": 75,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 90
+    },
+    "exercise": {
+      "components": 78,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 18,
+      "total": 96
+    },
+    "fileupload": {
+      "components": 5,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 10
+    },
+    "iris": {
+      "components": 14,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 7,
+      "total": 21
+    },
+    "lecture": {
+      "components": 38,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 11,
+      "total": 50
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 16
+    },
+    "plagiarism": {
+      "components": 15,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 20
+    },
+    "programming": {
+      "components": 105,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 38,
+      "total": 145
+    },
+    "quiz": {
+      "components": 40,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 10,
+      "total": 52
+    },
+    "shared": {
+      "components": 90,
+      "directives": 17,
+      "pipes": 26,
+      "injectables": 31,
+      "total": 164
+    },
+    "text": {
+      "components": 17,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 10,
+      "total": 28
+    },
+    "tutorialgroup": {
+      "components": 50,
+      "directives": 1,
+      "pipes": 2,
+      "injectables": 6,
+      "total": 59
+    }
+  }
+}
