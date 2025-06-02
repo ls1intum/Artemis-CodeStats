@@ -21,8 +21,42 @@ import { DecoratorlessTimelineChart } from "@/components/decoratorless-timeline-
 import { DecoratorlessContributorLeaderboard } from "@/components/decoratorless-contributor-leaderboard"
 
 export default function DecoratorlessMigrationDashboard() {
-  const [selectedReportIndex, setSelectedReportIndex] = useState(decoratorlessAPIReports.length - 1); // Start with most recent
-  const [compareReportIndex, setCompareReportIndex] = useState(0); // Start with first report
+  // Helper function to find the first commit from last Monday
+  const findFirstCommitFromLastMonday = () => {
+    const now = new Date();
+    const lastMonday = new Date(now);
+    
+    // Calculate last Monday - always 7 days ago if today is Monday, otherwise previous Monday
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    let daysToSubtract;
+    
+    if (dayOfWeek === 1) {
+      // If today is Monday, go back 7 days to last Monday
+      daysToSubtract = 7;
+    } else if (dayOfWeek === 0) {
+      // If today is Sunday, go back 6 days to last Monday
+      daysToSubtract = 6;
+    } else {
+      // For Tuesday-Saturday, go back to the previous Monday
+      daysToSubtract = dayOfWeek - 1; // Days since Monday
+    }
+    
+    lastMonday.setDate(now.getDate() - daysToSubtract);
+    lastMonday.setHours(0, 0, 0, 0); // Start of the day
+    
+    // Find the first commit from last Monday or later
+    // Since reports are sorted newest first, we need to search from the end
+    for (let i = decoratorlessAPIReports.length - 1; i >= 0; i--) {
+      const commitDate = decoratorlessAPIReports[i].metadata.artemis.commitDate;
+      if (commitDate < lastMonday) {
+        return i + 1; // Return the next report after the last Monday
+      }
+    }
+    return decoratorlessAPIReports.length - 1;
+  };
+
+  const [selectedReportIndex, setSelectedReportIndex] = useState(decoratorlessAPIReports.length - 1); // Start with most recent report
+  const [compareReportIndex, setCompareReportIndex] = useState(findFirstCommitFromLastMonday()); // Start with first commit from last Monday
 
   // Get the current reports based on selected indexes
   const currentReport = decoratorlessAPIReports[selectedReportIndex];
@@ -44,7 +78,7 @@ export default function DecoratorlessMigrationDashboard() {
 
   // Make reports available globally for the contributor leaderboard
   if (typeof window !== 'undefined') {
-    (window as any).decoratorlessAPIReports = decoratorlessAPIReports;
+    (window as unknown as { decoratorlessAPIReports: typeof decoratorlessAPIReports }).decoratorlessAPIReports = decoratorlessAPIReports;
   }
 
   if (!hasDecoratorlessAPI) {
