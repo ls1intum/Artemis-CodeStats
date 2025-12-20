@@ -1,0 +1,146 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "6c26e8e2af18ce004f6d579fa5c5465a6a78b2e1",
+      "commitDate": "2025-12-20T20:11:49.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Improve authentication configuration (#11855)"
+    }
+  },
+  "componentInventory": {
+    "admin": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "assessment": {
+      "components": 36,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 45
+    },
+    "atlas": {
+      "components": 68,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 76
+    },
+    "buildagent": {
+      "components": 7,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 10
+    },
+    "communication": {
+      "components": 63,
+      "directives": 8,
+      "pipes": 0,
+      "injectables": 19,
+      "total": 90
+    },
+    "core": {
+      "components": 175,
+      "directives": 8,
+      "pipes": 0,
+      "injectables": 75,
+      "total": 258
+    },
+    "exam": {
+      "components": 77,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 14,
+      "total": 93
+    },
+    "exercise": {
+      "components": 78,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 18,
+      "total": 96
+    },
+    "fileupload": {
+      "components": 8,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 13
+    },
+    "iris": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 7,
+      "total": 18
+    },
+    "lecture": {
+      "components": 49,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 12,
+      "total": 62
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 16
+    },
+    "plagiarism": {
+      "components": 15,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 20
+    },
+    "programming": {
+      "components": 108,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 39,
+      "total": 149
+    },
+    "quiz": {
+      "components": 46,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 12,
+      "total": 60
+    },
+    "shared": {
+      "components": 92,
+      "directives": 15,
+      "pipes": 26,
+      "injectables": 32,
+      "total": 165
+    },
+    "text": {
+      "components": 19,
+      "directives": 2,
+      "pipes": 1,
+      "injectables": 10,
+      "total": 32
+    },
+    "tutorialgroup": {
+      "components": 55,
+      "directives": 1,
+      "pipes": 2,
+      "injectables": 6,
+      "total": 64
+    }
+  }
+}
