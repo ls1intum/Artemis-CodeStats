@@ -1,0 +1,127 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "fb5503e3fe2c60f38d1cf0132e493864ebd7c7f7",
+      "commitDate": "2025-12-22T09:27:41.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Bump version to 8.7.1 (bugfix update)"
+    }
+  },
+  "changeDetection": {
+    "admin": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 36,
+      "total": 36
+    },
+    "atlas": {
+      "explicitOnPush": 16,
+      "explicitDefault": 0,
+      "implicitDefault": 52,
+      "total": 68
+    },
+    "buildagent": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 7,
+      "total": 7
+    },
+    "communication": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 57,
+      "total": 63
+    },
+    "core": {
+      "explicitOnPush": 16,
+      "explicitDefault": 0,
+      "implicitDefault": 159,
+      "total": 175
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 75,
+      "total": 77
+    },
+    "exercise": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 76,
+      "total": 78
+    },
+    "fileupload": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 8
+    },
+    "iris": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 11,
+      "total": 11
+    },
+    "lecture": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 48,
+      "total": 49
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 10,
+      "total": 11
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 15,
+      "total": 15
+    },
+    "programming": {
+      "explicitOnPush": 10,
+      "explicitDefault": 0,
+      "implicitDefault": 98,
+      "total": 108
+    },
+    "quiz": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 41,
+      "total": 46
+    },
+    "shared": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 87,
+      "total": 92
+    },
+    "text": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 18,
+      "total": 19
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 35,
+      "explicitDefault": 0,
+      "implicitDefault": 20,
+      "total": 55
+    }
+  }
+}
