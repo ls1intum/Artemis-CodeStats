@@ -1,0 +1,127 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "437810adc6825b72c0649c5cbb78c0b31b6dbc4a",
+      "commitDate": "2025-12-27T21:57:56.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Adapt server test coverage"
+    }
+  },
+  "changeDetection": {
+    "admin": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 36,
+      "total": 36
+    },
+    "atlas": {
+      "explicitOnPush": 16,
+      "explicitDefault": 0,
+      "implicitDefault": 52,
+      "total": 68
+    },
+    "buildagent": {
+      "explicitOnPush": 7,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 7
+    },
+    "communication": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 57,
+      "total": 63
+    },
+    "core": {
+      "explicitOnPush": 54,
+      "explicitDefault": 0,
+      "implicitDefault": 124,
+      "total": 178
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 75,
+      "total": 77
+    },
+    "exercise": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 76,
+      "total": 78
+    },
+    "fileupload": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 8
+    },
+    "iris": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 11,
+      "total": 11
+    },
+    "lecture": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 48,
+      "total": 49
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 10,
+      "total": 11
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 15,
+      "total": 15
+    },
+    "programming": {
+      "explicitOnPush": 10,
+      "explicitDefault": 0,
+      "implicitDefault": 98,
+      "total": 108
+    },
+    "quiz": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 41,
+      "total": 46
+    },
+    "shared": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 88,
+      "total": 93
+    },
+    "text": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 18,
+      "total": 19
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 35,
+      "explicitDefault": 0,
+      "implicitDefault": 20,
+      "total": 55
+    }
+  }
+}
