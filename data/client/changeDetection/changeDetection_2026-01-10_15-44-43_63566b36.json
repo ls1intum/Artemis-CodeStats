@@ -1,0 +1,127 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "63566b363f30b7d3f4f1ef4e2e48d2a059c5a0fd",
+      "commitDate": "2026-01-10T15:44:43.000Z",
+      "commitAuthor": "Florian Glombik",
+      "commitMessage": "Development: Migrate programming exercise documentation (#11851)"
+    }
+  },
+  "changeDetection": {
+    "admin": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 36,
+      "total": 36
+    },
+    "atlas": {
+      "explicitOnPush": 16,
+      "explicitDefault": 0,
+      "implicitDefault": 52,
+      "total": 68
+    },
+    "buildagent": {
+      "explicitOnPush": 7,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 7
+    },
+    "communication": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 58,
+      "total": 64
+    },
+    "core": {
+      "explicitOnPush": 55,
+      "explicitDefault": 0,
+      "implicitDefault": 128,
+      "total": 183
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 76,
+      "total": 78
+    },
+    "exercise": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 76,
+      "total": 78
+    },
+    "fileupload": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 8
+    },
+    "iris": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 2,
+      "total": 13
+    },
+    "lecture": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 47,
+      "total": 49
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 10,
+      "total": 11
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 15,
+      "total": 15
+    },
+    "programming": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 97,
+      "total": 108
+    },
+    "quiz": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 42,
+      "total": 47
+    },
+    "shared": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 88,
+      "total": 93
+    },
+    "text": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 32,
+      "total": 32
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 35,
+      "explicitDefault": 0,
+      "implicitDefault": 19,
+      "total": 54
+    }
+  }
+}
