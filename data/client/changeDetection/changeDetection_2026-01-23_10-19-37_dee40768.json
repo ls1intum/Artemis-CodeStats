@@ -1,0 +1,133 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "dee407688ea88c2d6cc734af1e58131111592ef8",
+      "commitDate": "2026-01-23T10:19:37.000Z",
+      "commitAuthor": "Benjamin Schmitz",
+      "commitMessage": "Infrastructure: Add Staging 2 to github actions deployment workflow (#12012)"
+    }
+  },
+  "changeDetection": {
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 37,
+      "total": 37
+    },
+    "atlas": {
+      "explicitOnPush": 15,
+      "explicitDefault": 0,
+      "implicitDefault": 53,
+      "total": 68
+    },
+    "buildagent": {
+      "explicitOnPush": 7,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 7
+    },
+    "communication": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 58,
+      "total": 64
+    },
+    "core": {
+      "explicitOnPush": 13,
+      "explicitDefault": 0,
+      "implicitDefault": 173,
+      "total": 186
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 77,
+      "total": 79
+    },
+    "exercise": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 76,
+      "total": 78
+    },
+    "fileupload": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 8
+    },
+    "hyperion": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "iris": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 2,
+      "total": 13
+    },
+    "lecture": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 47,
+      "total": 49
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 19,
+      "total": 19
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 15,
+      "total": 15
+    },
+    "programming": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 97,
+      "total": 108
+    },
+    "quiz": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 42,
+      "total": 47
+    },
+    "shared": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 88,
+      "total": 93
+    },
+    "sharing": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 1,
+      "total": 1
+    },
+    "text": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 32,
+      "total": 32
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 35,
+      "explicitDefault": 0,
+      "implicitDefault": 19,
+      "total": 54
+    }
+  }
+}
