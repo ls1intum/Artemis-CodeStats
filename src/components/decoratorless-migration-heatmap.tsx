@@ -167,8 +167,6 @@ export function DecoratorlessMigrationHeatmap({ data, compareData }: Decoratorle
 
   const heatmapData = processData()
 
-  console.log(heatmapData);
-
   return (
     <div className="space-y-4">
       <div className="flex justify-end">

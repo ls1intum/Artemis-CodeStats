@@ -101,6 +101,7 @@ const modules = [
   "lecture",
   "lti",
   "modeling",
+  "openapi",
   "plagiarism",
   "programming",
   "quiz",
