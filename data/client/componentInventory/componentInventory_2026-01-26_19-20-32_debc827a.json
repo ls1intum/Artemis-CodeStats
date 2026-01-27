@@ -100,6 +100,13 @@
       "injectables": 5,
       "total": 24
     },
+    "openapi": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 5
+    },
     "plagiarism": {
       "components": 15,
       "directives": 2,

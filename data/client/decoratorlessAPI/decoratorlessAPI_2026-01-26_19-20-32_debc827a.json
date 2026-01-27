@@ -243,6 +243,24 @@
       "contentChildDecorator": 0,
       "total": 101
     },
+    "openapi": {
+      "inputFunction": 0,
+      "inputRequired": 0,
+      "inputDecorator": 0,
+      "outputFunction": 0,
+      "outputDecorator": 0,
+      "modelFunction": 0,
+      "viewChildFunction": 0,
+      "viewChildRequired": 0,
+      "viewChildrenFunction": 0,
+      "viewChildDecorator": 0,
+      "viewChildrenDecorator": 0,
+      "contentChildFunction": 0,
+      "contentChildRequired": 0,
+      "contentChildrenFunction": 0,
+      "contentChildDecorator": 0,
+      "total": 0
+    },
     "plagiarism": {
       "inputFunction": 21,
       "inputRequired": 5,

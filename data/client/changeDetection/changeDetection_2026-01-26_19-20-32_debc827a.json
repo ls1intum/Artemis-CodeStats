@@ -87,6 +87,12 @@
       "implicitDefault": 19,
       "total": 19
     },
+    "openapi": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
     "plagiarism": {
       "explicitOnPush": 0,
       "explicitDefault": 0,
