@@ -1,0 +1,139 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "de9ecdcc8e52559de6bec0d84bdd3c7aad79830d",
+      "commitDate": "2026-03-20T07:55:48.000Z",
+      "commitAuthor": "Khinevich Mikhail",
+      "commitMessage": "Hyperion: Disable comment threads for consistency issues during approach evaluation (#12306)"
+    }
+  },
+  "changeDetection": {
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 37,
+      "total": 37
+    },
+    "atlas": {
+      "explicitOnPush": 15,
+      "explicitDefault": 0,
+      "implicitDefault": 52,
+      "total": 67
+    },
+    "buildagent": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 11
+    },
+    "communication": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 58,
+      "total": 64
+    },
+    "core": {
+      "explicitOnPush": 13,
+      "explicitDefault": 0,
+      "implicitDefault": 185,
+      "total": 198
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 78,
+      "total": 80
+    },
+    "exercise": {
+      "explicitOnPush": 7,
+      "explicitDefault": 0,
+      "implicitDefault": 77,
+      "total": 84
+    },
+    "fileupload": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 8
+    },
+    "hyperion": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "iris": {
+      "explicitOnPush": 14,
+      "explicitDefault": 0,
+      "implicitDefault": 3,
+      "total": 17
+    },
+    "lecture": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 47,
+      "total": 49
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 19,
+      "total": 19
+    },
+    "openapi": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 15,
+      "total": 15
+    },
+    "programming": {
+      "explicitOnPush": 13,
+      "explicitDefault": 0,
+      "implicitDefault": 98,
+      "total": 111
+    },
+    "quiz": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 44,
+      "total": 49
+    },
+    "shared": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 90,
+      "total": 96
+    },
+    "sharing": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 1,
+      "total": 1
+    },
+    "text": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 32,
+      "total": 32
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 35,
+      "explicitDefault": 0,
+      "implicitDefault": 23,
+      "total": 58
+    }
+  }
+}
