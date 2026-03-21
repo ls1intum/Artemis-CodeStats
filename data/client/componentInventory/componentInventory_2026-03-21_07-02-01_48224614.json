@@ -1,0 +1,160 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "48224614354597d860ed0fd08e4f9b8a815973a1",
+      "commitDate": "2026-03-21T07:02:01.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Improve local development setup and fix passkey saml2 conflict (#12241)"
+    }
+  },
+  "componentInventory": {
+    "assessment": {
+      "components": 37,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 46
+    },
+    "atlas": {
+      "components": 67,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 75
+    },
+    "buildagent": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 14
+    },
+    "communication": {
+      "components": 64,
+      "directives": 8,
+      "pipes": 0,
+      "injectables": 20,
+      "total": 92
+    },
+    "core": {
+      "components": 205,
+      "directives": 10,
+      "pipes": 0,
+      "injectables": 82,
+      "total": 297
+    },
+    "exam": {
+      "components": 80,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 14,
+      "total": 96
+    },
+    "exercise": {
+      "components": 84,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 24,
+      "total": 108
+    },
+    "fileupload": {
+      "components": 8,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 13
+    },
+    "hyperion": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 1
+    },
+    "iris": {
+      "components": 17,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 7,
+      "total": 24
+    },
+    "lecture": {
+      "components": 49,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 63
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 19,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 24
+    },
+    "openapi": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 8
+    },
+    "plagiarism": {
+      "components": 15,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 4,
+      "total": 21
+    },
+    "programming": {
+      "components": 111,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 40,
+      "total": 153
+    },
+    "quiz": {
+      "components": 49,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 64
+    },
+    "shared": {
+      "components": 97,
+      "directives": 15,
+      "pipes": 26,
+      "injectables": 32,
+      "total": 170
+    },
+    "sharing": {
+      "components": 1,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 1
+    },
+    "text": {
+      "components": 32,
+      "directives": 2,
+      "pipes": 1,
+      "injectables": 10,
+      "total": 45
+    },
+    "tutorialgroup": {
+      "components": 58,
+      "directives": 0,
+      "pipes": 2,
+      "injectables": 7,
+      "total": 67
+    }
+  }
+}
