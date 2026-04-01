@@ -1,0 +1,160 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "b48024b715ab4b225c8d90a66a4ab2222a7ab9e7",
+      "commitDate": "2026-04-01T14:00:34.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Improve path validation order in drag-and-drop file import (#12384)"
+    }
+  },
+  "componentInventory": {
+    "assessment": {
+      "components": 37,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 46
+    },
+    "atlas": {
+      "components": 67,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 75
+    },
+    "buildagent": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 14
+    },
+    "communication": {
+      "components": 64,
+      "directives": 8,
+      "pipes": 0,
+      "injectables": 20,
+      "total": 92
+    },
+    "core": {
+      "components": 213,
+      "directives": 10,
+      "pipes": 0,
+      "injectables": 83,
+      "total": 306
+    },
+    "exam": {
+      "components": 80,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 14,
+      "total": 96
+    },
+    "exercise": {
+      "components": 84,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 24,
+      "total": 108
+    },
+    "fileupload": {
+      "components": 8,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 13
+    },
+    "hyperion": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 1
+    },
+    "iris": {
+      "components": 18,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 7,
+      "total": 25
+    },
+    "lecture": {
+      "components": 51,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 65
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 19,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 24
+    },
+    "openapi": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 8
+    },
+    "plagiarism": {
+      "components": 15,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 4,
+      "total": 21
+    },
+    "programming": {
+      "components": 114,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 40,
+      "total": 156
+    },
+    "quiz": {
+      "components": 49,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 64
+    },
+    "shared": {
+      "components": 97,
+      "directives": 15,
+      "pipes": 26,
+      "injectables": 32,
+      "total": 170
+    },
+    "sharing": {
+      "components": 1,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 1
+    },
+    "text": {
+      "components": 32,
+      "directives": 2,
+      "pipes": 1,
+      "injectables": 10,
+      "total": 45
+    },
+    "tutorialgroup": {
+      "components": 63,
+      "directives": 0,
+      "pipes": 2,
+      "injectables": 8,
+      "total": 73
+    }
+  }
+}
