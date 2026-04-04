@@ -1,0 +1,139 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "be5a42d596635414d09bda517cc0d9b432f2904f",
+      "commitDate": "2026-04-04T15:08:12.000Z",
+      "commitAuthor": "Marlon Nienaber",
+      "commitMessage": "Tutorial groups: Improve tutorial group management (#12096)"
+    }
+  },
+  "changeDetection": {
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 37,
+      "total": 37
+    },
+    "atlas": {
+      "explicitOnPush": 15,
+      "explicitDefault": 0,
+      "implicitDefault": 52,
+      "total": 67
+    },
+    "buildagent": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 11
+    },
+    "communication": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 58,
+      "total": 64
+    },
+    "core": {
+      "explicitOnPush": 18,
+      "explicitDefault": 0,
+      "implicitDefault": 195,
+      "total": 213
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 78,
+      "total": 80
+    },
+    "exercise": {
+      "explicitOnPush": 7,
+      "explicitDefault": 0,
+      "implicitDefault": 77,
+      "total": 84
+    },
+    "fileupload": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 8
+    },
+    "hyperion": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "iris": {
+      "explicitOnPush": 15,
+      "explicitDefault": 0,
+      "implicitDefault": 3,
+      "total": 18
+    },
+    "lecture": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 49,
+      "total": 51
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 19,
+      "total": 19
+    },
+    "openapi": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 15,
+      "total": 15
+    },
+    "programming": {
+      "explicitOnPush": 16,
+      "explicitDefault": 0,
+      "implicitDefault": 98,
+      "total": 114
+    },
+    "quiz": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 44,
+      "total": 49
+    },
+    "shared": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 91,
+      "total": 97
+    },
+    "sharing": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 1,
+      "total": 1
+    },
+    "text": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 32,
+      "total": 32
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 20,
+      "explicitDefault": 0,
+      "implicitDefault": 24,
+      "total": 44
+    }
+  }
+}
