@@ -1,0 +1,139 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "334ae97137cc13b854332b971210384056841962",
+      "commitDate": "2026-04-23T22:05:35.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Update documentation dependencies"
+    }
+  },
+  "changeDetection": {
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 37,
+      "total": 37
+    },
+    "atlas": {
+      "explicitOnPush": 15,
+      "explicitDefault": 0,
+      "implicitDefault": 52,
+      "total": 67
+    },
+    "buildagent": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 11
+    },
+    "communication": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 58,
+      "total": 64
+    },
+    "core": {
+      "explicitOnPush": 18,
+      "explicitDefault": 0,
+      "implicitDefault": 204,
+      "total": 222
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 79,
+      "total": 81
+    },
+    "exercise": {
+      "explicitOnPush": 7,
+      "explicitDefault": 0,
+      "implicitDefault": 82,
+      "total": 89
+    },
+    "fileupload": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 8
+    },
+    "hyperion": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "iris": {
+      "explicitOnPush": 18,
+      "explicitDefault": 0,
+      "implicitDefault": 3,
+      "total": 21
+    },
+    "lecture": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 47,
+      "total": 52
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 19,
+      "total": 19
+    },
+    "openapi": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 15,
+      "total": 15
+    },
+    "programming": {
+      "explicitOnPush": 16,
+      "explicitDefault": 0,
+      "implicitDefault": 98,
+      "total": 114
+    },
+    "quiz": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 45,
+      "total": 50
+    },
+    "shared": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 92,
+      "total": 98
+    },
+    "sharing": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 1,
+      "total": 1
+    },
+    "text": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 32,
+      "total": 32
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 20,
+      "explicitDefault": 0,
+      "implicitDefault": 24,
+      "total": 44
+    }
+  }
+}
