@@ -1,0 +1,160 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "7954932a22f84e9e805051823c11c33b278ac1f0",
+      "commitDate": "2026-04-30T07:31:02.000Z",
+      "commitAuthor": "Claudia Anthropica",
+      "commitMessage": "General: Document course user management for instructors (#12630)"
+    }
+  },
+  "componentInventory": {
+    "assessment": {
+      "components": 37,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 46
+    },
+    "atlas": {
+      "components": 69,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 77
+    },
+    "buildagent": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 14
+    },
+    "communication": {
+      "components": 64,
+      "directives": 8,
+      "pipes": 0,
+      "injectables": 20,
+      "total": 92
+    },
+    "core": {
+      "components": 222,
+      "directives": 10,
+      "pipes": 0,
+      "injectables": 82,
+      "total": 314
+    },
+    "exam": {
+      "components": 81,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 15,
+      "total": 98
+    },
+    "exercise": {
+      "components": 89,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 24,
+      "total": 113
+    },
+    "fileupload": {
+      "components": 8,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 13
+    },
+    "hyperion": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 1
+    },
+    "iris": {
+      "components": 21,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 7,
+      "total": 28
+    },
+    "lecture": {
+      "components": 52,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 66
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 19,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 24
+    },
+    "openapi": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 8
+    },
+    "plagiarism": {
+      "components": 15,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 4,
+      "total": 21
+    },
+    "programming": {
+      "components": 114,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 40,
+      "total": 156
+    },
+    "quiz": {
+      "components": 50,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 65
+    },
+    "shared": {
+      "components": 100,
+      "directives": 18,
+      "pipes": 26,
+      "injectables": 32,
+      "total": 176
+    },
+    "sharing": {
+      "components": 1,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 1
+    },
+    "text": {
+      "components": 32,
+      "directives": 2,
+      "pipes": 1,
+      "injectables": 10,
+      "total": 45
+    },
+    "tutorialgroup": {
+      "components": 44,
+      "directives": 0,
+      "pipes": 2,
+      "injectables": 6,
+      "total": 52
+    }
+  }
+}
