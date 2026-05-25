@@ -26,18 +26,23 @@ TOTAL_INP=0
 TOTAL_FLD=0
 FIRST=1
 
-for module in admin assessment atlas communication core course exam exercise fileupload iris lecture lti modeling plagiarism programming quiz text tutorialgroup; do
-    # Find the test file for this module
-    testfile=$(find src/test/java/de/tum/cit/aet/artemis/$module -name "*EntityUsageArchitectureTest.java" 2>/dev/null | head -1)
+# Loop over every module directory under artemis/. If a module has an
+# *EntityUsageArchitectureTest.java, parse its thresholds and add them to the
+# threshold JSON; otherwise SKIP the module entirely. We must not emit a stub
+# {ret:0,inp:0,fld:0} entry — the jq merger below uses `// .value.X` to fall
+# back to the static extractor's count, but `0 // x` returns 0 in jq (0 is
+# truthy), which would silently overwrite real counts with zeros for any
+# module that does not yet have an ArchUnit test.
+for moduledir in src/main/java/de/tum/cit/aet/artemis/*/; do
+    module=$(basename "$moduledir")
+    testfile=$(find "src/test/java/de/tum/cit/aet/artemis/$module" -name "*EntityUsageArchitectureTest.java" 2>/dev/null | head -1)
 
-    if [ -n "$testfile" ]; then
-        ret=$(grep -A1 "getMaxEntityReturnViolations" "$testfile" 2>/dev/null | grep "return" | grep -oE "[0-9]+" | head -1)
-        inp=$(grep -A1 "getMaxEntityInputViolations" "$testfile" 2>/dev/null | grep "return" | grep -oE "[0-9]+" | head -1)
-        fld=$(grep -A1 "getMaxDtoEntityFieldViolations" "$testfile" 2>/dev/null | grep "return" | grep -oE "[0-9]+" | head -1)
-    else
-        ret=0; inp=0; fld=0
-    fi
+    # No ArchUnit test for this module → leave the static extractor's count in place.
+    [ -z "$testfile" ] && continue
 
+    ret=$(grep -A1 "getMaxEntityReturnViolations" "$testfile" 2>/dev/null | grep "return" | grep -oE "[0-9]+" | head -1)
+    inp=$(grep -A1 "getMaxEntityInputViolations" "$testfile" 2>/dev/null | grep "return" | grep -oE "[0-9]+" | head -1)
+    fld=$(grep -A1 "getMaxDtoEntityFieldViolations" "$testfile" 2>/dev/null | grep "return" | grep -oE "[0-9]+" | head -1)
     ret=${ret:-0}
     inp=${inp:-0}
     fld=${fld:-0}
