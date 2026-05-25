@@ -26,7 +26,7 @@ TOTAL_INP=0
 TOTAL_FLD=0
 FIRST=1
 
-for module in assessment atlas communication core exam exercise fileupload iris lecture lti modeling plagiarism programming quiz text tutorialgroup; do
+for module in admin assessment atlas communication core course exam exercise fileupload iris lecture lti modeling plagiarism programming quiz text tutorialgroup; do
     # Find the test file for this module
     testfile=$(find src/test/java/de/tum/cit/aet/artemis/$module -name "*EntityUsageArchitectureTest.java" 2>/dev/null | head -1)
 

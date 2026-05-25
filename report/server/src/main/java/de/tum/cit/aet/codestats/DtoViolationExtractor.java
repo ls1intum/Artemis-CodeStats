@@ -23,30 +23,36 @@ import java.util.stream.Stream;
  */
 public class DtoViolationExtractor {
 
-    // Module mapping based on package paths - ALL 20 Artemis modules
+    // Module mapping based on package paths - ALL Artemis server modules.
+    // Keep alphabetical; mirrors the directory layout under src/main/java/de/tum/cit/aet/artemis/.
     private static final Map<String, String> PACKAGE_TO_MODULE = new LinkedHashMap<>();
     static {
+        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.account", "account");
+        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.admin", "admin");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.assessment", "assessment");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.athena", "athena");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.atlas", "atlas");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.buildagent", "buildagent");
+        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.calendar", "calendar");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.communication", "communication");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.config", "config");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.core", "core");
+        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.course", "course");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.exam", "exam");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.exercise", "exercise");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.fileupload", "fileupload");
+        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.globalsearch", "globalsearch");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.hyperion", "hyperion");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.iris", "iris");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.lecture", "lecture");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.lti", "lti");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.modeling", "modeling");
-        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.nebula", "nebula");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.plagiarism", "plagiarism");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.programming", "programming");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.quiz", "quiz");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.text", "text");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.tutorialgroup", "tutorialgroup");
+        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.videosource", "videosource");
     }
 
     // REST mapping annotations

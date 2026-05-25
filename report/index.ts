@@ -88,11 +88,15 @@ const basePath = "src/main/webapp/app";
 // Cutoff date - won't analyze commits earlier than this
 const CUTOFF_COMMIT_DATE = new Date("2025-03-28");
 const modules = [
+  "account",
+  "admin",
   "assessment",
   "atlas",
   "buildagent",
+  "calendar",
   "communication",
   "core",
+  "course",
   "exam",
   "exercise",
   "fileupload",
