@@ -1,0 +1,188 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "5d0d89545e891886180554363fa002d071cfd2f6",
+      "commitDate": "2026-05-26T21:26:05.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Improve e2e test conduction (#12786)"
+    }
+  },
+  "componentInventory": {
+    "account": {
+      "components": 31,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 20,
+      "total": 52
+    },
+    "admin": {
+      "components": 51,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 18,
+      "total": 71
+    },
+    "assessment": {
+      "components": 37,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 46
+    },
+    "atlas": {
+      "components": 71,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 9,
+      "total": 80
+    },
+    "buildagent": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 14
+    },
+    "calendar": {
+      "components": 13,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 16
+    },
+    "communication": {
+      "components": 64,
+      "directives": 8,
+      "pipes": 0,
+      "injectables": 20,
+      "total": 92
+    },
+    "core": {
+      "components": 45,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 26,
+      "total": 73
+    },
+    "course": {
+      "components": 82,
+      "directives": 3,
+      "pipes": 0,
+      "injectables": 17,
+      "total": 102
+    },
+    "exam": {
+      "components": 82,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 15,
+      "total": 99
+    },
+    "exercise": {
+      "components": 91,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 24,
+      "total": 115
+    },
+    "fileupload": {
+      "components": 8,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 13
+    },
+    "hyperion": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 1
+    },
+    "iris": {
+      "components": 24,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 32
+    },
+    "lecture": {
+      "components": 53,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 67
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 19,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 24
+    },
+    "openapi": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 11,
+      "total": 11
+    },
+    "plagiarism": {
+      "components": 15,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 4,
+      "total": 21
+    },
+    "programming": {
+      "components": 113,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 41,
+      "total": 156
+    },
+    "quiz": {
+      "components": 50,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 65
+    },
+    "shared": {
+      "components": 100,
+      "directives": 18,
+      "pipes": 26,
+      "injectables": 32,
+      "total": 176
+    },
+    "sharing": {
+      "components": 1,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 1
+    },
+    "text": {
+      "components": 32,
+      "directives": 2,
+      "pipes": 1,
+      "injectables": 10,
+      "total": 45
+    },
+    "tutorialgroup": {
+      "components": 44,
+      "directives": 0,
+      "pipes": 2,
+      "injectables": 6,
+      "total": 52
+    }
+  }
+}
