@@ -47,6 +47,7 @@ public class DtoViolationExtractor {
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.lecture", "lecture");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.lti", "lti");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.modeling", "modeling");
+        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.notification", "notification");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.plagiarism", "plagiarism");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.programming", "programming");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.quiz", "quiz");
