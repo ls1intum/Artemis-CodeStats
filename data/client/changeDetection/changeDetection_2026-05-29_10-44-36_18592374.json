@@ -63,6 +63,12 @@
       "implicitDefault": 87,
       "total": 91
     },
+    "editor": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 4
+    },
     "exam": {
       "explicitOnPush": 2,
       "explicitDefault": 0,
@@ -79,6 +85,12 @@
       "explicitOnPush": 4,
       "explicitDefault": 0,
       "implicitDefault": 4,
+      "total": 8
+    },
+    "foundation": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 8,
       "total": 8
     },
     "hyperion": {
@@ -98,6 +110,24 @@
       "explicitDefault": 0,
       "implicitDefault": 48,
       "total": 53
+    },
+    "localci": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 11
+    },
+    "localvc": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 2,
+      "total": 2
+    },
+    "logos": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 2,
+      "total": 2
     },
     "lti": {
       "explicitOnPush": 0,
@@ -144,8 +174,14 @@
     "shared": {
       "explicitOnPush": 2,
       "explicitDefault": 0,
-      "implicitDefault": 62,
-      "total": 64
+      "implicitDefault": 67,
+      "total": 69
+    },
+    "shared-ui": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
     },
     "sharing": {
       "explicitOnPush": 0,

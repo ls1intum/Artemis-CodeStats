@@ -1408,6 +1408,14 @@
         "entityInputDetails": [],
         "dtoEntityFieldDetails": []
       },
+      "jenkins": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
       "lecture": {
         "entityReturnViolations": 17,
         "entityInputViolations": 7,
@@ -1656,6 +1664,53 @@
             "line": 69
           }
         ]
+      },
+      "localci": {
+        "entityReturnViolations": 2,
+        "entityInputViolations": 1,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [
+          {
+            "controller": "BuildPlanResource",
+            "method": "getBuildPlanForEditor",
+            "endpoint": "GET api/localci/programming-exercises/{exerciseId}/build-plan/for-editor",
+            "returnType": "ResponseEntity<BuildPlan>",
+            "entityClass": "BuildPlan",
+            "file": "de/tum/cit/aet/artemis/localci/web/BuildPlanResource.java",
+            "line": 58
+          },
+          {
+            "controller": "BuildPlanResource",
+            "method": "setBuildPlan",
+            "endpoint": "PUT api/localci/programming-exercises/{exerciseId}/build-plan",
+            "returnType": "ResponseEntity<BuildPlan>",
+            "entityClass": "BuildPlan",
+            "file": "de/tum/cit/aet/artemis/localci/web/BuildPlanResource.java",
+            "line": 82
+          }
+        ],
+        "entityInputDetails": [
+          {
+            "controller": "BuildPlanResource",
+            "method": "setBuildPlan",
+            "endpoint": "PUT api/localci/programming-exercises/{exerciseId}/build-plan",
+            "parameterName": "buildPlan",
+            "parameterType": "BuildPlan",
+            "annotationType": "@RequestBody",
+            "entityClass": "BuildPlan",
+            "file": "de/tum/cit/aet/artemis/localci/web/BuildPlanResource.java",
+            "line": 82
+          }
+        ],
+        "dtoEntityFieldDetails": []
+      },
+      "localvc": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
       },
       "lti": {
         "entityReturnViolations": 3,
@@ -2065,45 +2120,6 @@
             "line": 9
           }
         ]
-      },
-      "other": {
-        "entityReturnViolations": 2,
-        "entityInputViolations": 1,
-        "dtoEntityFieldViolations": 0,
-        "entityReturnDetails": [
-          {
-            "controller": "BuildPlanResource",
-            "method": "getBuildPlanForEditor",
-            "endpoint": "GET api/localci/programming-exercises/{exerciseId}/build-plan/for-editor",
-            "returnType": "ResponseEntity<BuildPlan>",
-            "entityClass": "BuildPlan",
-            "file": "de/tum/cit/aet/artemis/localci/web/BuildPlanResource.java",
-            "line": 58
-          },
-          {
-            "controller": "BuildPlanResource",
-            "method": "setBuildPlan",
-            "endpoint": "PUT api/localci/programming-exercises/{exerciseId}/build-plan",
-            "returnType": "ResponseEntity<BuildPlan>",
-            "entityClass": "BuildPlan",
-            "file": "de/tum/cit/aet/artemis/localci/web/BuildPlanResource.java",
-            "line": 82
-          }
-        ],
-        "entityInputDetails": [
-          {
-            "controller": "BuildPlanResource",
-            "method": "setBuildPlan",
-            "endpoint": "PUT api/localci/programming-exercises/{exerciseId}/build-plan",
-            "parameterName": "buildPlan",
-            "parameterType": "BuildPlan",
-            "annotationType": "@RequestBody",
-            "entityClass": "BuildPlan",
-            "file": "de/tum/cit/aet/artemis/localci/web/BuildPlanResource.java",
-            "line": 82
-          }
-        ],
-        "dtoEntityFieldDetails": []
       },
       "plagiarism": {
         "entityReturnViolations": 6,

@@ -72,6 +72,13 @@
       "injectables": 19,
       "total": 114
     },
+    "editor": {
+      "components": 4,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 2,
+      "total": 6
+    },
     "exam": {
       "components": 82,
       "directives": 2,
@@ -93,6 +100,13 @@
       "injectables": 5,
       "total": 13
     },
+    "foundation": {
+      "components": 8,
+      "directives": 11,
+      "pipes": 26,
+      "injectables": 21,
+      "total": 66
+    },
     "hyperion": {
       "components": 0,
       "directives": 0,
@@ -113,6 +127,27 @@
       "pipes": 0,
       "injectables": 13,
       "total": 67
+    },
+    "localci": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 14
+    },
+    "localvc": {
+      "components": 2,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 2
+    },
+    "logos": {
+      "components": 2,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 3
     },
     "lti": {
       "components": 6,
@@ -164,11 +199,18 @@
       "total": 65
     },
     "shared": {
-      "components": 64,
+      "components": 69,
       "directives": 6,
       "pipes": 0,
       "injectables": 4,
-      "total": 74
+      "total": 79
+    },
+    "shared-ui": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
     },
     "sharing": {
       "components": 1,
