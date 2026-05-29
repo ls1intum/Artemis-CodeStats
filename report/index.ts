@@ -87,6 +87,11 @@ const repoDir = path.join(process.cwd(), "artemis");
 const basePath = "src/main/webapp/app";
 // Cutoff date - won't analyze commits earlier than this
 const CUTOFF_COMMIT_DATE = new Date("2025-03-28");
+// Top-level client modules under src/main/webapp/app, kept alphabetical.
+// `buildagent` and `shared` no longer exist on develop (shared was split into
+// foundation/shared-ui/editor) but are retained so historical reports back to
+// the cutoff date still attribute their decorator usage; initializeProject
+// skips any module directory that does not exist for a given commit.
 const modules = [
   "account",
   "admin",
@@ -97,12 +102,17 @@ const modules = [
   "communication",
   "core",
   "course",
+  "editor",
   "exam",
   "exercise",
   "fileupload",
+  "foundation",
   "hyperion",
   "iris",
   "lecture",
+  "localci",
+  "localvc",
+  "logos",
   "lti",
   "modeling",
   "notification",
@@ -111,6 +121,7 @@ const modules = [
   "programming",
   "quiz",
   "shared",
+  "shared-ui",
   "sharing",
   "text",
   "tutorialgroup",

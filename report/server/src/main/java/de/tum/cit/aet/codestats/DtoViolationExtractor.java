@@ -44,7 +44,10 @@ public class DtoViolationExtractor {
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.globalsearch", "globalsearch");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.hyperion", "hyperion");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.iris", "iris");
+        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.jenkins", "jenkins");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.lecture", "lecture");
+        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.localci", "localci");
+        PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.localvc", "localvc");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.lti", "lti");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.modeling", "modeling");
         PACKAGE_TO_MODULE.put("de.tum.cit.aet.artemis.notification", "notification");
