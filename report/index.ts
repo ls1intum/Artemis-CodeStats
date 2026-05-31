@@ -88,10 +88,12 @@ const basePath = "src/main/webapp/app";
 // Cutoff date - won't analyze commits earlier than this
 const CUTOFF_COMMIT_DATE = new Date("2025-03-28");
 // Top-level client modules under src/main/webapp/app, kept alphabetical.
-// `buildagent` and `shared` no longer exist on develop (shared was split into
+// This is the historical superset across all analyzed commits. `buildagent`
+// and `shared` no longer exist on develop (shared was split into
 // foundation/shared-ui/editor) but are retained so historical reports back to
-// the cutoff date still attribute their decorator usage; initializeProject
-// skips any module directory that does not exist for a given commit.
+// the cutoff date still attribute their decorator usage. For any given commit,
+// `getPresentModules` filters this list down to the directories that actually
+// exist, so removed modules no longer appear as empty entries in new reports.
 const modules = [
   "account",
   "admin",
@@ -313,19 +315,31 @@ function cleanupAfterAnalysis() {
 }
 
 /**
+ * Filter the historical `modules` superset down to the directories that
+ * actually exist in the currently checked-out artemis working tree. This
+ * ensures removed modules (e.g. `shared`, `buildagent`) are not reported as
+ * empty entries for commits where they no longer exist, while still allowing
+ * them to be attributed when regenerating historical reports.
+ */
+function getPresentModules(): string[] {
+  return modules.filter((moduleName) =>
+    fs.existsSync(path.join(repoDir, basePath, moduleName))
+  );
+}
+
+/**
  * Initialize the ts-morph project and add source files
  */
-function initializeProject(): Project {
+function initializeProject(presentModules: string[]): Project {
   const project = new Project({
     tsConfigFilePath: path.join(repoDir, "tsconfig.json"),
   });
 
-  // Add source files from each module
-  modules.forEach((moduleName) => {
-    const modulePath = path.join(repoDir, basePath, moduleName);
-    if (fs.existsSync(modulePath)) {
-      project.addSourceFilesAtPaths(path.join(modulePath, "**/*.ts"));
-    }
+  // Add source files from each module that exists for this commit
+  presentModules.forEach((moduleName) => {
+    project.addSourceFilesAtPaths(
+      path.join(repoDir, basePath, moduleName, "**/*.ts")
+    );
   });
 
   return project;
@@ -398,19 +412,23 @@ function writeReportFile<T>(
  * @param commitInfo Optional commit info for historical reports
  */
 function generateReports(commitInfo?: CommitInfo) {
+  // Determine which modules exist for the commit currently checked out, so
+  // removed modules are not reported as empty entries.
+  const presentModules = getPresentModules();
+
   // Initialize project
-  const project = initializeProject();
+  const project = initializeProject(presentModules);
 
   // Run analyzers
-  const componentStats = analyzeExistingComponents(project, modules, basePath);
+  const componentStats = analyzeExistingComponents(project, presentModules, basePath);
   const changeDetectionStats = analyzeChangeDetection(
     project,
-    modules,
+    presentModules,
     basePath
   );
   const decoratorlessAPIStats = analyzeDecoratorlessAPI(
     project,
-    modules,
+    presentModules,
     basePath
   );
 
