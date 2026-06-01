@@ -1,0 +1,223 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "6ba787a29ef1313c90af9fa6d2e039604ce2abcc",
+      "commitDate": "2026-06-01T11:30:06.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Migrate the admin client module off ng-bootstrap to primeng (#12845)"
+    }
+  },
+  "componentInventory": {
+    "account": {
+      "components": 31,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 20,
+      "total": 52
+    },
+    "admin": {
+      "components": 53,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 18,
+      "total": 73
+    },
+    "assessment": {
+      "components": 37,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 46
+    },
+    "atlas": {
+      "components": 71,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 9,
+      "total": 80
+    },
+    "calendar": {
+      "components": 13,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 16
+    },
+    "communication": {
+      "components": 58,
+      "directives": 8,
+      "pipes": 0,
+      "injectables": 17,
+      "total": 83
+    },
+    "core": {
+      "components": 45,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 27,
+      "total": 74
+    },
+    "course": {
+      "components": 91,
+      "directives": 4,
+      "pipes": 0,
+      "injectables": 19,
+      "total": 114
+    },
+    "editor": {
+      "components": 4,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 2,
+      "total": 6
+    },
+    "exam": {
+      "components": 82,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 15,
+      "total": 99
+    },
+    "exercise": {
+      "components": 102,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 27,
+      "total": 129
+    },
+    "fileupload": {
+      "components": 8,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 13
+    },
+    "foundation": {
+      "components": 10,
+      "directives": 11,
+      "pipes": 26,
+      "injectables": 21,
+      "total": 68
+    },
+    "hyperion": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 1
+    },
+    "iris": {
+      "components": 24,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 32
+    },
+    "lecture": {
+      "components": 53,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 67
+    },
+    "localci": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 14
+    },
+    "localvc": {
+      "components": 2,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 2
+    },
+    "logos": {
+      "components": 2,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 3
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 19,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 24
+    },
+    "notification": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 9
+    },
+    "openapi": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 11,
+      "total": 11
+    },
+    "plagiarism": {
+      "components": 15,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 4,
+      "total": 21
+    },
+    "programming": {
+      "components": 111,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 41,
+      "total": 154
+    },
+    "quiz": {
+      "components": 50,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 65
+    },
+    "shared-ui": {
+      "components": 72,
+      "directives": 6,
+      "pipes": 0,
+      "injectables": 4,
+      "total": 82
+    },
+    "sharing": {
+      "components": 1,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 1
+    },
+    "text": {
+      "components": 32,
+      "directives": 2,
+      "pipes": 1,
+      "injectables": 10,
+      "total": 45
+    },
+    "tutorialgroup": {
+      "components": 44,
+      "directives": 0,
+      "pipes": 2,
+      "injectables": 6,
+      "total": 52
+    }
+  }
+}
