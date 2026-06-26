@@ -1,0 +1,199 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "95a9e82b0f472f1e9c4f3ab67c5ddc4f12e94fd2",
+      "commitDate": "2026-06-26T20:26:45.000Z",
+      "commitAuthor": "Ravi Tamang",
+      "commitMessage": "Modeling exercises: Add live cursors and presence to team collaboration (#12867)"
+    }
+  },
+  "changeDetection": {
+    "account": {
+      "explicitOnPush": 9,
+      "explicitDefault": 0,
+      "implicitDefault": 22,
+      "total": 31
+    },
+    "admin": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 55,
+      "total": 55
+    },
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 38,
+      "total": 38
+    },
+    "atlas": {
+      "explicitOnPush": 17,
+      "explicitDefault": 0,
+      "implicitDefault": 57,
+      "total": 74
+    },
+    "calendar": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 13,
+      "total": 13
+    },
+    "communication": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 52,
+      "total": 58
+    },
+    "core": {
+      "explicitOnPush": 14,
+      "explicitDefault": 0,
+      "implicitDefault": 32,
+      "total": 46
+    },
+    "course": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 87,
+      "total": 91
+    },
+    "editor": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 4
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 80,
+      "total": 82
+    },
+    "exercise": {
+      "explicitOnPush": 10,
+      "explicitDefault": 0,
+      "implicitDefault": 90,
+      "total": 100
+    },
+    "fileupload": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 4,
+      "total": 8
+    },
+    "foundation": {
+      "explicitOnPush": 1,
+      "explicitDefault": 0,
+      "implicitDefault": 9,
+      "total": 10
+    },
+    "hyperion": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "iris": {
+      "explicitOnPush": 21,
+      "explicitDefault": 0,
+      "implicitDefault": 3,
+      "total": 24
+    },
+    "lecture": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 49,
+      "total": 54
+    },
+    "localci": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 11
+    },
+    "localvc": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 2,
+      "total": 2
+    },
+    "logos": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 2,
+      "total": 2
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 20,
+      "total": 20
+    },
+    "notification": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "openapi": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 15,
+      "total": 15
+    },
+    "programming": {
+      "explicitOnPush": 16,
+      "explicitDefault": 0,
+      "implicitDefault": 96,
+      "total": 112
+    },
+    "quiz": {
+      "explicitOnPush": 5,
+      "explicitDefault": 0,
+      "implicitDefault": 45,
+      "total": 50
+    },
+    "shared": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 75,
+      "total": 77
+    },
+    "shared-ui": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "sharing": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 1,
+      "total": 1
+    },
+    "text": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 30,
+      "total": 30
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 20,
+      "explicitDefault": 0,
+      "implicitDefault": 24,
+      "total": 44
+    }
+  }
+}
