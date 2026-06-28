@@ -1,0 +1,230 @@
+{
+  "metadata": {
+    "type": "componentInventory",
+    "artemis": {
+      "commitHash": "f159eb7b90e7c8be261ce8ad6e4e71d8ebbf518a",
+      "commitDate": "2026-06-28T19:21:06.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Fix startup with disabled optional modules and speed up production startup (#13013)"
+    }
+  },
+  "componentInventory": {
+    "account": {
+      "components": 31,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 20,
+      "total": 52
+    },
+    "admin": {
+      "components": 55,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 19,
+      "total": 76
+    },
+    "assessment": {
+      "components": 38,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 47
+    },
+    "atlas": {
+      "components": 75,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 9,
+      "total": 84
+    },
+    "calendar": {
+      "components": 13,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 16
+    },
+    "communication": {
+      "components": 58,
+      "directives": 8,
+      "pipes": 0,
+      "injectables": 17,
+      "total": 83
+    },
+    "core": {
+      "components": 45,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 26,
+      "total": 73
+    },
+    "course": {
+      "components": 90,
+      "directives": 4,
+      "pipes": 0,
+      "injectables": 20,
+      "total": 114
+    },
+    "editor": {
+      "components": 4,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 2,
+      "total": 6
+    },
+    "exam": {
+      "components": 82,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 15,
+      "total": 99
+    },
+    "exercise": {
+      "components": 99,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 27,
+      "total": 126
+    },
+    "fileupload": {
+      "components": 8,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 13
+    },
+    "foundation": {
+      "components": 10,
+      "directives": 11,
+      "pipes": 27,
+      "injectables": 21,
+      "total": 69
+    },
+    "hyperion": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 1
+    },
+    "iris": {
+      "components": 24,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 8,
+      "total": 32
+    },
+    "lecture": {
+      "components": 54,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 68
+    },
+    "localci": {
+      "components": 11,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 14
+    },
+    "localvc": {
+      "components": 2,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 2
+    },
+    "logos": {
+      "components": 2,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 1,
+      "total": 3
+    },
+    "lti": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 6
+    },
+    "modeling": {
+      "components": 20,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 25
+    },
+    "notification": {
+      "components": 6,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 3,
+      "total": 9
+    },
+    "openapi": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 11,
+      "total": 11
+    },
+    "plagiarism": {
+      "components": 15,
+      "directives": 1,
+      "pipes": 0,
+      "injectables": 4,
+      "total": 20
+    },
+    "programming": {
+      "components": 112,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 41,
+      "total": 155
+    },
+    "quiz": {
+      "components": 50,
+      "directives": 2,
+      "pipes": 0,
+      "injectables": 13,
+      "total": 65
+    },
+    "shared": {
+      "components": 78,
+      "directives": 7,
+      "pipes": 0,
+      "injectables": 5,
+      "total": 90
+    },
+    "shared-ui": {
+      "components": 0,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 0
+    },
+    "sharing": {
+      "components": 1,
+      "directives": 0,
+      "pipes": 0,
+      "injectables": 0,
+      "total": 1
+    },
+    "text": {
+      "components": 30,
+      "directives": 2,
+      "pipes": 1,
+      "injectables": 10,
+      "total": 43
+    },
+    "tutorialgroup": {
+      "components": 44,
+      "directives": 0,
+      "pipes": 2,
+      "injectables": 6,
+      "total": 52
+    }
+  }
+}
