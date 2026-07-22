@@ -35,6 +35,15 @@
         "dtoEntityFieldViolations": 0,
         "entityReturnDetails": [
           {
+            "controller": "AdminCourseResource",
+            "method": "createCourse",
+            "endpoint": "POST api/admin/courses",
+            "returnType": "ResponseEntity<Course>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/admin/web/AdminCourseResource.java",
+            "line": 177
+          },
+          {
             "controller": "AdminOrganizationResource",
             "method": "addOrganization",
             "endpoint": "POST api/admin/organizations",
@@ -69,15 +78,6 @@
             "entityClass": "Organization",
             "file": "de/tum/cit/aet/artemis/admin/web/AdminOrganizationResource.java",
             "line": 304
-          },
-          {
-            "controller": "AdminCourseResource",
-            "method": "createCourse",
-            "endpoint": "POST api/admin/courses",
-            "returnType": "ResponseEntity<Course>",
-            "entityClass": "Course",
-            "file": "de/tum/cit/aet/artemis/admin/web/AdminCourseResource.java",
-            "line": 177
           }
         ],
         "entityInputDetails": [
@@ -111,6 +111,24 @@
         "entityInputViolations": 4,
         "dtoEntityFieldViolations": 3,
         "entityReturnDetails": [
+          {
+            "controller": "ResultResource",
+            "method": "getResultDetails",
+            "endpoint": "GET api/assessment/participations/{participationId}/results/{resultId}/details",
+            "returnType": "ResponseEntity<List<Feedback>>",
+            "entityClass": "Feedback",
+            "file": "de/tum/cit/aet/artemis/assessment/web/ResultResource.java",
+            "line": 164
+          },
+          {
+            "controller": "ResultResource",
+            "method": "createResultForExternalSubmission",
+            "endpoint": "POST api/assessment/exercises/{exerciseId}/external-submission-results",
+            "returnType": "ResponseEntity<Result>",
+            "entityClass": "Result",
+            "file": "de/tum/cit/aet/artemis/assessment/web/ResultResource.java",
+            "line": 243
+          },
           {
             "controller": "ExampleSubmissionResource",
             "method": "createExampleSubmission",
@@ -146,49 +164,9 @@
             "entityClass": "ExampleSubmission",
             "file": "de/tum/cit/aet/artemis/assessment/web/ExampleSubmissionResource.java",
             "line": 202
-          },
-          {
-            "controller": "ResultResource",
-            "method": "getResultDetails",
-            "endpoint": "GET api/assessment/participations/{participationId}/results/{resultId}/details",
-            "returnType": "ResponseEntity<List<Feedback>>",
-            "entityClass": "Feedback",
-            "file": "de/tum/cit/aet/artemis/assessment/web/ResultResource.java",
-            "line": 164
-          },
-          {
-            "controller": "ResultResource",
-            "method": "createResultForExternalSubmission",
-            "endpoint": "POST api/assessment/exercises/{exerciseId}/external-submission-results",
-            "returnType": "ResponseEntity<Result>",
-            "entityClass": "Result",
-            "file": "de/tum/cit/aet/artemis/assessment/web/ResultResource.java",
-            "line": 243
           }
         ],
         "entityInputDetails": [
-          {
-            "controller": "ExampleSubmissionResource",
-            "method": "createExampleSubmission",
-            "endpoint": "POST api/assessment/exercises/{exerciseId}/example-submissions",
-            "parameterName": "exampleSubmission",
-            "parameterType": "ExampleSubmission",
-            "annotationType": "@RequestBody",
-            "entityClass": "ExampleSubmission",
-            "file": "de/tum/cit/aet/artemis/assessment/web/ExampleSubmissionResource.java",
-            "line": 86
-          },
-          {
-            "controller": "ExampleSubmissionResource",
-            "method": "updateExampleSubmission",
-            "endpoint": "PUT api/assessment/exercises/{exerciseId}/example-submissions",
-            "parameterName": "exampleSubmission",
-            "parameterType": "ExampleSubmission",
-            "annotationType": "@RequestBody",
-            "entityClass": "ExampleSubmission",
-            "file": "de/tum/cit/aet/artemis/assessment/web/ExampleSubmissionResource.java",
-            "line": 105
-          },
           {
             "controller": "TutorParticipationResource",
             "method": "assessExampleSubmissionForTutorParticipation",
@@ -210,9 +188,39 @@
             "entityClass": "Result",
             "file": "de/tum/cit/aet/artemis/assessment/web/ResultResource.java",
             "line": 243
+          },
+          {
+            "controller": "ExampleSubmissionResource",
+            "method": "createExampleSubmission",
+            "endpoint": "POST api/assessment/exercises/{exerciseId}/example-submissions",
+            "parameterName": "exampleSubmission",
+            "parameterType": "ExampleSubmission",
+            "annotationType": "@RequestBody",
+            "entityClass": "ExampleSubmission",
+            "file": "de/tum/cit/aet/artemis/assessment/web/ExampleSubmissionResource.java",
+            "line": 86
+          },
+          {
+            "controller": "ExampleSubmissionResource",
+            "method": "updateExampleSubmission",
+            "endpoint": "PUT api/assessment/exercises/{exerciseId}/example-submissions",
+            "parameterName": "exampleSubmission",
+            "parameterType": "ExampleSubmission",
+            "annotationType": "@RequestBody",
+            "entityClass": "ExampleSubmission",
+            "file": "de/tum/cit/aet/artemis/assessment/web/ExampleSubmissionResource.java",
+            "line": 105
           }
         ],
         "dtoEntityFieldDetails": [
+          {
+            "dtoClass": "ResultWithPointsPerGradingCriterionDTO",
+            "fieldName": "result",
+            "fieldType": "Result",
+            "entityClass": "Result",
+            "file": "de/tum/cit/aet/artemis/assessment/dto/ResultWithPointsPerGradingCriterionDTO.java",
+            "line": 14
+          },
           {
             "dtoClass": "AssessmentUpdateDTO",
             "fieldName": "feedbacks",
@@ -228,14 +236,6 @@
             "entityClass": "ComplaintResponse",
             "file": "de/tum/cit/aet/artemis/assessment/dto/AssessmentUpdateDTO.java",
             "line": 18
-          },
-          {
-            "dtoClass": "ResultWithPointsPerGradingCriterionDTO",
-            "fieldName": "result",
-            "fieldType": "Result",
-            "entityClass": "Result",
-            "file": "de/tum/cit/aet/artemis/assessment/dto/ResultWithPointsPerGradingCriterionDTO.java",
-            "line": 14
           }
         ]
       },
@@ -309,78 +309,6 @@
         "entityInputViolations": 0,
         "dtoEntityFieldViolations": 2,
         "entityReturnDetails": [
-          {
-            "controller": "CourseAccessResource",
-            "method": "getCourseForEnrollment",
-            "endpoint": "GET api/course/courses/{courseId}/for-enrollment",
-            "returnType": "ResponseEntity<Course>",
-            "entityClass": "Course",
-            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
-            "line": 136
-          },
-          {
-            "controller": "CourseAccessResource",
-            "method": "getCoursesForEnrollment",
-            "endpoint": "GET api/course/courses/for-enrollment",
-            "returnType": "ResponseEntity<List<Course>>",
-            "entityClass": "Course",
-            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
-            "line": 154
-          },
-          {
-            "controller": "CourseAccessResource",
-            "method": "getStudentsInCourse",
-            "endpoint": "GET api/course/courses/{courseId}/students",
-            "returnType": "ResponseEntity<Set<User>>",
-            "entityClass": "User",
-            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
-            "line": 170
-          },
-          {
-            "controller": "CourseAccessResource",
-            "method": "getTutorsInCourse",
-            "endpoint": "GET api/course/courses/{courseId}/tutors",
-            "returnType": "ResponseEntity<Set<User>>",
-            "entityClass": "User",
-            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
-            "line": 259
-          },
-          {
-            "controller": "CourseAccessResource",
-            "method": "getEditorsInCourse",
-            "endpoint": "GET api/course/courses/{courseId}/editors",
-            "returnType": "ResponseEntity<Set<User>>",
-            "entityClass": "User",
-            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
-            "line": 273
-          },
-          {
-            "controller": "CourseAccessResource",
-            "method": "getInstructorsInCourse",
-            "endpoint": "GET api/course/courses/{courseId}/instructors",
-            "returnType": "ResponseEntity<Set<User>>",
-            "entityClass": "User",
-            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
-            "line": 287
-          },
-          {
-            "controller": "CourseAccessResource",
-            "method": "searchOtherUsersInCourse",
-            "endpoint": "GET api/course/courses/{courseId}/search-other-users",
-            "returnType": "ResponseEntity<List<User>>",
-            "entityClass": "User",
-            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
-            "line": 302
-          },
-          {
-            "controller": "CourseUpdateResource",
-            "method": "updateCourse",
-            "endpoint": "PUT api/course/courses/{courseId}",
-            "returnType": "ResponseEntity<Course>",
-            "entityClass": "Course",
-            "file": "de/tum/cit/aet/artemis/course/web/CourseUpdateResource.java",
-            "line": 121
-          },
           {
             "controller": "CourseManagementResource",
             "method": "getCourses",
@@ -472,6 +400,87 @@
             "line": 274
           },
           {
+            "controller": "CourseStatsResource",
+            "method": "getCoursesWithUserStats",
+            "endpoint": "GET api/course/courses/with-user-stats",
+            "returnType": "ResponseEntity<List<Course>>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseStatsResource.java",
+            "line": 92
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getCourseForEnrollment",
+            "endpoint": "GET api/course/courses/{courseId}/for-enrollment",
+            "returnType": "ResponseEntity<Course>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 136
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getCoursesForEnrollment",
+            "endpoint": "GET api/course/courses/for-enrollment",
+            "returnType": "ResponseEntity<List<Course>>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 154
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getStudentsInCourse",
+            "endpoint": "GET api/course/courses/{courseId}/students",
+            "returnType": "ResponseEntity<Set<User>>",
+            "entityClass": "User",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 170
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getTutorsInCourse",
+            "endpoint": "GET api/course/courses/{courseId}/tutors",
+            "returnType": "ResponseEntity<Set<User>>",
+            "entityClass": "User",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 259
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getEditorsInCourse",
+            "endpoint": "GET api/course/courses/{courseId}/editors",
+            "returnType": "ResponseEntity<Set<User>>",
+            "entityClass": "User",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 273
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getInstructorsInCourse",
+            "endpoint": "GET api/course/courses/{courseId}/instructors",
+            "returnType": "ResponseEntity<Set<User>>",
+            "entityClass": "User",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 287
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "searchOtherUsersInCourse",
+            "endpoint": "GET api/course/courses/{courseId}/search-other-users",
+            "returnType": "ResponseEntity<List<User>>",
+            "entityClass": "User",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 302
+          },
+          {
+            "controller": "CourseUpdateResource",
+            "method": "updateCourse",
+            "endpoint": "PUT api/course/courses/{courseId}",
+            "returnType": "ResponseEntity<Course>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseUpdateResource.java",
+            "line": 121
+          },
+          {
             "controller": "CourseOverviewResource",
             "method": "getCoursesForNotifications",
             "endpoint": "GET api/course/courses/for-notifications",
@@ -488,27 +497,10 @@
             "entityClass": "Course",
             "file": "de/tum/cit/aet/artemis/course/web/CourseOverviewResource.java",
             "line": 259
-          },
-          {
-            "controller": "CourseStatsResource",
-            "method": "getCoursesWithUserStats",
-            "endpoint": "GET api/course/courses/with-user-stats",
-            "returnType": "ResponseEntity<List<Course>>",
-            "entityClass": "Course",
-            "file": "de/tum/cit/aet/artemis/course/web/CourseStatsResource.java",
-            "line": 92
           }
         ],
         "entityInputDetails": [],
         "dtoEntityFieldDetails": [
-          {
-            "dtoClass": "CoursesForDashboardDTO",
-            "fieldName": "activeExams",
-            "fieldType": "Set<Exam>",
-            "entityClass": "Exam",
-            "file": "de/tum/cit/aet/artemis/course/dto/CoursesForDashboardDTO.java",
-            "line": 10
-          },
           {
             "dtoClass": "CourseForDashboardDTO",
             "fieldName": "course",
@@ -516,6 +508,14 @@
             "entityClass": "Course",
             "file": "de/tum/cit/aet/artemis/course/dto/CourseForDashboardDTO.java",
             "line": 29
+          },
+          {
+            "dtoClass": "CoursesForDashboardDTO",
+            "fieldName": "activeExams",
+            "fieldType": "Set<Exam>",
+            "entityClass": "Exam",
+            "file": "de/tum/cit/aet/artemis/course/dto/CoursesForDashboardDTO.java",
+            "line": 10
           }
         ]
       },
@@ -524,96 +524,6 @@
         "entityInputViolations": 5,
         "dtoEntityFieldViolations": 4,
         "entityReturnDetails": [
-          {
-            "controller": "StudentExamResource",
-            "method": "getStudentExamsForExam",
-            "endpoint": "GET api/exam/courses/{courseId}/exams/{examId}/student-exams",
-            "returnType": "ResponseEntity<Set<StudentExam>>",
-            "entityClass": "StudentExam",
-            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
-            "line": 177
-          },
-          {
-            "controller": "StudentExamResource",
-            "method": "updateWorkingTime",
-            "endpoint": "PATCH api/exam/courses/{courseId}/exams/{examId}/student-exams/{studentExamId}/working-time",
-            "returnType": "ResponseEntity<StudentExam>",
-            "entityClass": "StudentExam",
-            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
-            "line": 198
-          },
-          {
-            "controller": "StudentExamResource",
-            "method": "getStudentExamForConduction",
-            "endpoint": "GET api/exam/courses/{courseId}/exams/{examId}/student-exams/{studentExamId}/conduction",
-            "returnType": "ResponseEntity<StudentExam>",
-            "entityClass": "StudentExam",
-            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
-            "line": 337
-          },
-          {
-            "controller": "StudentExamResource",
-            "method": "getTestRunForConduction",
-            "endpoint": "GET api/exam/courses/{courseId}/exams/{examId}/test-runs/{testRunId}/conduction",
-            "returnType": "ResponseEntity<StudentExam>",
-            "entityClass": "StudentExam",
-            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
-            "line": 400
-          },
-          {
-            "controller": "StudentExamResource",
-            "method": "getStudentExamsForCoursePerUser",
-            "endpoint": "GET api/exam/courses/{courseId}/test-exams-per-user",
-            "returnType": "ResponseEntity<List<StudentExam>>",
-            "entityClass": "StudentExam",
-            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
-            "line": 436
-          },
-          {
-            "controller": "StudentExamResource",
-            "method": "getStudentExamForSummary",
-            "endpoint": "GET api/exam/courses/{courseId}/exams/{examId}/student-exams/{studentExamId}/summary",
-            "returnType": "ResponseEntity<StudentExam>",
-            "entityClass": "StudentExam",
-            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
-            "line": 457
-          },
-          {
-            "controller": "StudentExamResource",
-            "method": "findAllTestRunsForExam",
-            "endpoint": "GET api/exam/courses/{courseId}/exams/{examId}/test-runs",
-            "returnType": "ResponseEntity<List<StudentExam>>",
-            "entityClass": "StudentExam",
-            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
-            "line": 563
-          },
-          {
-            "controller": "StudentExamResource",
-            "method": "createTestRun",
-            "endpoint": "POST api/exam/courses/{courseId}/exams/{examId}/test-runs",
-            "returnType": "ResponseEntity<StudentExam>",
-            "entityClass": "StudentExam",
-            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
-            "line": 582
-          },
-          {
-            "controller": "StudentExamResource",
-            "method": "submitStudentExam",
-            "endpoint": "PUT api/exam/courses/{courseId}/exams/{examId}/student-exams/{studentExamId}/toggle-to-submitted",
-            "returnType": "ResponseEntity<StudentExam>",
-            "entityClass": "StudentExam",
-            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
-            "line": 792
-          },
-          {
-            "controller": "StudentExamResource",
-            "method": "unsubmitStudentExam",
-            "endpoint": "PUT api/exam/courses/{courseId}/exams/{examId}/student-exams/{studentExamId}/toggle-to-unsubmitted",
-            "returnType": "ResponseEntity<StudentExam>",
-            "entityClass": "StudentExam",
-            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
-            "line": 829
-          },
           {
             "controller": "ExamResource",
             "method": "createExam",
@@ -759,13 +669,94 @@
             "line": 1312
           },
           {
-            "controller": "AdminExamResource",
-            "method": "getCurrentAndUpcomingExams",
-            "endpoint": "GET api/exam/admin/courses/upcoming-exams",
-            "returnType": "ResponseEntity<List<Exam>>",
-            "entityClass": "Exam",
-            "file": "de/tum/cit/aet/artemis/exam/web/admin/AdminExamResource.java",
-            "line": 42
+            "controller": "StudentExamResource",
+            "method": "getStudentExamsForExam",
+            "endpoint": "GET api/exam/courses/{courseId}/exams/{examId}/student-exams",
+            "returnType": "ResponseEntity<Set<StudentExam>>",
+            "entityClass": "StudentExam",
+            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
+            "line": 177
+          },
+          {
+            "controller": "StudentExamResource",
+            "method": "updateWorkingTime",
+            "endpoint": "PATCH api/exam/courses/{courseId}/exams/{examId}/student-exams/{studentExamId}/working-time",
+            "returnType": "ResponseEntity<StudentExam>",
+            "entityClass": "StudentExam",
+            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
+            "line": 198
+          },
+          {
+            "controller": "StudentExamResource",
+            "method": "getStudentExamForConduction",
+            "endpoint": "GET api/exam/courses/{courseId}/exams/{examId}/student-exams/{studentExamId}/conduction",
+            "returnType": "ResponseEntity<StudentExam>",
+            "entityClass": "StudentExam",
+            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
+            "line": 337
+          },
+          {
+            "controller": "StudentExamResource",
+            "method": "getTestRunForConduction",
+            "endpoint": "GET api/exam/courses/{courseId}/exams/{examId}/test-runs/{testRunId}/conduction",
+            "returnType": "ResponseEntity<StudentExam>",
+            "entityClass": "StudentExam",
+            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
+            "line": 400
+          },
+          {
+            "controller": "StudentExamResource",
+            "method": "getStudentExamsForCoursePerUser",
+            "endpoint": "GET api/exam/courses/{courseId}/test-exams-per-user",
+            "returnType": "ResponseEntity<List<StudentExam>>",
+            "entityClass": "StudentExam",
+            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
+            "line": 436
+          },
+          {
+            "controller": "StudentExamResource",
+            "method": "getStudentExamForSummary",
+            "endpoint": "GET api/exam/courses/{courseId}/exams/{examId}/student-exams/{studentExamId}/summary",
+            "returnType": "ResponseEntity<StudentExam>",
+            "entityClass": "StudentExam",
+            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
+            "line": 457
+          },
+          {
+            "controller": "StudentExamResource",
+            "method": "findAllTestRunsForExam",
+            "endpoint": "GET api/exam/courses/{courseId}/exams/{examId}/test-runs",
+            "returnType": "ResponseEntity<List<StudentExam>>",
+            "entityClass": "StudentExam",
+            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
+            "line": 563
+          },
+          {
+            "controller": "StudentExamResource",
+            "method": "createTestRun",
+            "endpoint": "POST api/exam/courses/{courseId}/exams/{examId}/test-runs",
+            "returnType": "ResponseEntity<StudentExam>",
+            "entityClass": "StudentExam",
+            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
+            "line": 582
+          },
+          {
+            "controller": "StudentExamResource",
+            "method": "submitStudentExam",
+            "endpoint": "PUT api/exam/courses/{courseId}/exams/{examId}/student-exams/{studentExamId}/toggle-to-submitted",
+            "returnType": "ResponseEntity<StudentExam>",
+            "entityClass": "StudentExam",
+            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
+            "line": 792
+          },
+          {
+            "controller": "StudentExamResource",
+            "method": "unsubmitStudentExam",
+            "endpoint": "PUT api/exam/courses/{courseId}/exams/{examId}/student-exams/{studentExamId}/toggle-to-unsubmitted",
+            "returnType": "ResponseEntity<StudentExam>",
+            "entityClass": "StudentExam",
+            "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
+            "line": 829
           },
           {
             "controller": "ExerciseGroupResource",
@@ -802,9 +793,29 @@
             "entityClass": "ExerciseGroup",
             "file": "de/tum/cit/aet/artemis/exam/web/ExerciseGroupResource.java",
             "line": 210
+          },
+          {
+            "controller": "AdminExamResource",
+            "method": "getCurrentAndUpcomingExams",
+            "endpoint": "GET api/exam/admin/courses/upcoming-exams",
+            "returnType": "ResponseEntity<List<Exam>>",
+            "entityClass": "Exam",
+            "file": "de/tum/cit/aet/artemis/exam/web/admin/AdminExamResource.java",
+            "line": 42
           }
         ],
         "entityInputDetails": [
+          {
+            "controller": "ExamResource",
+            "method": "updateOrderOfExerciseGroups",
+            "endpoint": "PUT api/exam/courses/{courseId}/exams/{examId}/exercise-groups-order",
+            "parameterName": "orderedExerciseGroups",
+            "parameterType": "List<ExerciseGroup>",
+            "annotationType": "@RequestBody",
+            "entityClass": "ExerciseGroup",
+            "file": "de/tum/cit/aet/artemis/exam/web/ExamResource.java",
+            "line": 1245
+          },
           {
             "controller": "StudentExamResource",
             "method": "submitStudentExam",
@@ -826,17 +837,6 @@
             "entityClass": "StudentExam",
             "file": "de/tum/cit/aet/artemis/exam/web/StudentExamResource.java",
             "line": 582
-          },
-          {
-            "controller": "ExamResource",
-            "method": "updateOrderOfExerciseGroups",
-            "endpoint": "PUT api/exam/courses/{courseId}/exams/{examId}/exercise-groups-order",
-            "parameterName": "orderedExerciseGroups",
-            "parameterType": "List<ExerciseGroup>",
-            "annotationType": "@RequestBody",
-            "entityClass": "ExerciseGroup",
-            "file": "de/tum/cit/aet/artemis/exam/web/ExamResource.java",
-            "line": 1245
           },
           {
             "controller": "ExerciseGroupResource",
@@ -863,14 +863,6 @@
         ],
         "dtoEntityFieldDetails": [
           {
-            "dtoClass": "ExamImportResultDTO",
-            "fieldName": "exam",
-            "fieldType": "Exam",
-            "entityClass": "Exam",
-            "file": "de/tum/cit/aet/artemis/exam/dto/ExamImportResultDTO.java",
-            "line": 27
-          },
-          {
             "dtoClass": "ExerciseGroupImportResultDTO",
             "fieldName": "exerciseGroups",
             "fieldType": "List<ExerciseGroup>",
@@ -879,12 +871,12 @@
             "line": 21
           },
           {
-            "dtoClass": "ExamScoresDTO",
-            "fieldName": "exerciseGroups",
-            "fieldType": "List<ExerciseGroup>",
-            "entityClass": "ExerciseGroup",
-            "file": "de/tum/cit/aet/artemis/exam/dto/ExamScoresDTO.java",
-            "line": 12
+            "dtoClass": "ExamImportResultDTO",
+            "fieldName": "exam",
+            "fieldType": "Exam",
+            "entityClass": "Exam",
+            "file": "de/tum/cit/aet/artemis/exam/dto/ExamImportResultDTO.java",
+            "line": 27
           },
           {
             "dtoClass": "StudentExamWithGradeDTO",
@@ -893,6 +885,14 @@
             "entityClass": "StudentExam",
             "file": "de/tum/cit/aet/artemis/exam/dto/StudentExamWithGradeDTO.java",
             "line": 23
+          },
+          {
+            "dtoClass": "ExamScoresDTO",
+            "fieldName": "exerciseGroups",
+            "fieldType": "List<ExerciseGroup>",
+            "entityClass": "ExerciseGroup",
+            "file": "de/tum/cit/aet/artemis/exam/dto/ExamScoresDTO.java",
+            "line": 12
           }
         ]
       },
@@ -901,6 +901,87 @@
         "entityInputViolations": 0,
         "dtoEntityFieldViolations": 3,
         "entityReturnDetails": [
+          {
+            "controller": "SubmissionResource",
+            "method": "getTestRunSubmissionsForAssessment",
+            "endpoint": "GET api/exercise/exercises/{exerciseId}/test-run-submissions",
+            "returnType": "ResponseEntity<List<Submission>>",
+            "entityClass": "Submission",
+            "file": "de/tum/cit/aet/artemis/exercise/web/SubmissionResource.java",
+            "line": 138
+          },
+          {
+            "controller": "SubmissionResource",
+            "method": "getSubmissionsOnPageWithSize",
+            "endpoint": "GET api/exercise/exercises/{exerciseId}/submissions-for-import",
+            "returnType": "ResponseEntity<SearchResultPageDTO<Submission>>",
+            "entityClass": "Submission",
+            "file": "de/tum/cit/aet/artemis/exercise/web/SubmissionResource.java",
+            "line": 216
+          },
+          {
+            "controller": "ParticipationRetrievalResource",
+            "method": "getParticipationWithLatestResult",
+            "endpoint": "GET api/exercise/participations/{participationId}/with-latest-result",
+            "returnType": "ResponseEntity<StudentParticipation>",
+            "entityClass": "StudentParticipation",
+            "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationRetrievalResource.java",
+            "line": 89
+          },
+          {
+            "controller": "ParticipationRetrievalResource",
+            "method": "getParticipationForCurrentUser",
+            "endpoint": "GET api/exercise/participations/{participationId}",
+            "returnType": "ResponseEntity<StudentParticipation>",
+            "entityClass": "StudentParticipation",
+            "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationRetrievalResource.java",
+            "line": 105
+          },
+          {
+            "controller": "ParticipationRetrievalResource",
+            "method": "getSubmissionsOfParticipation",
+            "endpoint": "GET api/exercise/participations/{participationId}/submissions",
+            "returnType": "ResponseEntity<List<Submission>>",
+            "entityClass": "Submission",
+            "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationRetrievalResource.java",
+            "line": 141
+          },
+          {
+            "controller": "AdminExerciseResource",
+            "method": "getUpcomingExercises",
+            "endpoint": "GET api/exercise/admin/exercises/upcoming",
+            "returnType": "ResponseEntity<Set<Exercise>>",
+            "entityClass": "Exercise",
+            "file": "de/tum/cit/aet/artemis/exercise/web/admin/AdminExerciseResource.java",
+            "line": 43
+          },
+          {
+            "controller": "ExerciseResource",
+            "method": "getExercise",
+            "endpoint": "GET api/exercise/exercises/{exerciseId}",
+            "returnType": "ResponseEntity<Exercise>",
+            "entityClass": "Exercise",
+            "file": "de/tum/cit/aet/artemis/exercise/web/ExerciseResource.java",
+            "line": 137
+          },
+          {
+            "controller": "ExerciseResource",
+            "method": "getExerciseForExampleSolution",
+            "endpoint": "GET api/exercise/exercises/{exerciseId}/example-solution",
+            "returnType": "ResponseEntity<Exercise>",
+            "entityClass": "Exercise",
+            "file": "de/tum/cit/aet/artemis/exercise/web/ExerciseResource.java",
+            "line": 202
+          },
+          {
+            "controller": "ExerciseResource",
+            "method": "getExerciseForAssessmentDashboard",
+            "endpoint": "GET api/exercise/exercises/{exerciseId}/for-assessment-dashboard",
+            "returnType": "ResponseEntity<Exercise>",
+            "entityClass": "Exercise",
+            "file": "de/tum/cit/aet/artemis/exercise/web/ExerciseResource.java",
+            "line": 237
+          },
           {
             "controller": "ParticipationResource",
             "method": "startParticipation",
@@ -938,33 +1019,6 @@
             "line": 283
           },
           {
-            "controller": "ExerciseResource",
-            "method": "getExercise",
-            "endpoint": "GET api/exercise/exercises/{exerciseId}",
-            "returnType": "ResponseEntity<Exercise>",
-            "entityClass": "Exercise",
-            "file": "de/tum/cit/aet/artemis/exercise/web/ExerciseResource.java",
-            "line": 137
-          },
-          {
-            "controller": "ExerciseResource",
-            "method": "getExerciseForExampleSolution",
-            "endpoint": "GET api/exercise/exercises/{exerciseId}/example-solution",
-            "returnType": "ResponseEntity<Exercise>",
-            "entityClass": "Exercise",
-            "file": "de/tum/cit/aet/artemis/exercise/web/ExerciseResource.java",
-            "line": 202
-          },
-          {
-            "controller": "ExerciseResource",
-            "method": "getExerciseForAssessmentDashboard",
-            "endpoint": "GET api/exercise/exercises/{exerciseId}/for-assessment-dashboard",
-            "returnType": "ResponseEntity<Exercise>",
-            "entityClass": "Exercise",
-            "file": "de/tum/cit/aet/artemis/exercise/web/ExerciseResource.java",
-            "line": 237
-          },
-          {
             "controller": "ParticipationDeletionResource",
             "method": "cleanupBuildPlan",
             "endpoint": "PUT api/exercise/participations/{participationId}/cleanup-build-plan",
@@ -972,78 +1026,6 @@
             "entityClass": "Participation",
             "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationDeletionResource.java",
             "line": 121
-          },
-          {
-            "controller": "SubmissionResource",
-            "method": "getTestRunSubmissionsForAssessment",
-            "endpoint": "GET api/exercise/exercises/{exerciseId}/test-run-submissions",
-            "returnType": "ResponseEntity<List<Submission>>",
-            "entityClass": "Submission",
-            "file": "de/tum/cit/aet/artemis/exercise/web/SubmissionResource.java",
-            "line": 138
-          },
-          {
-            "controller": "SubmissionResource",
-            "method": "getSubmissionsOnPageWithSize",
-            "endpoint": "GET api/exercise/exercises/{exerciseId}/submissions-for-import",
-            "returnType": "ResponseEntity<SearchResultPageDTO<Submission>>",
-            "entityClass": "Submission",
-            "file": "de/tum/cit/aet/artemis/exercise/web/SubmissionResource.java",
-            "line": 216
-          },
-          {
-            "controller": "AdminExerciseResource",
-            "method": "getUpcomingExercises",
-            "endpoint": "GET api/exercise/admin/exercises/upcoming",
-            "returnType": "ResponseEntity<Set<Exercise>>",
-            "entityClass": "Exercise",
-            "file": "de/tum/cit/aet/artemis/exercise/web/admin/AdminExerciseResource.java",
-            "line": 43
-          },
-          {
-            "controller": "ParticipationRetrievalResource",
-            "method": "getParticipationWithLatestResult",
-            "endpoint": "GET api/exercise/participations/{participationId}/with-latest-result",
-            "returnType": "ResponseEntity<StudentParticipation>",
-            "entityClass": "StudentParticipation",
-            "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationRetrievalResource.java",
-            "line": 89
-          },
-          {
-            "controller": "ParticipationRetrievalResource",
-            "method": "getParticipationForCurrentUser",
-            "endpoint": "GET api/exercise/participations/{participationId}",
-            "returnType": "ResponseEntity<StudentParticipation>",
-            "entityClass": "StudentParticipation",
-            "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationRetrievalResource.java",
-            "line": 105
-          },
-          {
-            "controller": "ParticipationRetrievalResource",
-            "method": "getSubmissionsOfParticipation",
-            "endpoint": "GET api/exercise/participations/{participationId}/submissions",
-            "returnType": "ResponseEntity<List<Submission>>",
-            "entityClass": "Submission",
-            "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationRetrievalResource.java",
-            "line": 141
-          },
-          {
-            "controller": "ParticipationUpdateResource",
-            "method": "updateParticipation",
-            "endpoint": "PUT api/exercise/exercises/{exerciseId}/participations",
-            "returnType": "ResponseEntity<Participation>",
-            "entityClass": "Participation",
-            "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationUpdateResource.java",
-            "line": 98
-          },
-          {
-            "controller": "ParticipationUpdateResource",
-            "method": "updateParticipationDueDates",
-            "endpoint": "PUT api/exercise/exercises/{exerciseId}/participations/update-individual-due-date",
-            "returnType": "ResponseEntity<List<StudentParticipation>>",
-            "entityClass": "StudentParticipation",
-            "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationUpdateResource.java",
-            "line": 181
           },
           {
             "controller": "TeamResource",
@@ -1107,10 +1089,36 @@
             "entityClass": "Course",
             "file": "de/tum/cit/aet/artemis/exercise/web/TeamResource.java",
             "line": 486
+          },
+          {
+            "controller": "ParticipationUpdateResource",
+            "method": "updateParticipation",
+            "endpoint": "PUT api/exercise/exercises/{exerciseId}/participations",
+            "returnType": "ResponseEntity<Participation>",
+            "entityClass": "Participation",
+            "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationUpdateResource.java",
+            "line": 98
+          },
+          {
+            "controller": "ParticipationUpdateResource",
+            "method": "updateParticipationDueDates",
+            "endpoint": "PUT api/exercise/exercises/{exerciseId}/participations/update-individual-due-date",
+            "returnType": "ResponseEntity<List<StudentParticipation>>",
+            "entityClass": "StudentParticipation",
+            "file": "de/tum/cit/aet/artemis/exercise/web/ParticipationUpdateResource.java",
+            "line": 181
           }
         ],
         "entityInputDetails": [],
         "dtoEntityFieldDetails": [
+          {
+            "dtoClass": "ExerciseDetailsDTO",
+            "fieldName": "exercise",
+            "fieldType": "Exercise",
+            "entityClass": "Exercise",
+            "file": "de/tum/cit/aet/artemis/exercise/dto/ExerciseDetailsDTO.java",
+            "line": 9
+          },
           {
             "dtoClass": "SubmissionWithComplaintDTO",
             "fieldName": "submission",
@@ -1126,14 +1134,6 @@
             "entityClass": "Complaint",
             "file": "de/tum/cit/aet/artemis/exercise/dto/SubmissionWithComplaintDTO.java",
             "line": 12
-          },
-          {
-            "dtoClass": "ExerciseDetailsDTO",
-            "fieldName": "exercise",
-            "fieldType": "Exercise",
-            "entityClass": "Exercise",
-            "file": "de/tum/cit/aet/artemis/exercise/dto/ExerciseDetailsDTO.java",
-            "line": 9
           }
         ]
       },
@@ -1388,69 +1388,6 @@
         "dtoEntityFieldViolations": 1,
         "entityReturnDetails": [
           {
-            "controller": "ModelingExerciseResource",
-            "method": "createModelingExercise",
-            "endpoint": "POST api/modeling/modeling-exercises",
-            "returnType": "ResponseEntity<ModelingExercise>",
-            "entityClass": "ModelingExercise",
-            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
-            "line": 177
-          },
-          {
-            "controller": "ModelingExerciseResource",
-            "method": "getAllExercisesOnPage",
-            "endpoint": "GET api/modeling/modeling-exercises",
-            "returnType": "ResponseEntity<SearchResultPageDTO<ModelingExercise>>",
-            "entityClass": "ModelingExercise",
-            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
-            "line": 236
-          },
-          {
-            "controller": "ModelingExerciseResource",
-            "method": "updateModelingExercise",
-            "endpoint": "PUT api/modeling/modeling-exercises",
-            "returnType": "ResponseEntity<ModelingExercise>",
-            "entityClass": "ModelingExercise",
-            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
-            "line": 253
-          },
-          {
-            "controller": "ModelingExerciseResource",
-            "method": "getModelingExercisesForCourse",
-            "endpoint": "GET api/modeling/courses/{courseId}/modeling-exercises",
-            "returnType": "ResponseEntity<List<ModelingExercise>>",
-            "entityClass": "ModelingExercise",
-            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
-            "line": 332
-          },
-          {
-            "controller": "ModelingExerciseResource",
-            "method": "getModelingExercise",
-            "endpoint": "GET api/modeling/modeling-exercises/{exerciseId}",
-            "returnType": "ResponseEntity<ModelingExercise>",
-            "entityClass": "ModelingExercise",
-            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
-            "line": 354
-          },
-          {
-            "controller": "ModelingExerciseResource",
-            "method": "importExercise",
-            "endpoint": "POST api/modeling/modeling-exercises/import",
-            "returnType": "ResponseEntity<ModelingExercise>",
-            "entityClass": "ModelingExercise",
-            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
-            "line": 424
-          },
-          {
-            "controller": "ModelingExerciseResource",
-            "method": "reEvaluateAndUpdateModelingExercise",
-            "endpoint": "PUT api/modeling/modeling-exercises/{exerciseId}/re-evaluate",
-            "returnType": "ResponseEntity<ModelingExercise>",
-            "entityClass": "ModelingExercise",
-            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
-            "line": 489
-          },
-          {
             "controller": "ModelingAssessmentResource",
             "method": "getAssessmentBySubmissionId",
             "endpoint": "GET api/modeling/modeling-submissions/{submissionId}/result",
@@ -1557,31 +1494,72 @@
             "entityClass": "Submission",
             "file": "de/tum/cit/aet/artemis/modeling/web/ModelingSubmissionResource.java",
             "line": 431
-          }
-        ],
-        "entityInputDetails": [
+          },
           {
             "controller": "ModelingExerciseResource",
             "method": "createModelingExercise",
             "endpoint": "POST api/modeling/modeling-exercises",
-            "parameterName": "modelingExercise",
-            "parameterType": "ModelingExercise",
-            "annotationType": "@RequestBody",
+            "returnType": "ResponseEntity<ModelingExercise>",
             "entityClass": "ModelingExercise",
             "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
             "line": 177
           },
           {
             "controller": "ModelingExerciseResource",
+            "method": "getAllExercisesOnPage",
+            "endpoint": "GET api/modeling/modeling-exercises",
+            "returnType": "ResponseEntity<SearchResultPageDTO<ModelingExercise>>",
+            "entityClass": "ModelingExercise",
+            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
+            "line": 236
+          },
+          {
+            "controller": "ModelingExerciseResource",
+            "method": "updateModelingExercise",
+            "endpoint": "PUT api/modeling/modeling-exercises",
+            "returnType": "ResponseEntity<ModelingExercise>",
+            "entityClass": "ModelingExercise",
+            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
+            "line": 253
+          },
+          {
+            "controller": "ModelingExerciseResource",
+            "method": "getModelingExercisesForCourse",
+            "endpoint": "GET api/modeling/courses/{courseId}/modeling-exercises",
+            "returnType": "ResponseEntity<List<ModelingExercise>>",
+            "entityClass": "ModelingExercise",
+            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
+            "line": 332
+          },
+          {
+            "controller": "ModelingExerciseResource",
+            "method": "getModelingExercise",
+            "endpoint": "GET api/modeling/modeling-exercises/{exerciseId}",
+            "returnType": "ResponseEntity<ModelingExercise>",
+            "entityClass": "ModelingExercise",
+            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
+            "line": 354
+          },
+          {
+            "controller": "ModelingExerciseResource",
             "method": "importExercise",
             "endpoint": "POST api/modeling/modeling-exercises/import",
-            "parameterName": "importedExercise",
-            "parameterType": "ModelingExercise",
-            "annotationType": "@RequestBody",
+            "returnType": "ResponseEntity<ModelingExercise>",
             "entityClass": "ModelingExercise",
             "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
             "line": 424
           },
+          {
+            "controller": "ModelingExerciseResource",
+            "method": "reEvaluateAndUpdateModelingExercise",
+            "endpoint": "PUT api/modeling/modeling-exercises/{exerciseId}/re-evaluate",
+            "returnType": "ResponseEntity<ModelingExercise>",
+            "entityClass": "ModelingExercise",
+            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
+            "line": 489
+          }
+        ],
+        "entityInputDetails": [
           {
             "controller": "ModelingAssessmentResource",
             "method": "saveModelingExampleAssessment",
@@ -1614,6 +1592,28 @@
             "entityClass": "ModelingSubmission",
             "file": "de/tum/cit/aet/artemis/modeling/web/ModelingSubmissionResource.java",
             "line": 128
+          },
+          {
+            "controller": "ModelingExerciseResource",
+            "method": "createModelingExercise",
+            "endpoint": "POST api/modeling/modeling-exercises",
+            "parameterName": "modelingExercise",
+            "parameterType": "ModelingExercise",
+            "annotationType": "@RequestBody",
+            "entityClass": "ModelingExercise",
+            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
+            "line": 177
+          },
+          {
+            "controller": "ModelingExerciseResource",
+            "method": "importExercise",
+            "endpoint": "POST api/modeling/modeling-exercises/import",
+            "parameterName": "importedExercise",
+            "parameterType": "ModelingExercise",
+            "annotationType": "@RequestBody",
+            "entityClass": "ModelingExercise",
+            "file": "de/tum/cit/aet/artemis/modeling/web/ModelingExerciseResource.java",
+            "line": 424
           }
         ],
         "dtoEntityFieldDetails": [
@@ -1649,6 +1649,24 @@
         "dtoEntityFieldViolations": 3,
         "entityReturnDetails": [
           {
+            "controller": "ExerciseSharingResource",
+            "method": "setUpFromSharingImport",
+            "endpoint": "POST api/programming/sharing/setup-import",
+            "returnType": "ResponseEntity<ProgrammingExercise>",
+            "entityClass": "ProgrammingExercise",
+            "file": "de/tum/cit/aet/artemis/programming/web/ExerciseSharingResource.java",
+            "line": 150
+          },
+          {
+            "controller": "ExerciseSharingResource",
+            "method": "getExerciseDetails",
+            "endpoint": "POST api/programming/sharing/import/basket/exercise-details",
+            "returnType": "ResponseEntity<ProgrammingExercise>",
+            "entityClass": "ProgrammingExercise",
+            "file": "de/tum/cit/aet/artemis/programming/web/ExerciseSharingResource.java",
+            "line": 175
+          },
+          {
             "controller": "ProgrammingSubmissionResource",
             "method": "getAllProgrammingSubmissions",
             "endpoint": "GET api/programming/exercises/{exerciseId}/programming-submissions",
@@ -1676,22 +1694,49 @@
             "line": 366
           },
           {
-            "controller": "ProgrammingExerciseUpdateResource",
-            "method": "updateProgrammingExercise",
-            "endpoint": "PUT api/programming/programming-exercises",
-            "returnType": "ResponseEntity<ProgrammingExercise>",
-            "entityClass": "ProgrammingExercise",
-            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseUpdateResource.java",
-            "line": 138
+            "controller": "ProgrammingExerciseTaskResource",
+            "method": "getTasks",
+            "endpoint": "GET api/programming/programming-exercises/{exerciseId}/tasks",
+            "returnType": "ResponseEntity<Set<ProgrammingExerciseTask>>",
+            "entityClass": "ProgrammingExerciseTask",
+            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseTaskResource.java",
+            "line": 57
           },
           {
-            "controller": "ProgrammingExerciseUpdateResource",
-            "method": "reEvaluateAndUpdateProgrammingExercise",
-            "endpoint": "PUT api/programming/programming-exercises/{exerciseId}/re-evaluate",
-            "returnType": "ResponseEntity<ProgrammingExercise>",
-            "entityClass": "ProgrammingExercise",
-            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseUpdateResource.java",
-            "line": 496
+            "controller": "ProgrammingExerciseTaskResource",
+            "method": "getTasksWithUnassignedTask",
+            "endpoint": "GET api/programming/programming-exercises/{exerciseId}/tasks-with-unassigned-test-cases",
+            "returnType": "ResponseEntity<List<ProgrammingExerciseTask>>",
+            "entityClass": "ProgrammingExerciseTask",
+            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseTaskResource.java",
+            "line": 78
+          },
+          {
+            "controller": "ProgrammingExerciseParticipationResource",
+            "method": "getParticipationWithLatestResultForStudentParticipation",
+            "endpoint": "GET api/programming/programming-exercise-participations/{participationId}/student-participation-with-latest-result-and-feedbacks",
+            "returnType": "ResponseEntity<ProgrammingExerciseStudentParticipation>",
+            "entityClass": "ProgrammingExerciseStudentParticipation",
+            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseParticipationResource.java",
+            "line": 151
+          },
+          {
+            "controller": "ProgrammingExerciseParticipationResource",
+            "method": "getParticipationWithAllResultsForStudentParticipation",
+            "endpoint": "GET api/programming/programming-exercise-participations/{participationId}/student-participation-with-all-results",
+            "returnType": "ResponseEntity<ProgrammingExerciseStudentParticipation>",
+            "entityClass": "ProgrammingExerciseStudentParticipation",
+            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseParticipationResource.java",
+            "line": 178
+          },
+          {
+            "controller": "ProgrammingExerciseParticipationResource",
+            "method": "getLatestResultWithFeedbacksForProgrammingExerciseParticipation",
+            "endpoint": "GET api/programming/programming-exercise-participations/{participationId}/latest-result-with-feedbacks",
+            "returnType": "ResponseEntity<Result>",
+            "entityClass": "Result",
+            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseParticipationResource.java",
+            "line": 245
           },
           {
             "controller": "ProgrammingExerciseRetrievalResource",
@@ -1766,31 +1811,40 @@
             "line": 321
           },
           {
-            "controller": "ProgrammingExerciseParticipationResource",
-            "method": "getParticipationWithLatestResultForStudentParticipation",
-            "endpoint": "GET api/programming/programming-exercise-participations/{participationId}/student-participation-with-latest-result-and-feedbacks",
-            "returnType": "ResponseEntity<ProgrammingExerciseStudentParticipation>",
-            "entityClass": "ProgrammingExerciseStudentParticipation",
-            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseParticipationResource.java",
-            "line": 151
+            "controller": "StaticCodeAnalysisResource",
+            "method": "getStaticCodeAnalysisCategories",
+            "endpoint": "GET api/programming/programming-exercises/{exerciseId}/static-code-analysis-categories",
+            "returnType": "ResponseEntity<Set<StaticCodeAnalysisCategory>>",
+            "entityClass": "StaticCodeAnalysisCategory",
+            "file": "de/tum/cit/aet/artemis/programming/web/StaticCodeAnalysisResource.java",
+            "line": 71
           },
           {
-            "controller": "ProgrammingExerciseParticipationResource",
-            "method": "getParticipationWithAllResultsForStudentParticipation",
-            "endpoint": "GET api/programming/programming-exercise-participations/{participationId}/student-participation-with-all-results",
-            "returnType": "ResponseEntity<ProgrammingExerciseStudentParticipation>",
-            "entityClass": "ProgrammingExerciseStudentParticipation",
-            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseParticipationResource.java",
-            "line": 178
+            "controller": "StaticCodeAnalysisResource",
+            "method": "updateStaticCodeAnalysisCategories",
+            "endpoint": "PATCH api/programming/programming-exercises/{exerciseId}/static-code-analysis-categories",
+            "returnType": "ResponseEntity<Set<StaticCodeAnalysisCategory>>",
+            "entityClass": "StaticCodeAnalysisCategory",
+            "file": "de/tum/cit/aet/artemis/programming/web/StaticCodeAnalysisResource.java",
+            "line": 91
           },
           {
-            "controller": "ProgrammingExerciseParticipationResource",
-            "method": "getLatestResultWithFeedbacksForProgrammingExerciseParticipation",
-            "endpoint": "GET api/programming/programming-exercise-participations/{participationId}/latest-result-with-feedbacks",
-            "returnType": "ResponseEntity<Result>",
-            "entityClass": "Result",
-            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseParticipationResource.java",
-            "line": 245
+            "controller": "StaticCodeAnalysisResource",
+            "method": "resetStaticCodeAnalysisCategories",
+            "endpoint": "PATCH api/programming/programming-exercises/{exerciseId}/static-code-analysis-categories/reset",
+            "returnType": "ResponseEntity<Set<StaticCodeAnalysisCategory>>",
+            "entityClass": "StaticCodeAnalysisCategory",
+            "file": "de/tum/cit/aet/artemis/programming/web/StaticCodeAnalysisResource.java",
+            "line": 113
+          },
+          {
+            "controller": "StaticCodeAnalysisResource",
+            "method": "importStaticCodeAnalysisCategoriesFromExercise",
+            "endpoint": "PATCH api/programming/",
+            "returnType": "ResponseEntity<Set<StaticCodeAnalysisCategory>>",
+            "entityClass": "StaticCodeAnalysisCategory",
+            "file": "de/tum/cit/aet/artemis/programming/web/StaticCodeAnalysisResource.java",
+            "line": 134
           },
           {
             "controller": "ProgrammingExercisePartialUpdateResource",
@@ -1829,6 +1883,33 @@
             "line": 313
           },
           {
+            "controller": "ProgrammingExerciseTestCaseResource",
+            "method": "getTestCases",
+            "endpoint": "GET api/programming/programming-exercises/{exerciseId}/test-cases",
+            "returnType": "ResponseEntity<Set<ProgrammingExerciseTestCase>>",
+            "entityClass": "ProgrammingExerciseTestCase",
+            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseTestCaseResource.java",
+            "line": 80
+          },
+          {
+            "controller": "ProgrammingExerciseTestCaseResource",
+            "method": "updateTestCases",
+            "endpoint": "PATCH api/programming/programming-exercises/{exerciseId}/update-test-cases",
+            "returnType": "ResponseEntity<Set<ProgrammingExerciseTestCase>>",
+            "entityClass": "ProgrammingExerciseTestCase",
+            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseTestCaseResource.java",
+            "line": 100
+          },
+          {
+            "controller": "ProgrammingExerciseTestCaseResource",
+            "method": "resetTestCases",
+            "endpoint": "PATCH api/programming/programming-exercises/{exerciseId}/test-cases/reset",
+            "returnType": "ResponseEntity<List<ProgrammingExerciseTestCase>>",
+            "entityClass": "ProgrammingExerciseTestCase",
+            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseTestCaseResource.java",
+            "line": 129
+          },
+          {
             "controller": "SubmissionPolicyResource",
             "method": "getSubmissionPolicyOfExercise",
             "endpoint": "GET api/programming/programming-exercises/{exerciseId}/submission-policy",
@@ -1854,60 +1935,6 @@
             "entityClass": "SubmissionPolicy",
             "file": "de/tum/cit/aet/artemis/programming/web/SubmissionPolicyResource.java",
             "line": 241
-          },
-          {
-            "controller": "StaticCodeAnalysisResource",
-            "method": "getStaticCodeAnalysisCategories",
-            "endpoint": "GET api/programming/programming-exercises/{exerciseId}/static-code-analysis-categories",
-            "returnType": "ResponseEntity<Set<StaticCodeAnalysisCategory>>",
-            "entityClass": "StaticCodeAnalysisCategory",
-            "file": "de/tum/cit/aet/artemis/programming/web/StaticCodeAnalysisResource.java",
-            "line": 71
-          },
-          {
-            "controller": "StaticCodeAnalysisResource",
-            "method": "updateStaticCodeAnalysisCategories",
-            "endpoint": "PATCH api/programming/programming-exercises/{exerciseId}/static-code-analysis-categories",
-            "returnType": "ResponseEntity<Set<StaticCodeAnalysisCategory>>",
-            "entityClass": "StaticCodeAnalysisCategory",
-            "file": "de/tum/cit/aet/artemis/programming/web/StaticCodeAnalysisResource.java",
-            "line": 91
-          },
-          {
-            "controller": "StaticCodeAnalysisResource",
-            "method": "resetStaticCodeAnalysisCategories",
-            "endpoint": "PATCH api/programming/programming-exercises/{exerciseId}/static-code-analysis-categories/reset",
-            "returnType": "ResponseEntity<Set<StaticCodeAnalysisCategory>>",
-            "entityClass": "StaticCodeAnalysisCategory",
-            "file": "de/tum/cit/aet/artemis/programming/web/StaticCodeAnalysisResource.java",
-            "line": 113
-          },
-          {
-            "controller": "StaticCodeAnalysisResource",
-            "method": "importStaticCodeAnalysisCategoriesFromExercise",
-            "endpoint": "PATCH api/programming/",
-            "returnType": "ResponseEntity<Set<StaticCodeAnalysisCategory>>",
-            "entityClass": "StaticCodeAnalysisCategory",
-            "file": "de/tum/cit/aet/artemis/programming/web/StaticCodeAnalysisResource.java",
-            "line": 134
-          },
-          {
-            "controller": "ProgrammingExerciseTaskResource",
-            "method": "getTasks",
-            "endpoint": "GET api/programming/programming-exercises/{exerciseId}/tasks",
-            "returnType": "ResponseEntity<Set<ProgrammingExerciseTask>>",
-            "entityClass": "ProgrammingExerciseTask",
-            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseTaskResource.java",
-            "line": 57
-          },
-          {
-            "controller": "ProgrammingExerciseTaskResource",
-            "method": "getTasksWithUnassignedTask",
-            "endpoint": "GET api/programming/programming-exercises/{exerciseId}/tasks-with-unassigned-test-cases",
-            "returnType": "ResponseEntity<List<ProgrammingExerciseTask>>",
-            "entityClass": "ProgrammingExerciseTask",
-            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseTaskResource.java",
-            "line": 78
           },
           {
             "controller": "RepositoryProgrammingExerciseParticipationResource",
@@ -1937,49 +1964,22 @@
             "line": 127
           },
           {
-            "controller": "ExerciseSharingResource",
-            "method": "setUpFromSharingImport",
-            "endpoint": "POST api/programming/sharing/setup-import",
+            "controller": "ProgrammingExerciseUpdateResource",
+            "method": "updateProgrammingExercise",
+            "endpoint": "PUT api/programming/programming-exercises",
             "returnType": "ResponseEntity<ProgrammingExercise>",
             "entityClass": "ProgrammingExercise",
-            "file": "de/tum/cit/aet/artemis/programming/web/ExerciseSharingResource.java",
-            "line": 150
+            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseUpdateResource.java",
+            "line": 138
           },
           {
-            "controller": "ExerciseSharingResource",
-            "method": "getExerciseDetails",
-            "endpoint": "POST api/programming/sharing/import/basket/exercise-details",
+            "controller": "ProgrammingExerciseUpdateResource",
+            "method": "reEvaluateAndUpdateProgrammingExercise",
+            "endpoint": "PUT api/programming/programming-exercises/{exerciseId}/re-evaluate",
             "returnType": "ResponseEntity<ProgrammingExercise>",
             "entityClass": "ProgrammingExercise",
-            "file": "de/tum/cit/aet/artemis/programming/web/ExerciseSharingResource.java",
-            "line": 175
-          },
-          {
-            "controller": "ProgrammingExerciseTestCaseResource",
-            "method": "getTestCases",
-            "endpoint": "GET api/programming/programming-exercises/{exerciseId}/test-cases",
-            "returnType": "ResponseEntity<Set<ProgrammingExerciseTestCase>>",
-            "entityClass": "ProgrammingExerciseTestCase",
-            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseTestCaseResource.java",
-            "line": 80
-          },
-          {
-            "controller": "ProgrammingExerciseTestCaseResource",
-            "method": "updateTestCases",
-            "endpoint": "PATCH api/programming/programming-exercises/{exerciseId}/update-test-cases",
-            "returnType": "ResponseEntity<Set<ProgrammingExerciseTestCase>>",
-            "entityClass": "ProgrammingExerciseTestCase",
-            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseTestCaseResource.java",
-            "line": 100
-          },
-          {
-            "controller": "ProgrammingExerciseTestCaseResource",
-            "method": "resetTestCases",
-            "endpoint": "PATCH api/programming/programming-exercises/{exerciseId}/test-cases/reset",
-            "returnType": "ResponseEntity<List<ProgrammingExerciseTestCase>>",
-            "entityClass": "ProgrammingExerciseTestCase",
-            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseTestCaseResource.java",
-            "line": 129
+            "file": "de/tum/cit/aet/artemis/programming/web/ProgrammingExerciseUpdateResource.java",
+            "line": 496
           },
           {
             "controller": "ProgrammingExerciseCreationResource",
@@ -1992,6 +1992,17 @@
           }
         ],
         "entityInputDetails": [
+          {
+            "controller": "StaticCodeAnalysisResource",
+            "method": "updateStaticCodeAnalysisCategories",
+            "endpoint": "PATCH api/programming/programming-exercises/{exerciseId}/static-code-analysis-categories",
+            "parameterName": "categories",
+            "parameterType": "Set<StaticCodeAnalysisCategory>",
+            "annotationType": "@RequestBody",
+            "entityClass": "StaticCodeAnalysisCategory",
+            "file": "de/tum/cit/aet/artemis/programming/web/StaticCodeAnalysisResource.java",
+            "line": 91
+          },
           {
             "controller": "ProgrammingExerciseExportImportResource",
             "method": "importProgrammingExercise",
@@ -2037,17 +2048,6 @@
             "line": 241
           },
           {
-            "controller": "StaticCodeAnalysisResource",
-            "method": "updateStaticCodeAnalysisCategories",
-            "endpoint": "PATCH api/programming/programming-exercises/{exerciseId}/static-code-analysis-categories",
-            "parameterName": "categories",
-            "parameterType": "Set<StaticCodeAnalysisCategory>",
-            "annotationType": "@RequestBody",
-            "entityClass": "StaticCodeAnalysisCategory",
-            "file": "de/tum/cit/aet/artemis/programming/web/StaticCodeAnalysisResource.java",
-            "line": 91
-          },
-          {
             "controller": "ProgrammingAssessmentResource",
             "method": "saveProgrammingAssessment",
             "endpoint": "PUT api/programming/participations/{participationId}/manual-results",
@@ -2080,20 +2080,20 @@
             "line": 19
           },
           {
-            "dtoClass": "UpdateProgrammingExerciseDTO",
-            "fieldName": "submissionPolicy",
-            "fieldType": "SubmissionPolicy",
-            "entityClass": "SubmissionPolicy",
-            "file": "de/tum/cit/aet/artemis/programming/dto/UpdateProgrammingExerciseDTO.java",
-            "line": 56
-          },
-          {
             "dtoClass": "ConsistencyErrorDTO",
             "fieldName": "programmingExercise",
             "fieldType": "ProgrammingExercise",
             "entityClass": "ProgrammingExercise",
             "file": "de/tum/cit/aet/artemis/programming/dto/ConsistencyErrorDTO.java",
             "line": 12
+          },
+          {
+            "dtoClass": "UpdateProgrammingExerciseDTO",
+            "fieldName": "submissionPolicy",
+            "fieldType": "SubmissionPolicy",
+            "entityClass": "SubmissionPolicy",
+            "file": "de/tum/cit/aet/artemis/programming/dto/UpdateProgrammingExerciseDTO.java",
+            "line": 56
           }
         ]
       },
