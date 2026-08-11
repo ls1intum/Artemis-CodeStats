@@ -1,0 +1,199 @@
+{
+  "metadata": {
+    "type": "changeDetection",
+    "artemis": {
+      "commitHash": "727336fed79d8a56de9b47af8f162da7fb4e7024",
+      "commitDate": "2026-08-11T09:18:00.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Stop the c kill shadow recursing until the stack overflows (#13481)"
+    }
+  },
+  "changeDetection": {
+    "account": {
+      "explicitOnPush": 10,
+      "explicitDefault": 0,
+      "implicitDefault": 22,
+      "total": 32
+    },
+    "admin": {
+      "explicitOnPush": 50,
+      "explicitDefault": 0,
+      "implicitDefault": 5,
+      "total": 55
+    },
+    "assessment": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 39,
+      "total": 39
+    },
+    "atlas": {
+      "explicitOnPush": 18,
+      "explicitDefault": 0,
+      "implicitDefault": 57,
+      "total": 75
+    },
+    "calendar": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 13,
+      "total": 13
+    },
+    "communication": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 52,
+      "total": 58
+    },
+    "core": {
+      "explicitOnPush": 14,
+      "explicitDefault": 0,
+      "implicitDefault": 32,
+      "total": 46
+    },
+    "course": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 82,
+      "total": 93
+    },
+    "editor": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 4
+    },
+    "exam": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 79,
+      "total": 81
+    },
+    "exercise": {
+      "explicitOnPush": 10,
+      "explicitDefault": 0,
+      "implicitDefault": 87,
+      "total": 97
+    },
+    "fileupload": {
+      "explicitOnPush": 3,
+      "explicitDefault": 0,
+      "implicitDefault": 5,
+      "total": 8
+    },
+    "foundation": {
+      "explicitOnPush": 2,
+      "explicitDefault": 0,
+      "implicitDefault": 10,
+      "total": 12
+    },
+    "hyperion": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "iris": {
+      "explicitOnPush": 21,
+      "explicitDefault": 0,
+      "implicitDefault": 2,
+      "total": 23
+    },
+    "lecture": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 49,
+      "total": 53
+    },
+    "localci": {
+      "explicitOnPush": 11,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 11
+    },
+    "localvc": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 2,
+      "total": 2
+    },
+    "logos": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 2,
+      "total": 2
+    },
+    "lti": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "modeling": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 19,
+      "total": 19
+    },
+    "notification": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 6,
+      "total": 6
+    },
+    "openapi": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "plagiarism": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 15,
+      "total": 15
+    },
+    "programming": {
+      "explicitOnPush": 18,
+      "explicitDefault": 0,
+      "implicitDefault": 93,
+      "total": 111
+    },
+    "quiz": {
+      "explicitOnPush": 6,
+      "explicitDefault": 0,
+      "implicitDefault": 42,
+      "total": 48
+    },
+    "shared": {
+      "explicitOnPush": 4,
+      "explicitDefault": 0,
+      "implicitDefault": 75,
+      "total": 79
+    },
+    "shared-ui": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 0,
+      "total": 0
+    },
+    "sharing": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 1,
+      "total": 1
+    },
+    "text": {
+      "explicitOnPush": 0,
+      "explicitDefault": 0,
+      "implicitDefault": 29,
+      "total": 29
+    },
+    "tutorialgroup": {
+      "explicitOnPush": 20,
+      "explicitDefault": 0,
+      "implicitDefault": 25,
+      "total": 45
+    }
+  }
+}
