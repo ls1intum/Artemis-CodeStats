@@ -1,0 +1,459 @@
+{
+  "metadata": {
+    "type": "dtoViolations",
+    "artemis": {
+      "commitHash": "aa16f3b0877153efd41496b6ef64272f3773e3c8",
+      "commitDate": "2026-09-16T19:38:26.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Development: Retire the legacy API prefixes the clients have left (#13849)"
+    },
+    "dataSource": "Static source code analysis with JavaParser (full coverage)"
+  },
+  "dtoViolations": {
+    "modules": {
+      "account": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "admin": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "assessment": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "athena": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "atlas": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "buildagent": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "calendar": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "communication": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "config": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "core": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "course": {
+        "entityReturnViolations": 19,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 2,
+        "entityReturnDetails": [
+          {
+            "controller": "CourseAccessResource",
+            "method": "getCourseForEnrollment",
+            "endpoint": "GET api/course/courses/{courseId}/for-enrollment",
+            "returnType": "ResponseEntity<Course>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 136
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getCoursesForEnrollment",
+            "endpoint": "GET api/course/courses/for-enrollment",
+            "returnType": "ResponseEntity<List<Course>>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 175
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getStudentsInCourse",
+            "endpoint": "GET api/course/courses/{courseId}/students",
+            "returnType": "ResponseEntity<Set<User>>",
+            "entityClass": "User",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 191
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getTutorsInCourse",
+            "endpoint": "GET api/course/courses/{courseId}/tutors",
+            "returnType": "ResponseEntity<Set<User>>",
+            "entityClass": "User",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 282
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getEditorsInCourse",
+            "endpoint": "GET api/course/courses/{courseId}/editors",
+            "returnType": "ResponseEntity<Set<User>>",
+            "entityClass": "User",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 296
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "getInstructorsInCourse",
+            "endpoint": "GET api/course/courses/{courseId}/instructors",
+            "returnType": "ResponseEntity<Set<User>>",
+            "entityClass": "User",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 310
+          },
+          {
+            "controller": "CourseAccessResource",
+            "method": "searchOtherUsersInCourse",
+            "endpoint": "GET api/course/courses/{courseId}/search-other-users",
+            "returnType": "ResponseEntity<List<User>>",
+            "entityClass": "User",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseAccessResource.java",
+            "line": 325
+          },
+          {
+            "controller": "CourseManagementResource",
+            "method": "getCourses",
+            "endpoint": "GET api/course/courses",
+            "returnType": "ResponseEntity<List<Course>>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseManagementResource.java",
+            "line": 106
+          },
+          {
+            "controller": "CourseManagementResource",
+            "method": "getCoursesWithQuizExercises",
+            "endpoint": "GET api/course/courses/courses-with-quiz",
+            "returnType": "ResponseEntity<List<Course>>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseManagementResource.java",
+            "line": 136
+          },
+          {
+            "controller": "CourseManagementResource",
+            "method": "getCoursesForManagementOverview",
+            "endpoint": "GET api/course/courses/course-management-overview",
+            "returnType": "ResponseEntity<List<Course>>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseManagementResource.java",
+            "line": 154
+          },
+          {
+            "controller": "CourseManagementResource",
+            "method": "getCourseForAssessmentDashboard",
+            "endpoint": "GET api/course/courses/{courseId}/for-assessment-dashboard",
+            "returnType": "ResponseEntity<Course>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseManagementResource.java",
+            "line": 166
+          },
+          {
+            "controller": "CourseManagementResource",
+            "method": "getCourseWithExercises",
+            "endpoint": "GET api/course/courses/{courseId}/with-exercises",
+            "returnType": "ResponseEntity<Course>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseManagementResource.java",
+            "line": 187
+          },
+          {
+            "controller": "CourseManagementResource",
+            "method": "getCourseWithExercisesAndLecturesAndCompetencies",
+            "endpoint": "GET api/course/courses/{courseId}/with-exercises-lectures-competencies",
+            "returnType": "ResponseEntity<Course>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseManagementResource.java",
+            "line": 202
+          },
+          {
+            "controller": "CourseManagementResource",
+            "method": "getCourseWithOrganizations",
+            "endpoint": "GET api/course/courses/{courseId}/with-organizations",
+            "returnType": "ResponseEntity<Course>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseManagementResource.java",
+            "line": 215
+          },
+          {
+            "controller": "CourseManagementResource",
+            "method": "getLockedSubmissionsForCourse",
+            "endpoint": "GET api/course/courses/{courseId}/locked-submissions",
+            "returnType": "ResponseEntity<List<Submission>>",
+            "entityClass": "Submission",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseManagementResource.java",
+            "line": 230
+          },
+          {
+            "controller": "CourseManagementResource",
+            "method": "getAllExercisesWithDueDatesForCourse",
+            "endpoint": "GET api/course/courses/{courseId}/all-exercises-with-due-dates",
+            "returnType": "ResponseEntity<Set<Exercise>>",
+            "entityClass": "Exercise",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseManagementResource.java",
+            "line": 253
+          },
+          {
+            "controller": "CourseUpdateResource",
+            "method": "updateCourse",
+            "endpoint": "PUT api/course/courses/{courseId}",
+            "returnType": "ResponseEntity<Course>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseUpdateResource.java",
+            "line": 120
+          },
+          {
+            "controller": "CourseOverviewResource",
+            "method": "getCoursesForNotifications",
+            "endpoint": "GET api/course/courses/for-notifications",
+            "returnType": "ResponseEntity<Set<Course>>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseOverviewResource.java",
+            "line": 294
+          },
+          {
+            "controller": "CourseOverviewResource",
+            "method": "getCourse",
+            "endpoint": "GET api/course/courses/{courseId}",
+            "returnType": "ResponseEntity<Course>",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/web/CourseOverviewResource.java",
+            "line": 310
+          }
+        ],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": [
+          {
+            "dtoClass": "CoursesForDashboardDTO",
+            "fieldName": "activeExams",
+            "fieldType": "Set<Exam>",
+            "entityClass": "Exam",
+            "file": "de/tum/cit/aet/artemis/course/dto/CoursesForDashboardDTO.java",
+            "line": 10
+          },
+          {
+            "dtoClass": "CourseForDashboardDTO",
+            "fieldName": "course",
+            "fieldType": "Course",
+            "entityClass": "Course",
+            "file": "de/tum/cit/aet/artemis/course/dto/CourseForDashboardDTO.java",
+            "line": 29
+          }
+        ]
+      },
+      "exam": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 1,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": [
+          {
+            "dtoClass": "ExamScoresDTO",
+            "fieldName": "exerciseGroups",
+            "fieldType": "List<ExerciseGroup>",
+            "entityClass": "ExerciseGroup",
+            "file": "de/tum/cit/aet/artemis/exam/dto/ExamScoresDTO.java",
+            "line": 12
+          }
+        ]
+      },
+      "exercise": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "fileupload": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "globalsearch": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "hyperion": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "iris": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "jenkins": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "lecture": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "localci": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "localvc": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "lti": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "modeling": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "notification": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "plagiarism": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "programming": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "quiz": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "text": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "tutorialgroup": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "videosource": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      }
+    },
+    "totals": {
+      "entityReturnViolations": 19,
+      "entityInputViolations": 0,
+      "dtoEntityFieldViolations": 3
+    }
+  }
+}
