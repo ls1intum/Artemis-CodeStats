@@ -1,0 +1,261 @@
+{
+  "metadata": {
+    "type": "dtoViolations",
+    "artemis": {
+      "commitHash": "da64b1a30d2fdc16c729a3a79b85de12613fcc4e",
+      "commitDate": "2026-09-18T15:55:50.000Z",
+      "commitAuthor": "Stephan Krusche",
+      "commitMessage": "Programming exercises: Fix an issue during the concurrent first start of a participation (#13873)"
+    },
+    "dataSource": "Static source code analysis with JavaParser (full coverage)"
+  },
+  "dtoViolations": {
+    "modules": {
+      "account": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "admin": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "assessment": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "athena": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "atlas": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "buildagent": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "calendar": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "communication": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "config": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "core": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "course": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "exam": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "exercise": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "fileupload": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "globalsearch": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "hyperion": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "iris": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "jenkins": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "lecture": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "localci": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "localvc": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "lti": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "modeling": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "notification": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "plagiarism": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "programming": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "quiz": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "text": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "tutorialgroup": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      },
+      "videosource": {
+        "entityReturnViolations": 0,
+        "entityInputViolations": 0,
+        "dtoEntityFieldViolations": 0,
+        "entityReturnDetails": [],
+        "entityInputDetails": [],
+        "dtoEntityFieldDetails": []
+      }
+    },
+    "totals": {
+      "entityReturnViolations": 0,
+      "entityInputViolations": 0,
+      "dtoEntityFieldViolations": 0
+    }
+  }
+}
