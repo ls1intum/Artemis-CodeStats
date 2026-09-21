@@ -59,13 +59,6 @@ test('lock entries are copied for pasting into the three Artemis lists', async (
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.goto('./#/?view=next')
   await loaded(page)
-  await page.getByRole('button', { name: 'Copy brief for an agent' }).click()
-  await expect(page.getByText(/Copied the migration brief/)).toBeVisible()
-  const brief = await page.evaluate(() => navigator.clipboard.readText())
-  expect(brief).toMatch(/^# Artemis client migration brief/)
-  expect(brief).toMatch(/## Lock now/)
-  expect(brief).toMatch(/## How to migrate/)
-  expect(brief).toMatch(/migrations\/brief\/course\.md/)
   await page
     .getByRole('button', { name: /^Copy lock entries for / })
     .first()
@@ -125,75 +118,52 @@ test('section drawer opens from the table, lives in the URL, lists blockers and 
   await expect(page.getByRole('dialog', { name: 'course' })).toBeVisible()
 })
 
-test('pages and history views render from the same data', async ({ page }) => {
+test('pages view and per-commit snapshots resolve through patches', async ({
+  page,
+}) => {
   await page.goto('./#/?view=pages')
   await loaded(page)
   const manifest = await (
     await page.request.get('./migrations/index.json')
   ).json()
   const t = manifest.snapshots.at(-1).totals
+  await expect(page.getByText(/The global shell/)).toBeVisible()
   await expect(
     page.getByRole('img', { name: /^Imports no Bootstrap \d+/ }).first(),
   ).toHaveAttribute(
     'aria-label',
     new RegExp(`Imports no Bootstrap ${t.pagesClean},`),
   )
-  await expect(page.getByText(/The global shell/)).toBeVisible()
   await page.getByRole('radio', { name: 'Ready', exact: true }).click()
   await expect(page.getByRole('table').last().locator('tbody tr')).toHaveCount(
     t.pagesClean,
   )
-  await page.getByRole('tab', { name: 'History' }).click()
+  // A commit that is not a base is stored as a patch and must render with full detail.
+  const patched = manifest.snapshots.find(
+    (s: { commit: string }) => !manifest.bases.includes(s.commit),
+  )
+  const stored = await (
+    await page.request.get(`./migrations/${patched.commit}.json`)
+  ).json()
+  expect(manifest.bases).toContain(stored.base)
+  await page.goto(`./#/?view=sections&snapshot=${patched.commit}`)
+  await loaded(page)
+  await expect(page.getByLabel('Snapshot')).toContainText(
+    patched.commit.slice(0, 8),
+  )
   await expect(
-    page.getByRole('link', { name: 'JSON', exact: true }).first(),
-  ).toHaveAttribute('href', /migrations\/[a-f0-9]{40}\.json$/)
-  const brief = await page.request.get('./migrations/brief.md')
-  expect(brief.ok()).toBe(true)
-  expect(await brief.text()).toMatch(/^# Artemis client migration brief/)
-  const section = await page.request.get('./migrations/brief/course.md')
-  expect(await section.text()).toMatch(/×\d+ → /)
-  const llms = await page.request.get('./llms.txt')
-  expect(await llms.text()).toMatch(/^# Artemis CodeStats\n\n> /)
+    page.getByRole('cell', { name: 'All sections' }).locator('..'),
+  ).toContainText(
+    (patched.totals.classHits + patched.totals.styleHits).toLocaleString(
+      'en-US',
+    ),
+  )
 })
 
-test('snapshot and comparison selection change the deltas and mark the chart', async ({
-  page,
-}) => {
-  await page.goto('./')
-  await loaded(page)
-  const before = await page
-    .getByRole('heading', { name: 'Bootstrap hits', exact: true })
-    .locator('..')
-    .textContent()
-  await page.getByLabel('Snapshot').click()
-  await page.getByRole('option', { name: /package adoption/ }).click()
-  await expect(page).toHaveURL(/snapshot=45bcba70/)
-  await expect(page.getByText('snapshot', { exact: true })).toBeVisible()
-  await page.getByLabel('Compare against').click()
-  await expect(
-    page.getByRole('option', { name: /package adoption/ }),
-  ).toHaveCount(0)
-  await page.getByRole('option', { name: /kit pilot/ }).click()
-  await expect(page).toHaveURL(/compare=e6e7c9cc/)
-  await expect(
-    page
-      .getByRole('heading', { name: 'Bootstrap hits', exact: true })
-      .locator('..'),
-  ).not.toHaveText(before!)
-  await expect(
-    page.getByRole('heading', { name: 'Commits that moved the numbers' }),
-  ).toBeVisible()
-  await page.goto('./#/?snapshot=e6e7c9cca1e961ce05463177bc316dc42c8d1c38')
-  await loaded(page)
-  await expect(page.getByRole('alert')).toHaveCount(0)
-})
-
-test('requests for unretained commits fall back visibly', async ({ page }) => {
+test('requests for unknown commits fall back visibly', async ({ page }) => {
   await page.goto('./#/?snapshot=0000000000000000000000000000000000000000')
   await loaded(page)
-  await expect(page.getByRole('status')).toContainText(
-    'not a retained checkpoint',
-  )
+  await expect(page.getByRole('status')).toContainText('not in the history')
 })
 
 test('missing and invalid reports fail visibly and can recover', async ({
@@ -232,6 +202,11 @@ test('small-screen reflow, drawer columns and keyboard entry point', async ({
     )
   for (let i = 1; i < heads.length; i++)
     expect(heads[i][0]).toBeGreaterThanOrEqual(heads[i - 1][1] - 1)
+  await expect
+    .poll(() =>
+      page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]')),
+    )
+    .toBe(true)
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await loaded(page)

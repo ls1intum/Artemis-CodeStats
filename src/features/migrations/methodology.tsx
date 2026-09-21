@@ -4,14 +4,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { commitUrl, sourceUrl, type Detail, type Manifest } from './model'
+import { commitUrl, sourceUrl, type Manifest } from './model'
+import type { DetailView } from './load-report'
 
 export function Methodology({
   manifest,
   detail,
 }: {
   manifest: Manifest
-  detail: Detail
+  detail: DetailView
 }) {
   const unscanned = detail.units.filter(
     (u) => !u.scanned && Object.keys(u.tumUi).length > 0,
@@ -66,6 +67,12 @@ export function Methodology({
               <code>imports</code>, dialogs opened from code and{' '}
               <code>import()</code> calls. Type-only imports do not count;
               content projected from outside a unit is not resolved.
+            </dd>
+            <dt className="font-medium">Spacing</dt>
+            <dd>
+              Bootstrap spacing-scale classes (<code>mb-3</code>,{' '}
+              <code>gap-2</code>) that keep their names under Tailwind but
+              change value once a directory is locked; convert by size.
             </dd>
             <dt className="font-medium">Lockable</dt>
             <dd>

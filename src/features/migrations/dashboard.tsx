@@ -12,7 +12,6 @@ import { SectionSheet } from './section-sheet'
 import { Pages } from './pages'
 import { NextSteps } from './next-steps'
 import { Inventory } from './inventory'
-import { History } from './history'
 import { Methodology } from './methodology'
 
 const viewLabel: Record<View, string> = {
@@ -21,12 +20,12 @@ const viewLabel: Record<View, string> = {
   pages: 'Pages',
   next: 'Next steps',
   inventory: 'Inventory',
-  history: 'History',
 }
 
 export function MigrationDashboard() {
-  const { manifest, points, snapshot, compare, detail, compareDetail } =
-    useLoaderData({ from: '/' })
+  const { manifest, snapshot, compare, detail, compareDetail } = useLoaderData({
+    from: '/',
+  })
   const search = useSearch({ from: '/' })
   const navigate = useNavigate({ from: '/' })
   const opener = useRef<HTMLElement | null>(null)
@@ -72,7 +71,6 @@ export function MigrationDashboard() {
         </div>
         <Controls
           manifest={manifest}
-          points={points}
           snapshot={snapshot}
           compare={compare}
           onChange={update}
@@ -81,8 +79,8 @@ export function MigrationDashboard() {
       {(search.snapshot && search.snapshot !== snapshot.commit) ||
       (search.compare && search.compare !== compare.commit) ? (
         <p role="status" className="text-sm text-destructive">
-          A requested snapshot is not a retained checkpoint or is not earlier
-          than the snapshot; showing the nearest available one.
+          A requested commit is not in the history or is not earlier than the
+          snapshot; showing the nearest available one.
         </p>
       ) : null}
       <Headline
@@ -112,7 +110,7 @@ export function MigrationDashboard() {
           <Burndown
             series={series}
             snapshot={snapshot}
-            latest={snapshot.commit === points.at(-1)?.commit}
+            latest={snapshot.commit === manifest.snapshots.at(-1)?.commit}
           />
           <Changes
             series={manifest.snapshots}
@@ -139,18 +137,14 @@ export function MigrationDashboard() {
           <Pages detail={detail} />
         </TabsContent>
         <TabsContent value="next">
-          <NextSteps snapshot={snapshot} detail={detail} />
+          <NextSteps detail={detail} />
         </TabsContent>
         <TabsContent value="inventory">
           <Inventory detail={detail} />
         </TabsContent>
-        <TabsContent value="history">
-          <History manifest={manifest} points={points} />
-        </TabsContent>
       </Tabs>
       <SectionSheet
         section={section}
-        snapshot={snapshot}
         detail={detail}
         compare={compareDetail}
         onClose={() => update({ section: undefined })}

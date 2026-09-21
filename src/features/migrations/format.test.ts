@@ -29,7 +29,7 @@ const summary = (day: number, hits: number): Summary => ({
 })
 
 test('lock entries follow the three Artemis lists', () => {
-  assert.deepEqual(lockEntries('src/main/webapp/app/exam/manage/clean'), {
+  assert.deepEqual(lockEntries('app/exam/manage/clean'), {
     eslint: "'src/main/webapp/app/exam/manage/clean/**/*.html',",
     stylelint: '"src/main/webapp/app/exam/manage/clean/**/*.scss",',
     tailwind: "@source './app/exam/manage/clean';",

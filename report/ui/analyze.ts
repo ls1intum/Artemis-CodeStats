@@ -16,10 +16,11 @@ import { pathToFileURL } from 'node:url'
 import {
   analyzerVersion,
   appRoot,
+  deriveClosures,
   sectionOf,
+  webapp,
   unitPath,
   type Detail,
-  type InventoryEntry,
   type Section,
   type Summary,
   type Totals,
@@ -79,7 +80,6 @@ const spacingClass = /^(?:[mp][tbsexy]?-(?:[0-5]|auto)|gap-[0-5])$/
 // Utilities that exist only in Tailwind, as evidence that a template already uses it.
 const tailwindClass =
   /^(?:(?:sm|md|lg|xl|2xl):)?(?:flex-(?:col|row|wrap|1|none)|inline-flex|grid-cols-\d+|col-span-\d+|items-(?:start|end|center|baseline|stretch)|justify-(?:start|end|center|between|around|evenly)|gap-(?:[6-9]|\d{2}|x-\d+|y-\d+)|(?:text|bg|border)-state-[a-z]+|w-full|h-full|hidden|truncate|rounded-(?:md|lg|xl|full)|shrink-0|grow|min-w-0)$/
-const libraries: Library[] = ['primeng', 'ngBootstrap', 'tumUi']
 const bump = (usage: Usage, key: string, by = 1) => {
   usage[key] = (usage[key] ?? 0) + by
 }
@@ -539,20 +539,6 @@ export async function loadRule(root: string) {
   }
 }
 
-const inventory = (usages: Usage[]): InventoryEntry[] => {
-  const entries = new Map<string, InventoryEntry>()
-  for (const usage of usages)
-    for (const [name, occurrences] of Object.entries(usage)) {
-      const entry = entries.get(name) ?? { name, occurrences: 0, units: 0 }
-      entry.occurrences += occurrences
-      entry.units++
-      entries.set(name, entry)
-    }
-  return [...entries.values()].sort(
-    (a, b) => b.occurrences - a.occurrences || a.name.localeCompare(b.name),
-  )
-}
-
 export async function analyzeTree(
   root: string,
   meta: { commit: string; date: string; subject: string },
@@ -662,11 +648,7 @@ export async function analyzeTree(
           (n, s) => n + styleHits(styles.get(s)!),
           0,
         ),
-        closureHits: 0,
-        routeHits: 0,
-        blocked: 0,
-        blocks: 0,
-        blockers: [],
+        imports: [],
         tokens,
         primeng: usage('primeng'),
         ngBootstrap: usage('ngBootstrap'),
@@ -695,28 +677,8 @@ export async function analyzeTree(
             .map(([, id]) => id)
         }),
       )
-  const reachable = new Map<string, Set<string>>()
-  for (const id of units.keys()) {
-    const seen = new Set<string>()
-    const stack = [...(edges.get(id) ?? [])]
-    while (stack.length) {
-      const next = stack.pop()!
-      if (seen.has(next)) continue
-      seen.add(next)
-      stack.push(...(edges.get(next) ?? []))
-    }
-    seen.delete(id)
-    reachable.set(id, seen)
-  }
-  for (const unit of units.values()) {
-    const closure = [...reachable.get(unit.id)!].map((id) => units.get(id)!)
-    unit.closureHits = closure.reduce((n, other) => n + ownHits(other), 0)
-    const dirty = closure.filter((other) => ownHits(other) > 0)
-    unit.blocked = dirty.length
-    unit.blockers = dirty.map((other) => other.id).sort()
-    if (unit.status === 'clean' && ownHits(unit) === 0)
-      for (const id of unit.blockers) units.get(id)!.blocks++
-  }
+  for (const unit of units.values())
+    unit.imports = [...new Set(edges.get(unit.id) ?? [])].sort()
   // Routed pages: walk the route tree from app.routes.ts through children and loadChildren,
   // joining paths and remembering the route components a page renders inside.
   const resolveFile = (base: string) =>
@@ -743,7 +705,7 @@ export async function analyzeTree(
       const unit = unitId ? units.get(unitId) : undefined
       if (unit && unit.route === undefined) {
         unit.route = `/${path}`
-        unit.routeParents = ancestors
+        if (ancestors.length) unit.routeParents = ancestors
       }
       const parents = unitId ? [...ancestors, unitId] : ancestors
       const children = node.childrenRef
@@ -775,11 +737,10 @@ export async function analyzeTree(
       '',
       [],
     )
-  for (const unit of units.values())
-    unit.routeHits = (unit.routeParents ?? []).reduce(
-      (n, id) => n + ownHits(units.get(id)!) + units.get(id)!.closureHits,
-      0,
-    )
+  // Closure metrics are derived from the stored edges, on the server and the client alike.
+  const derived = deriveClosures([...units.values()])
+  const closureHits = (unit: Unit) => derived.get(unit.id)!.closureHits
+  const routeHits = (unit: Unit) => derived.get(unit.id)!.routeHits
   const orphanFiles: Detail['files'] = []
   for (const [path, tokens] of fileTokens)
     if (!owned.has(path) && !units.has(path) && sum(tokens) > 0)
@@ -835,7 +796,7 @@ export async function analyzeTree(
       entry.units++
       if (unit.status !== 'locked') entry.unlocked++
       if (unit.template) entry.templates++
-      entry.clean &&= ownHits(unit) === 0 && unit.closureHits === 0
+      entry.clean &&= ownHits(unit) === 0 && closureHits(unit) === 0
       dirs.set(dir, entry)
     }
   for (const file of orphanFiles)
@@ -879,7 +840,7 @@ export async function analyzeTree(
     const entry = section(unit.section)
     entry.units++
     entry[unit.status]++
-    for (const blocker of unit.blockers)
+    for (const blocker of derived.get(unit.id)!.blockers)
       if (units.get(blocker)!.section !== unit.section) {
         const set = externalBlockers.get(unit.section) ?? new Set()
         set.add(blocker)
@@ -914,10 +875,13 @@ export async function analyzeTree(
       (u) =>
         u.route !== undefined &&
         ownHits(u) === 0 &&
-        u.closureHits === 0 &&
-        u.routeHits === 0,
+        closureHits(u) === 0 &&
+        routeHits(u) === 0,
     ).length,
   }
+  // Stored paths are relative to src/main/webapp/.
+  const rel = (path: string) => path.slice(webapp.length)
+  const rels = (paths: string[]) => paths.map(rel)
   return {
     summary: {
       ...meta,
@@ -935,25 +899,25 @@ export async function analyzeTree(
       rule: sha,
       kit: [...kit.elements, ...kit.attributes].sort(),
       lockGlobs,
-      lockable,
+      lockable: lockable.map((l) => ({ ...l, dir: rel(l.dir) })),
       sections: [...sections.values()].sort(
         (a, b) =>
           b.classHits + b.styleHits - (a.classHits + a.styleHits) ||
           a.name.localeCompare(b.name),
       ),
-      units: all.sort((a, b) => a.id.localeCompare(b.id)),
-      styles: styleFiles,
-      files: orphanFiles,
-      inventory: {
-        bootstrap: inventory([
-          ...all.map((u) => u.tokens),
-          ...orphanFiles.map((f) => f.tokens),
-        ]),
-        ...Object.fromEntries(
-          libraries.map((l) => [l, inventory(all.map((u) => u[l]))]),
-        ),
-      } as Detail['inventory'],
-      diagnostics,
+      units: all
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((u) => ({
+          ...u,
+          id: rel(u.id),
+          template: u.template && rel(u.template),
+          styles: rels(u.styles),
+          imports: rels(u.imports),
+          routeParents: u.routeParents && rels(u.routeParents),
+        })),
+      styles: styleFiles.map((f) => ({ ...f, path: rel(f.path) })),
+      files: orphanFiles.map((f) => ({ ...f, path: rel(f.path) })),
+      diagnostics: diagnostics.map((d) => ({ ...d, path: rel(d.path) })),
     },
   }
 }

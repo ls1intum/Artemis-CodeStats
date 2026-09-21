@@ -9,7 +9,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { lockEntries, sourceUrl, type Detail } from './model'
-import { short } from './format'
 import { copyText } from './clipboard'
 
 function copyEntries(dirs: string[]) {
@@ -59,7 +58,7 @@ export function LockableTable({
                   className="underline underline-offset-4 break-all"
                   href={sourceUrl(commit, dir)}
                 >
-                  {short(dir)}
+                  {dir}
                 </a>
               </TableCell>
               <TableCell className="text-right tabular-nums">{units}</TableCell>
@@ -67,7 +66,7 @@ export function LockableTable({
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`Copy lock entries for ${short(dir)}`}
+                  aria-label={`Copy lock entries for ${dir}`}
                   onClick={() => copyEntries([dir])}
                 >
                   <Copy aria-hidden="true" />

@@ -1,5 +1,19 @@
 import { z } from 'zod'
-import { detailSchema, manifestSchema, type Manifest } from './model'
+import {
+  applyPatch,
+  enrich,
+  manifestSchema,
+  storedDetailSchema,
+  type Detail,
+  type Summary,
+  type UnitView,
+} from './model'
+
+export type DetailView = Omit<Detail, 'units'> & { units: UnitView[] }
+const view = (detail: Detail): DetailView => ({
+  ...detail,
+  units: enrich(detail.units),
+})
 
 async function loadJson<T>(
   file: string,
@@ -21,11 +35,13 @@ async function loadJson<T>(
   return parsed.data
 }
 
-const checkpoints = (manifest: Manifest) =>
-  manifest.snapshots.filter((s) => manifest.evidenceCommits.includes(s.commit))
+// The default comparison is the last commit at least a week before the snapshot.
+export const weekBefore = (snapshots: Summary[], snapshot: Summary) => {
+  const cutoff = Date.parse(snapshot.date) - 7 * 86_400_000
+  return snapshots.filter((s) => Date.parse(s.date) <= cutoff).at(-1)
+}
 
-// Detail exists only for checkpoints. The comparison is always an earlier checkpoint;
-// the first checkpoint compares against itself.
+// Every commit has a detail file; a patch resolves through its base (one extra request).
 export async function loadMigrationReport(
   requested: { snapshot?: string; compare?: string },
   signal: AbortSignal,
@@ -36,35 +52,38 @@ export async function loadMigrationReport(
     signal,
     'no-cache',
   )
-  const points = checkpoints(manifest)
+  const all = manifest.snapshots
   const snapshot =
-    points.find((s) => s.commit === requested.snapshot) ?? points.at(-1)!
-  const index = points.indexOf(snapshot)
-  const earlier = points.slice(0, index)
+    all.find((s) => s.commit === requested.snapshot) ?? all.at(-1)!
+  const earlier = all.slice(0, all.indexOf(snapshot))
   const compare =
     earlier.find((s) => s.commit === requested.compare) ??
-    earlier.at(-1) ??
+    weekBefore(earlier, snapshot) ??
+    earlier[0] ??
     snapshot
-  const load = async (commit: string) => {
-    const detail = await loadJson(
+  const bases = new Map<string, Promise<Detail>>()
+  const load = async (commit: string): Promise<Detail> => {
+    const stored = await loadJson(
       `${commit}.json`,
-      detailSchema,
+      storedDetailSchema,
       signal,
       'default',
     )
-    if (detail.commit !== commit)
+    if (stored.commit !== commit)
       throw new Error(
         'Report identity mismatch. Regenerate and publish matching reports.',
       )
-    return detail
+    if (!('base' in stored)) return stored
+    const base = bases.get(stored.base) ?? load(stored.base)
+    bases.set(stored.base, base)
+    return applyPatch(await base, stored)
   }
   const [detail, compareDetail] = await Promise.all([
-    load(snapshot.commit),
-    compare === snapshot ? undefined : load(compare.commit),
+    load(snapshot.commit).then(view),
+    compare === snapshot ? undefined : load(compare.commit).then(view),
   ])
   return {
     manifest,
-    points,
     snapshot,
     compare,
     detail,

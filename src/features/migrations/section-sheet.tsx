@@ -21,26 +21,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import {
-  appRoot,
-  sourceUrl,
-  statuses,
-  type Detail,
-  type Status,
-  type Summary,
-} from './model'
-import {
-  free,
-  hits,
-  number,
-  percent,
-  short,
-  statusLabel,
-  unitFile,
-} from './format'
+import { sourceUrl, statuses, type Status } from './model'
+import type { DetailView } from './load-report'
+import { free, hits, number, percent, statusLabel, unitFile } from './format'
 import { Delta, StatusBar } from './status'
 import { LockableTable } from './lockable'
-import { BriefActions } from './next-steps'
 
 const badgeVariant: Record<Status, 'default' | 'secondary' | 'outline'> = {
   locked: 'default',
@@ -57,14 +42,12 @@ const usage = (u: Record<string, number>) =>
 
 function SectionBody({
   section,
-  snapshot,
   detail,
   compare,
 }: {
   section: string
-  snapshot: Summary
-  detail: Detail
-  compare: Detail
+  detail: DetailView
+  compare: DetailView
 }) {
   const [filter, setFilter] = useState<Status | 'all'>('all')
   const summary = detail.sections.find((s) => s.name === section)!
@@ -86,7 +69,7 @@ function SectionBody({
     )
   const files = detail.files.filter((f) => f.section === section)
   const lockable = detail.lockable.filter((l) =>
-    l.dir.startsWith(`${appRoot}/${section}/`),
+    l.dir.startsWith(`app/${section}/`),
   )
   return (
     <>
@@ -104,7 +87,6 @@ function SectionBody({
             ` · ${percent(free(summary), summary.units)} Bootstrap-free`}
         </SheetDescription>
         {summary.units > 0 && <StatusBar counts={summary} legend />}
-        <BriefActions snapshot={snapshot} detail={detail} section={section} />
       </SheetHeader>
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 overflow-y-auto px-4 pb-4">
         {lockable.length > 0 && (
@@ -142,6 +124,7 @@ function SectionBody({
                 <TableHead className="text-right">Hits</TableHead>
                 <TableHead className="text-right">Imports with hits</TableHead>
                 <TableHead>Bootstrap classes</TableHead>
+                <TableHead className="text-right">Spacing</TableHead>
                 <TableHead className="text-right">PrimeNG / ngb</TableHead>
               </TableRow>
             </TableHeader>
@@ -163,7 +146,7 @@ function SectionBody({
                         className="break-all underline underline-offset-4"
                         href={sourceUrl(detail.commit, unitFile(u))}
                       >
-                        {short(unitFile(u)).replace(`app/${section}/`, '')}
+                        {unitFile(u).replace(`app/${section}/`, '')}
                       </a>
                     </TableCell>
                     <TableCell>
@@ -206,7 +189,7 @@ function SectionBody({
                                     className="truncate underline underline-offset-4"
                                     href={sourceUrl(detail.commit, unitFile(b))}
                                   >
-                                    {b.selector ?? short(b.id)}
+                                    {b.selector ?? b.id}
                                   </a>
                                   <span className="tabular-nums">
                                     {hits(b)}
@@ -237,6 +220,9 @@ function SectionBody({
                       )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
+                      {u.spacing || ''}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {usage(u.primeng) || usage(u.ngBootstrap)
                         ? `${usage(u.primeng)} / ${usage(u.ngBootstrap)}`
                         : ''}
@@ -265,7 +251,7 @@ function SectionBody({
                         className="break-all underline underline-offset-4"
                         href={sourceUrl(detail.commit, f.path)}
                       >
-                        {short(f.path)}
+                        {f.path}
                       </a>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
@@ -284,16 +270,14 @@ function SectionBody({
 
 export function SectionSheet({
   section,
-  snapshot,
   detail,
   compare,
   onClose,
   opener,
 }: {
   section: string | undefined
-  snapshot: Summary
-  detail: Detail
-  compare: Detail
+  detail: DetailView
+  compare: DetailView
   onClose: () => void
   opener: RefObject<HTMLElement | null>
 }) {
@@ -322,7 +306,6 @@ export function SectionSheet({
             <SectionBody
               key={section}
               section={section}
-              snapshot={snapshot}
               detail={detail}
               compare={compare}
             />

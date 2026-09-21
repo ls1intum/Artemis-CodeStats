@@ -36,12 +36,7 @@ test('history retains every integrated commit since adoption, with sparse earlie
     result.snapshots.map((s) => s.commit),
     ['pilot', 'package', 'a', 'b', 'weekly', 'head'],
   )
-  assert.deepEqual(result.evidenceCommits, [
-    'pilot',
-    'package',
-    'weekly',
-    'head',
-  ])
+  assert.deepEqual(result.bases, ['pilot', 'package', 'weekly'])
   assert.throws(() => planHistory(history, 'not-on-first-parent'), /missing/)
 })
 
@@ -111,8 +106,26 @@ test('generator catches up missed commits, preserves source checkout, is idempot
       [1, 2, 1, 2, 1],
     )
     assert.equal(report.snapshots.at(-1)?.subject, 'day 5 (#5)')
-    assert.equal(existsSync(join(output, `${oldHead}.json`)), false)
-    assert.equal(existsSync(join(output, `${head}.json`)), true)
+    const stored = (commit: string) =>
+      JSON.parse(readFileSync(join(output, `${commit}.json`), 'utf8'))
+    assert.equal(
+      stored(packageAdoption).base,
+      undefined,
+      'milestones are bases',
+    )
+    assert.equal(
+      stored(head).base,
+      packageAdoption,
+      'later commits are patches',
+    )
+    assert.deepEqual(
+      stored(head).units.changed.map((u: { id: string }) =>
+        u.id.split('/').pop(),
+      ),
+      ['dialog.component.ts'],
+      'only the unit whose own facts changed',
+    )
+    assert.deepEqual(stored(removed).units.changed, [])
     const manifest = readFileSync(join(output, 'index.json'), 'utf8')
     await generateReports(options)
     assert.equal(readFileSync(join(output, 'index.json'), 'utf8'), manifest)
@@ -120,15 +133,15 @@ test('generator catches up missed commits, preserves source checkout, is idempot
     await generateReports(options)
     assert.equal(existsSync(join(output, `${head}.json`)), true)
     assert.equal(readFileSync(join(output, 'index.json'), 'utf8'), manifest)
-    const detailPath = join(output, `${head}.json`)
-    const detail = JSON.parse(readFileSync(detailPath, 'utf8'))
+    const detailPath = join(output, `${packageAdoption}.json`)
+    const detail = stored(packageAdoption)
     detail.units = detail.units.slice(1)
     writeFileSync(detailPath, JSON.stringify(detail))
-    await assert.rejects(generateReports(options), /Cached evidence/)
+    await assert.rejects(generateReports(options), /Cached detail/)
     assert.equal(readFileSync(join(output, 'index.json'), 'utf8'), manifest)
     writeFileSync(join(output, 'index.json'), '{broken JSON')
     await generateReports({ ...options, rebuild: true })
-    assert.equal(JSON.parse(readFileSync(detailPath, 'utf8')).units.length, 11)
+    assert.equal(stored(packageAdoption).units.length, 11)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

@@ -12,7 +12,6 @@ export const views = [
   'pages',
   'next',
   'inventory',
-  'history',
 ] as const
 export type View = (typeof views)[number]
 export type Status = (typeof statuses)[number]
@@ -57,12 +56,13 @@ export type Summary = z.infer<typeof summarySchema>
 
 export const manifestSchema = z
   .object({
-    schemaVersion: z.literal(3),
+    schemaVersion: z.literal(4),
     analyzerVersion: z.literal(analyzerVersion),
     generatedAt: z.string().datetime(),
     baseline: sha,
     packageAdoption: sha,
-    evidenceCommits: z.array(sha).min(1),
+    // Commits with a full detail file; every other commit's detail is a patch against the base before it.
+    bases: z.array(sha).min(1),
     snapshots: z.array(summarySchema).min(1),
   })
   .superRefine((data, ctx) => {
@@ -72,12 +72,12 @@ export const manifestSchema = z
     if (new Set(commits).size !== commits.length) invalid('Duplicate snapshots')
     if (commits[0] !== data.baseline) invalid('Missing baseline snapshot')
     if (
-      [data.baseline, data.packageAdoption, commits.at(-1)].some(
-        (c) => !c || !data.evidenceCommits.includes(c),
+      [data.baseline, data.packageAdoption].some(
+        (c) => !data.bases.includes(c),
       ) ||
-      data.evidenceCommits.some((c) => !commits.includes(c))
+      data.bases.some((c) => !commits.includes(c))
     )
-      invalid('Invalid evidence commits')
+      invalid('Invalid base commits')
     if (
       data.snapshots.some(
         (s, i) =>
@@ -101,15 +101,13 @@ export const unitSchema = z.object({
   tailwind: z.boolean(),
   // Full route path from app.routes.ts; `:dynamic` marks a non-literal segment.
   route: z.string().optional(),
+  // Route components this page renders inside, outermost first.
   routeParents: z.array(z.string()).optional(),
-  routeHits: count,
   spacing: count,
   classHits: count,
   styleHits: count,
-  closureHits: count,
-  blocked: count,
-  blocks: count,
-  blockers: z.array(z.string()),
+  // Units whose decorated class this unit imports; closures are derived from these edges.
+  imports: z.array(z.string()),
   tokens: usage,
   primeng: usage,
   ngBootstrap: usage,
@@ -130,14 +128,17 @@ export const sectionSchema = z.object({
 })
 export type Section = z.infer<typeof sectionSchema>
 
-const inventoryEntry = z.object({
-  name: z.string(),
-  occurrences: count,
+const styleFileSchema = z.object({
+  path: z.string(),
+  section: z.string(),
+  variables: count,
+  colors: count,
+  imports: count,
   units: count,
 })
-export type InventoryEntry = z.infer<typeof inventoryEntry>
+export type StyleFile = z.infer<typeof styleFileSchema>
 
-export const detailSchema = z.object({
+const detailBase = z.object({
   analyzerVersion: z.literal(analyzerVersion),
   commit: sha,
   rule: sha,
@@ -145,17 +146,6 @@ export const detailSchema = z.object({
   lockGlobs: z.array(z.string()),
   lockable: z.array(z.object({ dir: z.string(), units: count })),
   sections: z.array(sectionSchema),
-  units: z.array(unitSchema),
-  styles: z.array(
-    z.object({
-      path: z.string(),
-      section: z.string(),
-      variables: count,
-      colors: count,
-      imports: count,
-      units: count,
-    }),
-  ),
   files: z.array(
     z.object({
       path: z.string(),
@@ -165,17 +155,169 @@ export const detailSchema = z.object({
       tokens: usage,
     }),
   ),
-  inventory: z.object({
-    bootstrap: z.array(inventoryEntry),
-    primeng: z.array(inventoryEntry),
-    ngBootstrap: z.array(inventoryEntry),
-    tumUi: z.array(inventoryEntry),
-  }),
   diagnostics: z.array(z.object({ path: z.string(), message: z.string() })),
 })
+export const detailSchema = detailBase.extend({
+  units: z.array(unitSchema),
+  styles: z.array(styleFileSchema),
+})
 export type Detail = z.infer<typeof detailSchema>
+// Every commit has a detail file; most are patches against the previous base commit.
+export const patchSchema = detailBase.extend({
+  base: sha,
+  units: z.object({
+    changed: z.array(unitSchema),
+    removed: z.array(z.string()),
+  }),
+  styles: z.object({
+    changed: z.array(styleFileSchema),
+    removed: z.array(z.string()),
+  }),
+})
+export type Patch = z.infer<typeof patchSchema>
+export const storedDetailSchema = z.union([detailSchema, patchSchema])
 
-export const siteUrl = 'https://ls1intum.github.io/Artemis-CodeStats/'
+const patched = <T extends { [k in K]: string }, K extends keyof T>(
+  key: K,
+  base: T[],
+  changed: T[],
+  removed: string[],
+) => {
+  const replaced = new Map(changed.map((item) => [item[key] as string, item]))
+  const gone = new Set(removed)
+  const kept = base
+    .filter((item) => !gone.has(item[key] as string))
+    .map((item) => replaced.get(item[key] as string) ?? item)
+  const known = new Set(base.map((item) => item[key] as string))
+  return [...kept, ...changed.filter((item) => !known.has(item[key] as string))]
+}
+export function applyPatch(base: Detail, patch: Patch): Detail {
+  if (patch.base !== base.commit)
+    throw new Error(`Patch ${patch.commit} does not apply to ${base.commit}`)
+  return {
+    analyzerVersion: patch.analyzerVersion,
+    commit: patch.commit,
+    rule: patch.rule,
+    kit: patch.kit,
+    lockGlobs: patch.lockGlobs,
+    lockable: patch.lockable,
+    sections: patch.sections,
+    files: patch.files,
+    diagnostics: patch.diagnostics,
+    units: patched(
+      'id',
+      base.units,
+      patch.units.changed,
+      patch.units.removed,
+    ).sort((a, b) => a.id.localeCompare(b.id)),
+    styles: patched(
+      'path',
+      base.styles,
+      patch.styles.changed,
+      patch.styles.removed,
+    ),
+  }
+}
+export function makePatch(base: Detail, detail: Detail): Patch {
+  const diff = <T extends { [k in K]: string }, K extends keyof T>(
+    key: K,
+    before: T[],
+    after: T[],
+  ) => {
+    const previous = new Map(before.map((item) => [item[key] as string, item]))
+    const next = new Set(after.map((item) => item[key] as string))
+    return {
+      changed: after.filter((item) => {
+        const old = previous.get(item[key] as string)
+        return !old || JSON.stringify(old) !== JSON.stringify(item)
+      }),
+      removed: before
+        .map((item) => item[key] as string)
+        .filter((id) => !next.has(id)),
+    }
+  }
+  const { units, styles, ...rest } = detail
+  return {
+    ...rest,
+    base: base.commit,
+    units: diff('id', base.units, units),
+    styles: diff('path', base.styles, styles),
+  }
+}
+
+// Import closures are derived on the client so stored units only carry facts about themselves.
+export type Derived = {
+  closureHits: number
+  blockers: string[]
+  blocks: number
+  routeHits: number
+}
+export type UnitView = Unit & Derived
+export function deriveClosures(units: Unit[]): Map<string, Derived> {
+  const byId = new Map(units.map((u) => [u.id, u]))
+  const own = (u: Unit) => u.classHits + u.styleHits
+  const reach = (id: string): Set<string> => {
+    const seen = new Set<string>()
+    const stack = [...(byId.get(id)?.imports ?? [])]
+    while (stack.length) {
+      const next = stack.pop()!
+      if (seen.has(next) || !byId.has(next)) continue
+      seen.add(next)
+      stack.push(...byId.get(next)!.imports)
+    }
+    seen.delete(id)
+    return seen
+  }
+  const derived = new Map<string, Derived>()
+  for (const u of units) {
+    const closure = [...reach(u.id)].map((id) => byId.get(id)!)
+    derived.set(u.id, {
+      closureHits: closure.reduce((n, o) => n + own(o), 0),
+      blockers: closure
+        .filter((o) => own(o) > 0)
+        .map((o) => o.id)
+        .sort(),
+      blocks: 0,
+      routeHits: 0,
+    })
+  }
+  for (const u of units) {
+    const d = derived.get(u.id)!
+    if (u.status === 'clean' && own(u) === 0)
+      for (const id of d.blockers) derived.get(id)!.blocks++
+    d.routeHits = (u.routeParents ?? []).reduce((n, id) => {
+      const parent = byId.get(id)
+      return parent ? n + own(parent) + derived.get(id)!.closureHits : n
+    }, 0)
+  }
+  return derived
+}
+export const enrich = (units: Unit[]): UnitView[] => {
+  const derived = deriveClosures(units)
+  return units.map((u) => ({ ...u, ...derived.get(u.id)! }))
+}
+
+export type InventoryEntry = {
+  name: string
+  occurrences: number
+  units: number
+}
+export const inventoryOf = (usages: Record<string, number>[]) => {
+  const entries = new Map<string, InventoryEntry>()
+  for (const usage of usages)
+    for (const [name, occurrences] of Object.entries(usage)) {
+      const entry = entries.get(name) ?? { name, occurrences: 0, units: 0 }
+      entry.occurrences += occurrences
+      entry.units++
+      entries.set(name, entry)
+    }
+  return [...entries.values()].sort(
+    (a, b) => b.occurrences - a.occurrences || a.name.localeCompare(b.name),
+  )
+}
+
+// Stored paths are relative to the Artemis client root, `src/main/webapp/`.
+export const webapp = 'src/main/webapp/'
 export const appRoot = 'src/main/webapp/app'
 export const sectionOf = (path: string) =>
   !path.startsWith(`${appRoot}/`)
@@ -187,7 +329,13 @@ export const sectionOf = (path: string) =>
 // Files with several declarations produce units `path#1`, `path#2`, … after the first.
 export const unitPath = (id: string) => id.replace(/#\d+$/, '')
 export const sourceUrl = (commit: string, path: string) =>
-  `https://github.com/ls1intum/Artemis/blob/${commit}/${path.split('/').map(encodeURIComponent).join('/')}`
+  `https://github.com/ls1intum/Artemis/blob/${commit}/${(path.startsWith(webapp)
+    ? path
+    : webapp + path
+  )
+    .split('/')
+    .map(encodeURIComponent)
+    .join('/')}`
 export const commitUrl = (commit: string) =>
   `https://github.com/ls1intum/Artemis/commit/${commit}`
 export const pullRequest = (subject: string) => {
@@ -203,7 +351,7 @@ export const pullRequest = (subject: string) => {
 
 // The three lists the Artemis migration-source-coverage test keeps consistent.
 export const lockEntries = (dir: string) => ({
-  eslint: `'${dir}/**/*.html',`,
-  stylelint: `"${dir}/**/*.scss",`,
-  tailwind: `@source '${dir.replace(/^src\/main\/webapp\//, './')}';`,
+  eslint: `'${webapp}${dir}/**/*.html',`,
+  stylelint: `"${webapp}${dir}/**/*.scss",`,
+  tailwind: `@source './${dir}';`,
 })

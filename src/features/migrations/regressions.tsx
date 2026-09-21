@@ -1,15 +1,16 @@
 import { TriangleAlert } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { sourceUrl, type Detail } from './model'
-import { hits, short, unitFile } from './format'
+import { sourceUrl } from './model'
+import type { DetailView } from './load-report'
+import { hits, unitFile } from './format'
 
 // Units that gained Bootstrap since the comparison; standing residue is not a regression.
 export function Regressions({
   detail,
   compare,
 }: {
-  detail: Detail
-  compare: Detail
+  detail: DetailView
+  compare: DetailView
 }) {
   if (detail === compare) return null
   const before = new Map(compare.units.map((u) => [u.id, u]))
@@ -41,7 +42,7 @@ export function Regressions({
                 className="break-all underline underline-offset-4"
                 href={sourceUrl(detail.commit, unitFile(unit))}
               >
-                {short(unitFile(unit))}
+                {unitFile(unit)}
               </a>{' '}
               · {note}
               {unit.status === 'locked' && ' · inside a locked path'}

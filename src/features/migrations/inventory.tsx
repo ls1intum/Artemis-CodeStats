@@ -14,8 +14,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { sourceUrl, type Detail, type InventoryEntry } from './model'
-import { number, short } from './format'
+import { inventoryOf, sourceUrl, type InventoryEntry } from './model'
+import type { DetailView } from './load-report'
+import { number } from './format'
 import { bootstrapTarget, kitTarget } from './targets'
 
 function InventoryTable({
@@ -61,9 +62,18 @@ function InventoryTable({
   )
 }
 
-export function Inventory({ detail }: { detail: Detail }) {
+export function Inventory({ detail }: { detail: DetailView }) {
   const kit = new Set(detail.kit)
-  const used = new Set(detail.inventory.tumUi.map((e) => e.name))
+  const inventory = {
+    bootstrap: inventoryOf([
+      ...detail.units.map((u) => u.tokens),
+      ...detail.files.map((f) => f.tokens),
+    ]),
+    primeng: inventoryOf(detail.units.map((u) => u.primeng)),
+    ngBootstrap: inventoryOf(detail.units.map((u) => u.ngBootstrap)),
+    tumUi: inventoryOf(detail.units.map((u) => u.tumUi)),
+  }
+  const used = new Set(inventory.tumUi.map((e) => e.name))
   const unused = detail.kit.filter((s) => !used.has(s))
   const scroll = 'max-h-[32rem] overflow-auto'
   return (
@@ -82,13 +92,13 @@ export function Inventory({ detail }: { detail: Detail }) {
         <Tabs defaultValue="bootstrap">
           <TabsList className="flex h-auto flex-wrap">
             <TabsTrigger value="bootstrap">
-              Bootstrap classes ({detail.inventory.bootstrap.length})
+              Bootstrap classes ({inventory.bootstrap.length})
             </TabsTrigger>
             <TabsTrigger value="primeng">
-              PrimeNG ({detail.inventory.primeng.length})
+              PrimeNG ({inventory.primeng.length})
             </TabsTrigger>
             <TabsTrigger value="ngBootstrap">
-              ng-bootstrap ({detail.inventory.ngBootstrap.length})
+              ng-bootstrap ({inventory.ngBootstrap.length})
             </TabsTrigger>
             <TabsTrigger value="tumUi">
               TUM UI kit ({detail.kit.length - unused.length} of{' '}
@@ -100,20 +110,20 @@ export function Inventory({ detail }: { detail: Detail }) {
           </TabsList>
           <TabsContent value="bootstrap" className={scroll}>
             <InventoryTable
-              entries={detail.inventory.bootstrap}
+              entries={inventory.bootstrap}
               target={bootstrapTarget}
               targetLabel="Target"
             />
           </TabsContent>
           <TabsContent value="primeng" className={scroll}>
             <InventoryTable
-              entries={detail.inventory.primeng}
+              entries={inventory.primeng}
               target={(n) => kitTarget(n, kit)}
               targetLabel="Kit equivalent"
             />
           </TabsContent>
           <TabsContent value="ngBootstrap" className={scroll}>
-            <InventoryTable entries={detail.inventory.ngBootstrap} />
+            <InventoryTable entries={inventory.ngBootstrap} />
           </TabsContent>
           <TabsContent value="styles" className={`${scroll} grid gap-3`}>
             <p className="text-sm text-muted-foreground">
@@ -140,7 +150,7 @@ export function Inventory({ detail }: { detail: Detail }) {
                         className="break-all underline underline-offset-4"
                         href={sourceUrl(detail.commit, f.path)}
                       >
-                        {short(f.path)}
+                        {f.path}
                       </a>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
@@ -161,7 +171,7 @@ export function Inventory({ detail }: { detail: Detail }) {
             </Table>
           </TabsContent>
           <TabsContent value="tumUi" className={`${scroll} grid gap-4`}>
-            <InventoryTable entries={detail.inventory.tumUi} />
+            <InventoryTable entries={inventory.tumUi} />
             {unused.length > 0 && (
               <p className="text-sm text-muted-foreground">
                 In the kit, not used by the client yet:{' '}

@@ -15,12 +15,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { appRoot, sourceUrl, type Detail, type Unit } from './model'
-import { hits, number, short, unitFile } from './format'
+import { sourceUrl, type UnitView } from './model'
+import type { DetailView } from './load-report'
+import { hits, number, unitFile } from './format'
 import { SegmentBar } from './status'
 
 type PageState = 'ready' | 'blocked' | 'bootstrap'
-const state = (u: Unit): PageState =>
+const state = (u: UnitView): PageState =>
   hits(u) > 0
     ? 'bootstrap'
     : u.closureHits + u.routeHits > 0
@@ -44,10 +45,10 @@ const stateFill: Record<PageState, string> = {
 const states: PageState[] = ['ready', 'blocked', 'bootstrap']
 
 // Routed pages are what users see; a page is ready when nothing it imports carries Bootstrap.
-export function Pages({ detail }: { detail: Detail }) {
+export function Pages({ detail }: { detail: DetailView }) {
   const [filter, setFilter] = useState<PageState | 'all'>('all')
   const pages = detail.units.filter((u) => u.route !== undefined)
-  const counts = (list: Unit[]) =>
+  const counts = (list: UnitView[]) =>
     states.map((s) => ({
       label: stateLabel[s],
       value: list.filter((u) => state(u) === s).length,
@@ -56,7 +57,7 @@ export function Pages({ detail }: { detail: Detail }) {
   const sections = [...new Set(pages.map((u) => u.section))]
     .map((name) => ({ name, pages: pages.filter((u) => u.section === name) }))
     .sort((a, b) => b.pages.length - a.pages.length)
-  const remaining = (u: Unit) => hits(u) + u.closureHits + u.routeHits
+  const remaining = (u: UnitView) => hits(u) + u.closureHits + u.routeHits
   const rows = pages
     .filter((u) => filter === 'all' || state(u) === filter)
     .sort(
@@ -65,7 +66,7 @@ export function Pages({ detail }: { detail: Detail }) {
         remaining(a) - remaining(b) ||
         a.route!.localeCompare(b.route!),
     )
-  const shell = detail.units.find((u) => u.id === `${appRoot}/app.component.ts`)
+  const shell = detail.units.find((u) => u.id === 'app/app.component.ts')
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
       <Card>
@@ -82,8 +83,8 @@ export function Pages({ detail }: { detail: Detail }) {
             {shell && hits(shell) + shell.closureHits > 0 && (
               <>
                 {' '}
-                The global shell (<code>{short(unitFile(shell))}</code> with
-                navbar, footer and overlays) carries{' '}
+                The global shell (<code>{unitFile(shell)}</code> with navbar,
+                footer and overlays) carries{' '}
                 {number(hits(shell) + shell.closureHits)} hits and renders on
                 every page; it is not counted here.
               </>
@@ -181,7 +182,7 @@ export function Pages({ detail }: { detail: Detail }) {
                       className="underline underline-offset-4"
                       href={sourceUrl(detail.commit, unitFile(u))}
                     >
-                      {u.selector ?? short(unitFile(u))}
+                      {u.selector ?? unitFile(u)}
                     </a>
                   </TableCell>
                   <TableCell>{u.section}</TableCell>
@@ -195,7 +196,7 @@ export function Pages({ detail }: { detail: Detail }) {
                     {u.routeHits ? number(u.routeHits) : ''}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {u.blocked + (hits(u) > 0 ? 1 : 0) || ''}
+                    {u.blockers.length + (hits(u) > 0 ? 1 : 0) || ''}
                   </TableCell>
                 </TableRow>
               ))}

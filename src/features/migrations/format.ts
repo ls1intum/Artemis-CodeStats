@@ -29,7 +29,6 @@ export const dayTime = (date: string) =>
     hour12: false,
     timeZone: 'UTC',
   }) + ' UTC'
-export const short = (path: string) => path.replace(/^src\/main\/webapp\//, '')
 export const unitFile = (unit: Pick<Unit, 'id' | 'template'>) =>
   unit.template ?? unitPath(unit.id)
 

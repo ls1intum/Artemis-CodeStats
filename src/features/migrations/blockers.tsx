@@ -13,10 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { sourceUrl, type Detail } from './model'
-import { hits, number, short, unitFile } from './format'
+import { sourceUrl } from './model'
+import type { DetailView } from './load-report'
+import { hits, number, unitFile } from './format'
 
-export function Blockers({ detail }: { detail: Detail }) {
+export function Blockers({ detail }: { detail: DetailView }) {
   const rows = detail.units
     .filter((u) => u.blocks > 0)
     .sort((a, b) => b.blocks - a.blocks || hits(a) - hits(b))
@@ -52,7 +53,7 @@ export function Blockers({ detail }: { detail: Detail }) {
                     className="underline underline-offset-4 break-all"
                     href={sourceUrl(detail.commit, unitFile(u))}
                   >
-                    {u.selector ?? short(u.id)}
+                    {u.selector ?? u.id}
                   </a>
                   {u.status === 'locked' && (
                     <span className="ml-2 text-xs text-muted-foreground">

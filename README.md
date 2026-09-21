@@ -8,24 +8,16 @@ Migration reports for the [Artemis learning platform](https://github.com/ls1intu
 ## Active: Bootstrap → Tailwind / TUM UI
 
 Remaining Bootstrap in the Artemis client, measured with Artemis's own
-`no-bootstrap-classes` lint rule and regression-lock list, for every first-parent commit on
+`no-bootstrap-classes` lint rule and regression-lock list. Every first-parent commit on
 `develop` since the [TUM UI package adoption on August 4, 2026](https://github.com/ls1intum/Artemis/pull/13323)
-(weekly samples back to the [kit pilot on July 17](https://github.com/ls1intum/Artemis/pull/13226)).
+is a full snapshot that can be selected and compared (weekly samples back to the
+[kit pilot on July 17](https://github.com/ls1intum/Artemis/pull/13226)).
 The dashboard shows the burndown, which pull requests moved it, which sections and shared
 components block progress, which directories can be locked now, and which PrimeNG,
 ng-bootstrap and Bootstrap APIs remain with their TUM UI targets.
 
 The signals/decoratorless and DTO dashboards are archived under **Archived migrations**.
 Their data is preserved; their collection has stopped.
-
-## For agents
-
-The site publishes [`llms.txt`](https://ls1intum.github.io/Artemis-CodeStats/llms.txt) and a
-[migration brief](https://ls1intum.github.io/Artemis-CodeStats/migrations/brief.md) (also as
-[JSON](https://ls1intum.github.io/Artemis-CodeStats/migrations/brief.json)) regenerated hourly:
-which directories to lock with the exact entries, which shared units to fix first, and per-section
-unit tasks with each Bootstrap class mapped to its guideline target. Point a coding agent at the
-brief, or copy a section-scoped brief from the dashboard.
 
 ## Develop and verify
 

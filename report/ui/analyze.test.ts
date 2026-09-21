@@ -13,11 +13,14 @@ import {
   type Rule,
 } from './analyze'
 import {
+  applyPatch,
   detailSchema,
+  enrich,
+  inventoryOf,
+  makePatch,
   summarySchema,
 } from '../../src/features/migrations/model'
 import { fixtureFiles as files, writeFixture } from './fixture'
-import { renderBrief } from '../../src/features/migrations/brief'
 
 const app = 'src/main/webapp/app'
 let root: string
@@ -102,9 +105,10 @@ test('template hits match the lint forms and add the forms it cannot see', async
 })
 
 test('tree analysis derives units, status, closure, lockability and inventories', async () => {
-  const { summary, detail } = await analyzeTree(root, meta)
+  const { summary, detail: stored } = await analyzeTree(root, meta)
   summarySchema.parse(summary)
-  detailSchema.parse(detail)
+  detailSchema.parse(stored)
+  const detail = { ...stored, units: enrich(stored.units) }
   assert.deepEqual(summary.totals, {
     units: 11,
     locked: 2,
@@ -145,8 +149,8 @@ test('tree analysis derives units, status, closure, lockability and inventories'
   assert.equal(page.styleHits, 3)
   assert.equal(page.closureHits, 2)
   assert.deepEqual(page.styles, [
-    `${app}/exam/manage/page/page.component.scss`,
-    `${app}/exam/manage/shared.scss`,
+    'app/exam/manage/page/page.component.scss',
+    'app/exam/manage/shared.scss',
   ])
   assert.deepEqual(page.primeng, { 'p-dialog': 1 })
   assert.deepEqual(page.ngBootstrap, { ngbTooltip: 1 })
@@ -219,12 +223,12 @@ test('tree analysis derives units, status, closure, lockability and inventories'
   )
   assert.equal(unit('app.component.ts').section, 'app')
   assert.deepEqual(detail.lockable, [
-    { dir: `${app}/exam/manage/dialog`, units: 1 },
-    { dir: `${app}/exam/manage/enum-only`, units: 1 },
+    { dir: 'app/exam/manage/dialog', units: 1 },
+    { dir: 'app/exam/manage/enum-only', units: 1 },
   ])
   assert.deepEqual(
     detail.files.map((f) => [f.path, f.classHits, f.styleHits]),
-    [['src/main/webapp/content/scss/global.scss', 0, 2]],
+    [['content/scss/global.scss', 0, 2]],
   )
   assert.deepEqual(
     detail.sections.map((s) => [
@@ -244,59 +248,29 @@ test('tree analysis derives units, status, closure, lockability and inventories'
       ['core', 1, 0, 0, 0, 0],
     ],
   )
-  assert.deepEqual(detail.inventory.bootstrap.slice(0, 2), [
-    { name: 'd-flex', occurrences: 4, units: 4 },
-    { name: 'row', occurrences: 3, units: 3 },
-  ])
-  assert.deepEqual(detail.inventory.ngBootstrap, [
+  assert.deepEqual(
+    inventoryOf([
+      ...detail.units.map((u) => u.tokens),
+      ...detail.files.map((f) => f.tokens),
+    ]).slice(0, 2),
+    [
+      { name: 'd-flex', occurrences: 4, units: 4 },
+      { name: 'row', occurrences: 3, units: 3 },
+    ],
+  )
+  assert.deepEqual(inventoryOf(detail.units.map((u) => u.ngBootstrap)), [
     { name: 'ngbTooltip', occurrences: 1, units: 1 },
   ])
+  assert.deepEqual(
+    clean.imports,
+    [button.id],
+    'edges are stored, closures derived',
+  )
+  const patch = makePatch(stored, { ...stored, units: stored.units.slice(1) })
+  assert.deepEqual(patch.units, { changed: [], removed: [stored.units[0].id] })
+  assert.deepEqual(applyPatch(stored, patch).units, stored.units.slice(1))
   assert.equal(detail.diagnostics.length, 0)
   assert.match(detail.rule, /^[a-f0-9]{40}$/)
-})
-
-test('the brief lists lock entries, blockers and unit tasks with targets', async () => {
-  const { summary, detail } = await analyzeTree(root, meta)
-  const { markdown, json } = renderBrief(summary, detail)
-  assert.match(
-    markdown,
-    /## Lock now\n\n- `src\/main\/webapp\/app\/exam\/manage\/dialog` \(1 unit\)/,
-  )
-  assert.match(markdown, /@source '\.\/app\/exam\/manage\/dialog';/)
-  assert.match(
-    markdown,
-    /## Shared units to fix first\n\n- `src\/main\/webapp\/app\/shared-ui\/button\/button.component.html` \(jhi-button\): imported by 1 Bootstrap-free unit;/,
-  )
-  assert.match(markdown, /## Sections\n\n- exam: 12 hits in 4 units/)
-  assert.doesNotMatch(
-    markdown,
-    /×1 →/,
-    'the global brief links section briefs instead of listing tasks',
-  )
-  assert.equal(json.lockable.length, 2)
-  const scoped = renderBrief(summary, detail, { section: 'exam' })
-  assert.equal(scoped.json.scope, 'exam')
-  assert.match(scoped.markdown, /`btn`×1 → tum-ui-button \/ tumUiButton/)
-  assert.match(scoped.markdown, /`d-flex`×1 → flex/)
-  assert.match(
-    scoped.markdown,
-    /`src\/main\/webapp\/app\/exam\/manage\/page\/page.component.scss`: 2 raw colors/,
-  )
-  assert.match(scoped.markdown, /PrimeNG: p-dialog/)
-  assert.match(
-    scoped.markdown,
-    /imports 1 unit with Bootstrap \(2 hits\): `app\/shared-ui\/button\/button.component.html`/,
-  )
-  const tasks = scoped.json.sections[0].tasks
-  assert.equal(
-    tasks[0].path,
-    `${app}/exam/manage/pair/pair.component.ts`,
-    'fewest imported hits, then fewest hits first',
-  )
-  assert.equal(
-    tasks.at(-1)?.path,
-    `${app}/exam/manage/page/page.component.html`,
-  )
 })
 
 test('missing Angular units fail loudly instead of reporting success', async () => {

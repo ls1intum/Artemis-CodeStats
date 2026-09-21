@@ -126,7 +126,7 @@ export function Sections({
         </CardTitle>
         <CardDescription>
           Most remaining Bootstrap first. Open a section for its units, what
-          blocks them, its lock entries and a section brief.
+          blocks them and its lock entries.
         </CardDescription>
       </CardHeader>
       <CardContent>
