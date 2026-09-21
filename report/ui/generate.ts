@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { analyzeTree } from './analyze'
 import { planHistory } from './history'
+import { renderBrief } from '../../src/features/migrations/brief'
 import {
   analyzerVersion,
   detailSchema,
@@ -155,6 +156,16 @@ export async function generateReports({
   )
     manifest.generatedAt = cached.data.generatedAt
   atomicWrite(cachePath, manifestSchema.parse(manifest))
+  // Agent-facing entry points: a markdown brief and its JSON twin for the latest checkpoint.
+  const latest = manifest.snapshots.at(-1)!
+  const brief = renderBrief(
+    latest,
+    detailSchema.parse(
+      JSON.parse(readFileSync(join(output, `${latest.commit}.json`), 'utf8')),
+    ),
+  )
+  writeFileSync(join(output, 'brief.md'), brief.markdown)
+  atomicWrite(join(output, 'brief.json'), brief.json)
   const retained = new Set(
     manifest.evidenceCommits.map((commit) => `${commit}.json`),
   )

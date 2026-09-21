@@ -17,6 +17,7 @@ import {
   summarySchema,
 } from '../../src/features/migrations/model'
 import { fixtureFiles as files, writeFixture } from './fixture'
+import { renderBrief } from '../../src/features/migrations/brief'
 
 const app = 'src/main/webapp/app'
 let root: string
@@ -56,14 +57,18 @@ test('tailwind sources ignore negations and inline sources', () => {
 })
 
 test('style residue follows the stylelint lock plus Bootstrap Sass imports', () => {
-  assert.equal(
+  assert.deepEqual(
     analyzeStyles(files[`${app}/exam/manage/page/page.component.scss`]),
-    2,
+    { variables: 0, colors: 2, imports: 0 },
   )
-  assert.equal(analyzeStyles(files[`${app}/exam/manage/shared.scss`]), 1)
-  assert.equal(
+  assert.deepEqual(analyzeStyles(files[`${app}/exam/manage/shared.scss`]), {
+    variables: 0,
+    colors: 0,
+    imports: 1,
+  })
+  assert.deepEqual(
     analyzeStyles('// var(--bs-x)\n.a { color: var(--primary); }'),
-    0,
+    { variables: 0, colors: 0, imports: 0 },
   )
 })
 
@@ -114,7 +119,10 @@ test('tree analysis derives units, status, closure, lockability and inventories'
     ngBootstrap: 1,
     tumUi: 1,
     kit: 1,
+    pages: 2,
+    pagesClean: 1,
   })
+  assert.deepEqual(summary.sections.exam, [7, 0, 3, 4, 9, 3])
   const unit = (id: string) => detail.units.find((u) => u.id.endsWith(id))!
   const list = unit('list.component.ts')
   assert.equal(list.status, 'locked')
@@ -203,6 +211,34 @@ test('tree analysis derives units, status, closure, lockability and inventories'
   ])
   assert.equal(detail.diagnostics.length, 0)
   assert.match(detail.rule, /^[a-f0-9]{40}$/)
+})
+
+test('the brief lists lock entries, blockers and unit tasks with targets', async () => {
+  const { summary, detail } = await analyzeTree(root, meta)
+  const { markdown, json } = renderBrief(summary, detail)
+  assert.match(
+    markdown,
+    /## Lock now\n\n- `app\/exam\/manage\/dialog` \(1 unit\)/,
+  )
+  assert.match(markdown, /@source '\.\/app\/exam\/manage\/dialog';/)
+  assert.match(
+    markdown,
+    /## Shared units to fix first\n\n- `app\/shared-ui\/button\/button.component.html` \(jhi-button\): imported by 1 Bootstrap-free unit;/,
+  )
+  assert.match(markdown, /`btn`×1 → tum-ui-button \/ tumUiButton/)
+  assert.match(
+    markdown,
+    /`app\/exam\/manage\/page\/page.component.scss`: 2 raw colors/,
+  )
+  assert.match(markdown, /PrimeNG: p-dialog/)
+  assert.equal(json.lockable.length, 2)
+  assert.equal(
+    json.sections.find((s) => s.name === 'exam')?.tasks[0].path,
+    `${app}/exam/manage/page/page.component.html`,
+  )
+  const scoped = renderBrief(summary, detail, { section: 'shared-ui' })
+  assert.equal(scoped.json.scope, 'shared-ui')
+  assert.equal(scoped.json.sections.length, 1)
 })
 
 test('missing Angular units fail loudly instead of reporting success', async () => {

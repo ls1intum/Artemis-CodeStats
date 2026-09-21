@@ -58,6 +58,20 @@ parses templates with `@angular/compiler`).
   the three entries to add.
 - **Section** — the first directory below `src/main/webapp/app`; `app` for root files and
   `content` for global styles.
+- **Page** — a unit referenced by `component` or `loadComponent` in a `*.routes.ts` /
+  `*.route.ts` file, with the `path` of that route definition (the shortest when several).
+  A page is _ready_ when it and everything it imports have zero hits, _blocked_ when only
+  imported units have hits.
+- **Spacing** — Bootstrap spacing-scale classes (`m*-0..5`, `p*-0..5`, `gap-0..5`) per unit.
+  The rule allows them because Tailwind has the same names, but their values change once a
+  directory is locked, so they are listed as work in the brief, not as hits.
+- **Tailwind** — a unit whose template uses utilities that exist only in Tailwind
+  (`flex-col`, `items-center`, `grid-cols-*`, `text-state-*`, …). Evidence of the target style
+  being used, never proof of completion.
+- **Stylesheets** — every SCSS file with residue, split into `--bs-*` variables, raw colors
+  (hex, `rgb()`, `hsl()`) and Bootstrap Sass imports, with the number of units that reference
+  it. Theme palette files under `content/scss/themes` define the palette itself and appear
+  under the `content` section.
 - **Inventories** — PrimeNG, ng-bootstrap and TUM UI usage is counted from template elements
   and attributes (kit selectors are read from the kit sources of the same commit), plus PrimeNG
   and ng-bootstrap imports whose names end in `Service` or `Modal`, which are usage without
@@ -66,8 +80,8 @@ parses templates with `@angular/compiler`).
 ## Data
 
 `public/migrations/index.json` holds a summary for the kit-pilot baseline, weekly samples
-until package adoption, and every first-parent commit since (`totals` only, with the commit
-subject so changes are attributable to pull requests). `public/migrations/<sha>.json` holds the
+until package adoption, and every first-parent commit since (`totals`, compact per-section
+rows and the commit subject so changes are attributable to pull requests). `public/migrations/<sha>.json` holds the
 full detail (units, sections, orphan files, inventories, lockable directories, kit selectors,
 diagnostics, rule blob hash) for weekly checkpoints, both milestones and the latest commit;
 older detail files are deleted. Schemas live in `src/features/migrations/model.ts`, and the
@@ -79,14 +93,33 @@ dependency-free today and the import fails loudly if it stops exporting the matc
 
 ## Dashboard
 
-One page, state in the hash query (`snapshot`, `compare`, `section`; the comparison is always
-an earlier checkpoint): headline tiles, a step-area burndown of hits for every integrated
-commit with lock-list changes marked, the commits that moved the numbers between the two
-selected checkpoints, a sections table opening a side sheet (units, imported units with hits,
-lockable directories with copyable lock entries), shared units ranked by how many clean units
-they block, and inventories of remaining Bootstrap classes, PrimeNG, ng-bootstrap and TUM UI
-usage with the guideline's targets. Units whose hits grew since the comparison are listed
-only when there are any.
+State lives in the hash query (`view`, `snapshot`, `compare`, `section`; the comparison is
+always an earlier checkpoint). Headline tiles and the locked / clean / Bootstrap bar are always
+visible; the views are:
+
+| View       | Content                                                                                                     |
+| ---------- | ----------------------------------------------------------------------------------------------------------- |
+| Overview   | Units whose hits grew (only when any), step-area burndown per commit with lock-list changes, commits that moved the numbers with PR links |
+| Sections   | Sections table with status bar, Δ, per-section trend sparkline, pages ready; heatmap of hits per section × class family; side sheet per section with units, imported units with hits, shared stylesheets, lockable directories and a section brief |
+| Pages      | Routed pages ready / blocked / Bootstrap per section, and every page sorted by remaining work                |
+| Next steps | Brief for people and agents (copy as markdown, download JSON), lockable directories with copyable lock entries, shared units that block the most |
+| Inventory  | Remaining Bootstrap classes with guideline targets, PrimeNG with kit equivalents, ng-bootstrap, TUM UI kit usage and unused selectors, stylesheets with residue |
+| History    | Checkpoint table with detail downloads, and the agent entry points                                          |
+
+## For agents and scripts
+
+Static files, regenerated hourly, are the integration surface; no server or MCP endpoint is
+needed to read them ([a JSON file is often the better MCP server](https://materializedview.io/p/mcp-server-could-have-been-json-file)).
+
+- `llms.txt` at the site root indexes the entry points ([llms.txt convention](https://llmstxt.org/)).
+- `migrations/brief.md` — status, directories to lock with the exact three entries, shared
+  units to fix first, and per-section unit tasks with each Bootstrap class mapped to the
+  guideline target, PrimeNG mapped to kit selectors, stylesheet residue and spacing work.
+  Written so a coding agent can start migrating from it. `migrations/brief.json` is the same
+  content as data and names the detail file it was built from. The dashboard renders the same
+  brief for any snapshot or section (copy / download).
+- `migrations/index.json` and `migrations/<sha>.json` — the full data; schemas in
+  `src/features/migrations/model.ts`.
 
 ## Develop, verify, regenerate
 

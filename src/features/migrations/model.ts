@@ -6,6 +6,15 @@ const count = z.number().int().nonnegative()
 const sha = z.string().regex(/^[a-f0-9]{40}$/)
 
 export const statuses = ['locked', 'clean', 'dirty'] as const
+export const views = [
+  'overview',
+  'sections',
+  'pages',
+  'next',
+  'inventory',
+  'history',
+] as const
+export type View = (typeof views)[number]
 export type Status = (typeof statuses)[number]
 
 export const totalsSchema = z.object({
@@ -22,14 +31,27 @@ export const totalsSchema = z.object({
   ngBootstrap: count,
   tumUi: count,
   kit: count,
+  pages: count,
+  pagesClean: count,
 })
 export type Totals = z.infer<typeof totalsSchema>
 
+// Per-section rows are compact tuples: units, locked, clean, dirty, classHits, styleHits.
+export const sectionRowSchema = z.tuple([
+  count,
+  count,
+  count,
+  count,
+  count,
+  count,
+])
+export type SectionRow = z.infer<typeof sectionRowSchema>
 export const summarySchema = z.object({
   commit: sha,
   date: z.string().datetime({ offset: true }),
   subject: z.string(),
   totals: totalsSchema,
+  sections: z.record(z.string(), sectionRowSchema),
 })
 export type Summary = z.infer<typeof summarySchema>
 
@@ -76,9 +98,13 @@ export const unitSchema = z.object({
   styles: z.array(z.string()),
   status: z.enum(statuses),
   scanned: z.boolean(),
+  tailwind: z.boolean(),
+  route: z.string().optional(),
+  spacing: count,
   classHits: count,
   styleHits: count,
   closureHits: count,
+  blocked: count,
   blocks: count,
   blockers: z.array(z.string()),
   tokens: usage,
@@ -117,6 +143,16 @@ export const detailSchema = z.object({
   lockable: z.array(z.object({ dir: z.string(), units: count })),
   sections: z.array(sectionSchema),
   units: z.array(unitSchema),
+  styles: z.array(
+    z.object({
+      path: z.string(),
+      section: z.string(),
+      variables: count,
+      colors: count,
+      imports: count,
+      units: count,
+    }),
+  ),
   files: z.array(
     z.object({
       path: z.string(),
@@ -136,6 +172,7 @@ export const detailSchema = z.object({
 })
 export type Detail = z.infer<typeof detailSchema>
 
+export const siteUrl = 'https://ls1intum.github.io/Artemis-CodeStats/'
 export const appRoot = 'src/main/webapp/app'
 export const sectionOf = (path: string) =>
   !path.startsWith(`${appRoot}/`)

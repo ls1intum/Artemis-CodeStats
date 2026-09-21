@@ -66,3 +66,26 @@ export const kitTarget = (name: string, kit: Set<string>) => {
       : []
   return candidates.find((c) => kit.has(c)) ?? ''
 }
+
+// Families group the remaining classes by the kind of work they need.
+export const families = [
+  'Buttons',
+  'Forms',
+  'Components',
+  'Grid',
+  'Layout',
+  'Tables',
+  'Text & color',
+] as const
+export type Family = (typeof families)[number]
+const familyPatterns: [RegExp, Family][] = [
+  [/^btn/, 'Buttons'],
+  [/^(close|btn-close)$/, 'Buttons'],
+  [/^(form-|input-group|col-form-label|(valid|invalid)-feedback)/, 'Forms'],
+  [/^table/, 'Tables'],
+  [/^(row|col|g[xy]?-)/, 'Grid'],
+  [/^(d-|justify-content-|align-|flex-|[hw]-(25|50|75|100)$)/, 'Layout'],
+  [/^(text-|bg-|border-|visually-hidden)/, 'Text & color'],
+]
+export const family = (token: string): Family =>
+  familyPatterns.find(([re]) => re.test(token))?.[1] ?? 'Components'

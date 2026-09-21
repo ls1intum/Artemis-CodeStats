@@ -18,6 +18,15 @@ ng-bootstrap and Bootstrap APIs remain with their TUM UI targets.
 The signals/decoratorless and DTO dashboards are archived under **Archived migrations**.
 Their data is preserved; their collection has stopped.
 
+## For agents
+
+The site publishes [`llms.txt`](https://ls1intum.github.io/Artemis-CodeStats/llms.txt) and a
+[migration brief](https://ls1intum.github.io/Artemis-CodeStats/migrations/brief.md) (also as
+[JSON](https://ls1intum.github.io/Artemis-CodeStats/migrations/brief.json)) regenerated hourly:
+which directories to lock with the exact entries, which shared units to fix first, and per-section
+unit tasks with each Bootstrap class mapped to its guideline target. Point a coding agent at the
+brief, or copy a section-scoped brief from the dashboard.
+
 ## Develop and verify
 
 Requires Node 24 and npm. The UI reads committed report artifacts; no Artemis server is needed.

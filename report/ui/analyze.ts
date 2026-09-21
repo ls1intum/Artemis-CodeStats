@@ -38,7 +38,11 @@ export type Kit = {
 }
 type Usage = Record<string, number>
 type Library = 'primeng' | 'ngBootstrap' | 'tumUi'
-type TemplateResult = Record<Library | 'tokens', Usage> & { errors: string[] }
+type TemplateResult = Record<Library | 'tokens', Usage> & {
+  errors: string[]
+  spacing: number
+  tailwind: boolean
+}
 type Declaration = {
   kind: 'component' | 'directive'
   className?: string
@@ -51,11 +55,19 @@ type ScriptResult = {
   declarations: Declaration[]
   // Value imports of app files with the imported names; dynamic imports carry no names.
   dependencies: { base: string; names?: string[] }[]
+  // `component` / `loadComponent` targets of route definitions with their `path`.
+  routes: { base: string; name?: string; path: string }[]
   services: Record<'primeng' | 'ngBootstrap', Usage>
   tokens: Usage
 }
+export type StyleResult = { variables: number; colors: number; imports: number }
 
 const kitSourceDirs = ['packages/tum-ui/src/lib', `${appRoot}/shared-ui/tum-ui`]
+// Bootstrap's spacing scale keeps its class names under Tailwind but changes value; it is not banned.
+const spacingClass = /^(?:[mp][tbsexy]?-(?:[0-5]|auto)|gap-[0-5])$/
+// Utilities that exist only in Tailwind, as evidence that a template already uses it.
+const tailwindClass =
+  /^(?:(?:sm|md|lg|xl|2xl):)?(?:flex-(?:col|row|wrap|1|none)|inline-flex|grid-cols-\d+|col-span-\d+|items-(?:start|end|center|baseline|stretch)|justify-(?:start|end|center|between|around|evenly)|gap-(?:[6-9]|\d{2}|x-\d+|y-\d+)|(?:text|bg|border)-state-[a-z]+|w-full|h-full|hidden|truncate|rounded-(?:md|lg|xl|full)|shrink-0|grow|min-w-0)$/
 const libraries: Library[] = ['primeng', 'ngBootstrap', 'tumUi']
 const bump = (usage: Usage, key: string, by = 1) => {
   usage[key] = (usage[key] ?? 0) + by
@@ -160,10 +172,16 @@ export function analyzeTemplate(
     ngBootstrap: {},
     tumUi: {},
     errors: [],
+    spacing: 0,
+    tailwind: false,
   }
   const classes = (value: string) => {
-    for (const token of value.split(/\s+/))
-      if (token && rule.isBanned(token)) bump(result.tokens, token)
+    for (const token of value.split(/\s+/)) {
+      if (!token) continue
+      if (rule.isBanned(token)) bump(result.tokens, token)
+      if (spacingClass.test(token)) result.spacing++
+      if (tailwindClass.test(token)) result.tailwind = true
+    }
   }
   const inspect = (node: TmplAstElement | TmplAstTemplate) => {
     const name =
@@ -219,17 +237,21 @@ export function analyzeScript(path: string, source: string): ScriptResult {
   const result: ScriptResult = {
     declarations: [],
     dependencies: [],
+    routes: [],
     services: { primeng: {}, ngBootstrap: {} },
     tokens: {},
   }
   const angular = new Map<string, string>()
   const namespaces = new Set<string>()
-  const dependency = (specifier: string, names?: string[]) => {
-    const base = specifier.startsWith('.')
+  const localImports = new Map<string, { specifier: string; name: string }>()
+  const resolveBase = (specifier: string) =>
+    specifier.startsWith('.')
       ? posix.join(dirname(path), specifier)
       : specifier.startsWith('app/')
         ? `${appRoot}/${specifier.slice(4)}`
         : undefined
+  const dependency = (specifier: string, names?: string[]) => {
+    const base = resolveBase(specifier)
     if (base) result.dependencies.push({ base, names })
   }
   for (const statement of file.statements) {
@@ -255,6 +277,8 @@ export function analyzeScript(path: string, source: string): ScriptResult {
         namespaces.add(bindings.name.text)
       for (const { local, exported } of names) angular.set(local, exported)
     }
+    for (const { local, exported } of names)
+      localImports.set(local, { specifier: pkg, name: exported })
     // Services and modal handles are usage without template evidence; other names may be types.
     const library = /^primeng(?:\/|$)/.test(pkg)
       ? result.services.primeng
@@ -327,6 +351,49 @@ export function analyzeScript(path: string, source: string): ScriptResult {
       }
     }
   }
+  // `{ path: 'x', loadComponent: () => import('./y').then((m) => m.Y) }` or `component: Y`.
+  const route = (property: ts.PropertyAssignment) => {
+    let owner: ts.Node = property
+    while (owner.parent && !ts.isObjectLiteralExpression(owner.parent))
+      owner = owner.parent
+    const literal = owner.parent
+    const pathProperty =
+      literal &&
+      ts.isObjectLiteralExpression(literal) &&
+      literal.properties.find(
+        (p): p is ts.PropertyAssignment =>
+          ts.isPropertyAssignment(p) && propertyName(p.name) === 'path',
+      )
+    const routePath = pathProperty
+      ? (stringText(pathProperty.initializer) ?? '')
+      : ''
+    if (propertyName(property.name) === 'component') {
+      if (!ts.isIdentifier(property.initializer)) return
+      const target = localImports.get(property.initializer.text)
+      const base = target && resolveBase(target.specifier)
+      if (base) result.routes.push({ base, name: target.name, path: routePath })
+      return
+    }
+    let specifier: string | undefined
+    let name: string | undefined
+    const find = (node: ts.Node) => {
+      if (
+        ts.isCallExpression(node) &&
+        node.expression.kind === ts.SyntaxKind.ImportKeyword
+      )
+        specifier = node.arguments[0] && stringText(node.arguments[0])
+      if (
+        ts.isPropertyAccessExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === 'm'
+      )
+        name = node.name.text
+      ts.forEachChild(node, find)
+    }
+    find(property.initializer)
+    const base = specifier && resolveBase(specifier)
+    if (base) result.routes.push({ base, name, path: routePath })
+  }
   const visit = (node: ts.Node) => {
     if (
       ts.isCallExpression(node) &&
@@ -335,6 +402,11 @@ export function analyzeScript(path: string, source: string): ScriptResult {
       const specifier = node.arguments[0] && stringText(node.arguments[0])
       if (specifier) dependency(specifier)
     }
+    if (
+      ts.isPropertyAssignment(node) &&
+      ['component', 'loadComponent'].includes(propertyName(node.name) ?? '')
+    )
+      route(node)
     if (ts.isDecorator(node)) {
       const name = decoratorName(node)
       if (name === 'Component' || name === 'Directive') {
@@ -374,15 +446,17 @@ export function analyzeScript(path: string, source: string): ScriptResult {
   return result
 }
 
-export function analyzeStyles(source: string): number {
+// The stylelint lock rejects --bs-* values, hex and rgb()/hsl() colors; Bootstrap Sass imports block removal.
+export function analyzeStyles(source: string): StyleResult {
   const text = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, ' ')
-  // The stylelint lock rejects --bs-* values, hex and rgb()/hsl() colors; Bootstrap Sass imports block removal.
-  return (
-    text.match(
-      /var\(--bs-[\w-]+\)|#[0-9a-fA-F]{3,8}\b|\b(?:rgb|hsl)a?\(|@(?:import|use|forward)\s+['"][^'"]*bootstrap[^'"]*['"]/g,
-    )?.length ?? 0
-  )
+  const count = (re: RegExp) => text.match(re)?.length ?? 0
+  return {
+    variables: count(/var\(--bs-[\w-]+\)/g),
+    colors: count(/#[0-9a-fA-F]{3,8}\b|\b(?:rgb|hsl)a?\(/g),
+    imports: count(/@(?:import|use|forward)\s+['"][^'"]*bootstrap[^'"]*['"]/g),
+  }
 }
+export const styleHits = (s: StyleResult) => s.variables + s.colors + s.imports
 
 function listFiles(root: string, directory: string): string[] {
   const files: string[] = []
@@ -448,7 +522,7 @@ export async function analyzeTree(
   const diagnostics: Detail['diagnostics'] = []
   const scripts = new Map<string, ScriptResult>()
   const templates = new Map<string, TemplateResult>()
-  const styles = new Map<string, number>()
+  const styles = new Map<string, StyleResult>()
   const files = [
     ...listFiles(root, appRoot).filter(
       (p) => !p.startsWith(`${appRoot}/shared-ui/tum-ui/`),
@@ -531,9 +605,15 @@ export async function analyzeTree(
         styles: styleFiles,
         status: locked ? 'locked' : 'clean',
         scanned: isScanned(template ?? path),
+        tailwind: !!(external?.tailwind || inline?.tailwind),
+        spacing: (external?.spacing ?? 0) + (inline?.spacing ?? 0),
         classHits: sum(tokens),
-        styleHits: styleFiles.reduce((n, s) => n + styles.get(s)!, 0),
+        styleHits: styleFiles.reduce(
+          (n, s) => n + styleHits(styles.get(s)!),
+          0,
+        ),
         closureHits: 0,
+        blocked: 0,
         blocks: 0,
         blockers: [],
         tokens,
@@ -580,13 +660,28 @@ export async function analyzeTree(
   for (const unit of units.values()) {
     const closure = [...reachable.get(unit.id)!].map((id) => units.get(id)!)
     unit.closureHits = closure.reduce((n, other) => n + ownHits(other), 0)
+    const dirty = closure.filter((other) => ownHits(other) > 0)
+    unit.blocked = dirty.length
     if (ownHits(unit) > 0) continue
-    unit.blockers = closure
-      .filter((other) => ownHits(other) > 0)
-      .map((other) => other.id)
-      .sort()
+    unit.blockers = dirty.map((other) => other.id).sort()
     if (unit.status === 'clean')
       for (const id of unit.blockers) units.get(id)!.blocks++
+  }
+  // Routed pages: units referenced by `component` / `loadComponent` in route files.
+  for (const [path, script] of scripts) {
+    if (!/\.routes?\.ts$/.test(path)) continue
+    for (const { base, name, path: routePath } of script.routes) {
+      const target = [`${base}.ts`, `${base}/index.ts`, base].find((c) =>
+        classNames.has(c),
+      )
+      if (!target) continue
+      for (const [className, id] of classNames.get(target)!) {
+        if (name && className !== name) continue
+        const unit = units.get(id)!
+        if (unit.route === undefined || routePath.length < unit.route.length)
+          unit.route = routePath
+      }
+    }
   }
   const orphanFiles: Detail['files'] = []
   for (const [path, tokens] of fileTokens)
@@ -598,15 +693,28 @@ export async function analyzeTree(
         styleHits: 0,
         tokens,
       })
-  for (const [path, hits] of styles)
-    if (!owned.has(path) && hits > 0)
+  for (const [path, result] of styles)
+    if (!owned.has(path) && styleHits(result) > 0)
       orphanFiles.push({
         path,
         section: sectionOf(path),
         classHits: 0,
-        styleHits: hits,
+        styleHits: styleHits(result),
         tokens: {},
       })
+  const styleOwners = new Map<string, number>()
+  for (const unit of units.values())
+    for (const path of unit.styles)
+      styleOwners.set(path, (styleOwners.get(path) ?? 0) + 1)
+  const styleFiles: Detail['styles'] = [...styles]
+    .filter(([, result]) => styleHits(result) > 0)
+    .map(([path, result]) => ({
+      path,
+      section: sectionOf(path),
+      ...result,
+      units: styleOwners.get(path) ?? 0,
+    }))
+    .sort((a, b) => styleHits(b) - styleHits(a) || a.path.localeCompare(b.path))
   orphanFiles.sort((a, b) => a.path.localeCompare(b.path))
   // A directory is lockable when nothing under it, nor anything it renders, still carries Bootstrap.
   const dirs = new Map<
@@ -683,7 +791,8 @@ export async function analyzeTree(
   }
   for (const [path, tokens] of fileTokens)
     section(sectionOf(path)).classHits += sum(tokens)
-  for (const [path, hits] of styles) section(sectionOf(path)).styleHits += hits
+  for (const [path, result] of styles)
+    section(sectionOf(path)).styleHits += styleHits(result)
   for (const { dir } of lockable) section(sectionOf(`${dir}/x`)).lockableDirs++
   for (const [name, set] of externalBlockers) section(name).blockers = set.size
   const all = [...units.values()]
@@ -693,7 +802,7 @@ export async function analyzeTree(
     clean: all.filter((u) => u.status === 'clean').length,
     dirty: all.filter((u) => u.status === 'dirty').length,
     classHits: [...fileTokens.values()].reduce((n, t) => n + sum(t), 0),
-    styleHits: [...styles.values()].reduce((n, h) => n + h, 0),
+    styleHits: [...styles.values()].reduce((n, r) => n + styleHits(r), 0),
     lockedResidue: all
       .filter((u) => u.status === 'locked')
       .reduce((n, u) => n + ownHits(u), 0),
@@ -703,9 +812,22 @@ export async function analyzeTree(
     ngBootstrap: all.filter((u) => sum(u.ngBootstrap) > 0).length,
     tumUi: all.filter((u) => sum(u.tumUi) > 0).length,
     kit: kit.components,
+    pages: all.filter((u) => u.route !== undefined).length,
+    pagesClean: all.filter(
+      (u) => u.route !== undefined && ownHits(u) === 0 && u.closureHits === 0,
+    ).length,
   }
   return {
-    summary: { ...meta, totals },
+    summary: {
+      ...meta,
+      totals,
+      sections: Object.fromEntries(
+        [...sections.values()].map((s) => [
+          s.name,
+          [s.units, s.locked, s.clean, s.dirty, s.classHits, s.styleHits],
+        ]),
+      ),
+    },
     detail: {
       analyzerVersion,
       commit: meta.commit,
@@ -719,6 +841,7 @@ export async function analyzeTree(
           a.name.localeCompare(b.name),
       ),
       units: all.sort((a, b) => a.id.localeCompare(b.id)),
+      styles: styleFiles,
       files: orphanFiles,
       inventory: {
         bootstrap: inventory([

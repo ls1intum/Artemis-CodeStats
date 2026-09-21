@@ -28,6 +28,8 @@ test('overview renders real totals, burndown and lock entries', async ({
     page.getByRole('heading', { name: 'Bootstrap hits per integrated commit' }),
   ).toBeVisible()
   await expect(page.locator('.recharts-area-area').first()).toBeVisible()
+  await page.getByRole('tab', { name: 'Next steps' }).click()
+  await expect(page).toHaveURL(/view=next/)
   await expect(
     page.getByRole('heading', { name: 'Lockable directories', level: 2 }),
   ).toBeVisible()
@@ -55,8 +57,14 @@ test('lock entries are copied for pasting into the three Artemis lists', async (
     'clipboard permissions are Chromium-only',
   )
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  await page.goto('./')
+  await page.goto('./#/?view=next')
   await loaded(page)
+  await page.getByRole('button', { name: 'Copy brief for an agent' }).click()
+  await expect(page.getByText(/Copied the migration brief/)).toBeVisible()
+  const brief = await page.evaluate(() => navigator.clipboard.readText())
+  expect(brief).toMatch(/^# Artemis client migration brief/)
+  expect(brief).toMatch(/## Lock now/)
+  expect(brief).toMatch(/→ tum-ui-button/)
   await page
     .getByRole('button', { name: /^Copy lock entries for / })
     .first()
@@ -72,13 +80,19 @@ test('lock entries are copied for pasting into the three Artemis lists', async (
 test('section drawer opens from the table, lives in the URL, lists blockers and returns focus', async ({
   page,
 }) => {
-  await page.goto('./')
+  await page.goto('./#/?view=sections')
   await loaded(page)
+  await expect(
+    page.getByRole('heading', { name: 'What kind of work remains where' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('cell', { name: 'All sections' }).locator('..'),
+  ).toContainText(/\d/)
   const trigger = page.getByRole('button', { name: 'course', exact: true })
   await trigger.click()
   const dialog = page.getByRole('dialog', { name: 'course' })
   await expect(dialog).toBeVisible()
-  await expect(page).toHaveURL(/#\/\?section=course/)
+  await expect(page).toHaveURL(/#\/\?view=sections&section=course/)
   await expect(page).not.toHaveURL(/\?section=course#/)
   await expect(
     dialog.getByRole('table').last().locator('tbody tr').first(),
@@ -106,8 +120,36 @@ test('section drawer opens from the table, lives in the URL, lists blockers and 
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page).not.toHaveURL(/section=/)
   await expect(trigger).toBeFocused()
-  await page.goto('./#/?section=course')
+  await page.goto('./#/?view=sections&section=course')
   await expect(page.getByRole('dialog', { name: 'course' })).toBeVisible()
+})
+
+test('pages and history views render from the same data', async ({ page }) => {
+  await page.goto('./#/?view=pages')
+  await loaded(page)
+  const manifest = await (
+    await page.request.get('./migrations/index.json')
+  ).json()
+  const t = manifest.snapshots.at(-1).totals
+  await expect(
+    page.getByRole('img', { name: /^Imports no Bootstrap \d+/ }).first(),
+  ).toHaveAttribute(
+    'aria-label',
+    new RegExp(`Imports no Bootstrap ${t.pagesClean},`),
+  )
+  await page.getByRole('radio', { name: 'Ready', exact: true }).click()
+  await expect(page.getByRole('table').last().locator('tbody tr')).toHaveCount(
+    t.pagesClean,
+  )
+  await page.getByRole('tab', { name: 'History' }).click()
+  await expect(
+    page.getByRole('link', { name: 'migrations/brief.md' }),
+  ).toHaveAttribute('href', /migrations\/brief\.md$/)
+  const brief = await page.request.get('./migrations/brief.md')
+  expect(brief.ok()).toBe(true)
+  expect(await brief.text()).toMatch(/^# Artemis client migration brief/)
+  const llms = await page.request.get('./llms.txt')
+  expect(await llms.text()).toMatch(/^# Artemis CodeStats/)
 })
 
 test('snapshot and comparison selection change the deltas and mark the chart', async ({
@@ -172,7 +214,7 @@ test('small-screen reflow, drawer columns and keyboard entry point', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('./#/?section=course')
+  await page.goto('./#/?view=sections&section=course')
   const heads = await page
     .getByRole('dialog', { name: 'course' })
     .getByRole('table')

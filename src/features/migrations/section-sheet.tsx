@@ -21,7 +21,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { appRoot, sourceUrl, statuses, type Detail, type Status } from './model'
+import {
+  appRoot,
+  sourceUrl,
+  statuses,
+  type Detail,
+  type Status,
+  type Summary,
+} from './model'
 import {
   free,
   hits,
@@ -33,6 +40,7 @@ import {
 } from './format'
 import { Delta, StatusBar } from './status'
 import { LockableTable } from './lockable'
+import { BriefActions } from './next-steps'
 
 const badgeVariant: Record<Status, 'default' | 'secondary' | 'outline'> = {
   locked: 'default',
@@ -49,10 +57,12 @@ const usage = (u: Record<string, number>) =>
 
 function SectionBody({
   section,
+  snapshot,
   detail,
   compare,
 }: {
   section: string
+  snapshot: Summary
   detail: Detail
   compare: Detail
 }) {
@@ -94,6 +104,7 @@ function SectionBody({
             ` · ${percent(free(summary), summary.units)} Bootstrap-free`}
         </SheetDescription>
         {summary.units > 0 && <StatusBar counts={summary} legend />}
+        <BriefActions snapshot={snapshot} detail={detail} section={section} />
       </SheetHeader>
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 overflow-y-auto px-4 pb-4">
         {lockable.length > 0 && (
@@ -273,12 +284,14 @@ function SectionBody({
 
 export function SectionSheet({
   section,
+  snapshot,
   detail,
   compare,
   onClose,
   opener,
 }: {
   section: string | undefined
+  snapshot: Summary
   detail: Detail
   compare: Detail
   onClose: () => void
@@ -309,6 +322,7 @@ export function SectionSheet({
             <SectionBody
               key={section}
               section={section}
+              snapshot={snapshot}
               detail={detail}
               compare={compare}
             />

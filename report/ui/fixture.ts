@@ -58,7 +58,7 @@ export class PageComponent { open() { return import('../dialog/dialog.component'
   [`${app}/exam/manage/shared.scss`]: `@use 'bootstrap/scss/functions';`,
   [`${app}/exam/manage/dialog/dialog.component.ts`]: `import { Component } from '@angular/core'
 @Component({ selector: 'jhi-dialog', templateUrl: './dialog.component.html' }) export class DialogComponent {}`,
-  [`${app}/exam/manage/dialog/dialog.component.html`]: `<div class="grid"></div>`,
+  [`${app}/exam/manage/dialog/dialog.component.html`]: `<div class="grid gap-2 mb-3 sm:flex-col"></div>`,
   [`${app}/exam/manage/clean/clean.component.ts`]: `import { Component } from '@angular/core'
 import { ButtonComponent } from 'app/shared-ui/button/button.component'
 @Component({ selector: 'jhi-clean', templateUrl: './clean.component.html', imports: [ButtonComponent] }) export class CleanComponent { buttonClass = 'btn' }`,
@@ -72,6 +72,11 @@ import type { PageComponent } from '../page/page.component'
 @Component({ selector: 'jhi-pair-b', template: '<div class="btn"></div>' }) export class PairBComponent {}
 @Component({ selector: 'jhi-pair-c', templateUrl: './pair.component.html' }) export class PairCComponent {}`,
   [`${app}/exam/manage/pair/pair.component.html`]: `<div class="d-flex"></div>`,
+  [`${app}/exam/manage/exam.routes.ts`]: `import { DialogComponent } from './dialog/dialog.component'
+export const routes = [
+  { path: 'page/:id', loadComponent: () => import('./page/page.component').then((m) => m.PageComponent) },
+  { path: 'dialog', component: DialogComponent, children: [{ path: 'nested', component: DialogComponent }] },
+]`,
   [`${app}/app.component.ts`]: `import { Component } from '@angular/core'
 @Component({ selector: 'jhi-app', template: '<router-outlet />' }) export class AppComponent {}`,
   [`${app}/exam/manage/clean/clean.component.html`]: `<div class="flex"></div>`,

@@ -1,31 +1,35 @@
 import { useRef } from 'react'
 import { useLoaderData, useNavigate, useSearch } from '@tanstack/react-router'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { sourceUrl } from './model'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { sourceUrl, views, type View } from './model'
 import { Controls } from './controls'
 import { Headline } from './headline'
 import { Regressions } from './regressions'
 import { Burndown } from './burndown'
 import { Changes } from './changes'
-import { Sections } from './sections'
+import { FamilyHeatmap, Sections } from './sections'
 import { SectionSheet } from './section-sheet'
-import { Blockers } from './blockers'
-import { LockableTable } from './lockable'
+import { Pages } from './pages'
+import { NextSteps } from './next-steps'
 import { Inventory } from './inventory'
+import { History } from './history'
 import { Methodology } from './methodology'
+
+const viewLabel: Record<View, string> = {
+  overview: 'Overview',
+  sections: 'Sections',
+  pages: 'Pages',
+  next: 'Next steps',
+  inventory: 'Inventory',
+  history: 'History',
+}
 
 export function MigrationDashboard() {
   const { manifest, points, snapshot, compare, detail, compareDetail } =
     useLoaderData({ from: '/' })
   const search = useSearch({ from: '/' })
-  const opener = useRef<HTMLElement | null>(null)
   const navigate = useNavigate({ from: '/' })
+  const opener = useRef<HTMLElement | null>(null)
   const update = (patch: Partial<typeof search>) =>
     void navigate({ search: (previous) => ({ ...previous, ...patch }) })
   const adoption = manifest.snapshots.findIndex(
@@ -38,6 +42,7 @@ export function MigrationDashboard() {
     search.section && detail.sections.some((s) => s.name === search.section)
       ? search.section
       : undefined
+  const view = search.view ?? 'overview'
   return (
     <main
       tabIndex={-1}
@@ -61,7 +66,8 @@ export function MigrationDashboard() {
             >
               lint rule
             </a>{' '}
-            and lock list. A unit is done when its directory is locked.
+            and lock list, plus what routed pages import. A unit is done when
+            its directory is locked.
           </p>
         </div>
         <Controls
@@ -85,51 +91,71 @@ export function MigrationDashboard() {
         compare={compare}
         lockableUnits={detail.lockable.reduce((n, l) => n + l.units, 0)}
       />
-      <Regressions detail={detail} compare={compareDetail} />
-      <Burndown
-        series={series}
-        snapshot={snapshot}
-        latest={snapshot.commit === points.at(-1)?.commit}
-      />
-      <Changes
-        series={manifest.snapshots}
-        snapshot={snapshot}
-        compare={compare}
-      />
-      <Sections
-        detail={detail}
-        compare={compareDetail}
-        onSelect={(section, trigger) => {
-          opener.current = trigger
-          update({ section })
-        }}
-      />
+      <Tabs
+        value={view}
+        onValueChange={(v) =>
+          update({ view: v === 'overview' ? undefined : (v as View) })
+        }
+      >
+        <TabsList className="flex h-auto flex-wrap">
+          {views.map((v) => (
+            <TabsTrigger key={v} value={v}>
+              {viewLabel[v]}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <TabsContent
+          value="overview"
+          className="grid grid-cols-[minmax(0,1fr)] gap-6"
+        >
+          <Regressions detail={detail} compare={compareDetail} />
+          <Burndown
+            series={series}
+            snapshot={snapshot}
+            latest={snapshot.commit === points.at(-1)?.commit}
+          />
+          <Changes
+            series={manifest.snapshots}
+            snapshot={snapshot}
+            compare={compare}
+          />
+        </TabsContent>
+        <TabsContent
+          value="sections"
+          className="grid grid-cols-[minmax(0,1fr)] gap-6"
+        >
+          <Sections
+            detail={detail}
+            compare={compareDetail}
+            series={series}
+            onSelect={(section, trigger) => {
+              opener.current = trigger
+              update({ section })
+            }}
+          />
+          <FamilyHeatmap detail={detail} />
+        </TabsContent>
+        <TabsContent value="pages">
+          <Pages detail={detail} />
+        </TabsContent>
+        <TabsContent value="next">
+          <NextSteps snapshot={snapshot} detail={detail} />
+        </TabsContent>
+        <TabsContent value="inventory">
+          <Inventory detail={detail} />
+        </TabsContent>
+        <TabsContent value="history">
+          <History manifest={manifest} points={points} />
+        </TabsContent>
+      </Tabs>
       <SectionSheet
         section={section}
+        snapshot={snapshot}
         detail={detail}
         compare={compareDetail}
         onClose={() => update({ section: undefined })}
         opener={opener}
       />
-      <Blockers detail={detail} />
-      {detail.lockable.length > 0 && (
-        <Card id="lockable">
-          <CardHeader>
-            <CardTitle asChild>
-              <h2>Lockable directories</h2>
-            </CardTitle>
-            <CardDescription>
-              Nothing under these directories, nor anything they import, has
-              Bootstrap left. Locking them is a configuration-only change to the
-              three lists.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="max-h-[28rem] overflow-auto">
-            <LockableTable lockable={detail.lockable} commit={detail.commit} />
-          </CardContent>
-        </Card>
-      )}
-      <Inventory detail={detail} />
       <Methodology manifest={manifest} detail={detail} />
     </main>
   )

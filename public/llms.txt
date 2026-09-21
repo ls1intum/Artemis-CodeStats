@@ -1,0 +1,19 @@
+# Artemis CodeStats
+
+> Migration reports for the Artemis learning platform's Angular client: remaining Bootstrap, ng-bootstrap and PrimeNG usage on the way to Tailwind and the TUM UI kit, measured with Artemis's own lint rule and lock list for every commit on `develop`.
+
+## Current brief
+
+- [Migration brief (markdown)](https://ls1intum.github.io/Artemis-CodeStats/migrations/brief.md): status, directories that can be locked now with the exact lock entries, shared units to fix first, and per-section unit tasks with class-to-target mappings.
+- [Migration brief (JSON)](https://ls1intum.github.io/Artemis-CodeStats/migrations/brief.json): the same content as structured data, including the path of the full detail file.
+
+## Data
+
+- [History](https://ls1intum.github.io/Artemis-CodeStats/migrations/index.json): totals and per-section rows for every first-parent commit since the TUM UI package adoption, with commit subjects.
+- [Schema and definitions](https://github.com/ls1intum/Artemis-CodeStats/blob/main/src/features/migrations/model.ts): zod schemas for the history manifest and the per-checkpoint detail files.
+- [Methodology](https://github.com/ls1intum/Artemis-CodeStats/blob/main/docs/migration-dashboard.md): what a hit, a unit, locked, lockable and imported hits mean.
+
+## How to migrate
+
+- [Artemis client guideline, section Styling](https://github.com/ls1intum/Artemis/blob/develop/documentation/docs/developer/guidelines/client-development.mdx): the Bootstrap → TUM UI/Tailwind quick reference and the lock runbook.
+- [TUM UI component reference](https://github.com/ls1intum/Artemis/blob/develop/documentation/docs/developer/tum-ui.mdx)

@@ -22,7 +22,10 @@ const summary = (day: number, hits: number): Summary => ({
     ngBootstrap: 0,
     tumUi: 0,
     kit: 0,
+    pages: 0,
+    pagesClean: 0,
   },
+  sections: {},
 })
 
 test('lock entries follow the three Artemis lists', () => {

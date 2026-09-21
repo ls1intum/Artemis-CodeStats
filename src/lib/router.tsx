@@ -8,6 +8,7 @@ import {
 import { RootLayout } from '@/routes/__root'
 import { MigrationDashboard } from '@/features/migrations/dashboard'
 import { z } from 'zod'
+import { views } from '@/features/migrations/model'
 import { loadMigrationReport } from '@/features/migrations/load-report'
 import {
   MigrationError,
@@ -15,6 +16,7 @@ import {
 } from '@/features/migrations/route-feedback'
 
 const searchSchema = z.object({
+  view: z.enum(views).optional().catch(undefined),
   snapshot: z.string().optional().catch(undefined),
   compare: z.string().optional().catch(undefined),
   section: z.string().optional().catch(undefined),

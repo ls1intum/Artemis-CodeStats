@@ -43,7 +43,7 @@ export function Headline({
   const overall = velocity(series, snapshot, Infinity)
   return (
     <div className="grid gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Tile title="Bootstrap hits" value={number(hits(t))}>
           <Delta value={hits(t) - hits(c)} /> vs. comparison
           {recent &&
@@ -55,6 +55,14 @@ export function Headline({
         <Tile title="Bootstrap-free units" value={percent(free(t), t.units)}>
           {number(free(t))} of {number(t.units)} ·{' '}
           <Delta value={free(t) - free(c)} positive="up" /> vs. comparison
+        </Tile>
+        <Tile
+          title="Pages ready"
+          value={`${number(t.pagesClean)} / ${number(t.pages)}`}
+        >
+          routed pages that import no Bootstrap ·{' '}
+          <Delta value={t.pagesClean - c.pagesClean} positive="up" /> vs.
+          comparison
         </Tile>
         <Tile title="Locked units" value={number(t.locked)}>
           {t.lockedDirs} lock entries ·{' '}

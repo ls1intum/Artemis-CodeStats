@@ -14,8 +14,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { Detail, InventoryEntry } from './model'
-import { number } from './format'
+import { sourceUrl, type Detail, type InventoryEntry } from './model'
+import { number, short } from './format'
 import { bootstrapTarget, kitTarget } from './targets'
 
 function InventoryTable({
@@ -94,6 +94,9 @@ export function Inventory({ detail }: { detail: Detail }) {
               TUM UI kit ({detail.kit.length - unused.length} of{' '}
               {detail.kit.length} selectors used)
             </TabsTrigger>
+            <TabsTrigger value="styles">
+              Stylesheets ({detail.styles.length})
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="bootstrap" className={scroll}>
             <InventoryTable
@@ -111,6 +114,51 @@ export function Inventory({ detail }: { detail: Detail }) {
           </TabsContent>
           <TabsContent value="ngBootstrap" className={scroll}>
             <InventoryTable entries={detail.inventory.ngBootstrap} />
+          </TabsContent>
+          <TabsContent value="styles" className={`${scroll} grid gap-3`}>
+            <p className="text-sm text-muted-foreground">
+              SCSS files with residue the stylelint lock rejects:{' '}
+              <code>--bs-*</code> variables and raw colors, plus Bootstrap Sass
+              imports that block removing the dependency. Files under{' '}
+              <code>content/scss/themes</code> define the theme palette itself.
+            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>File</TableHead>
+                  <TableHead className="text-right">--bs-* vars</TableHead>
+                  <TableHead className="text-right">Raw colors</TableHead>
+                  <TableHead className="text-right">Sass imports</TableHead>
+                  <TableHead className="text-right">Used by units</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {detail.styles.map((f) => (
+                  <TableRow key={f.path}>
+                    <TableCell className="whitespace-normal">
+                      <a
+                        className="break-all underline underline-offset-4"
+                        href={sourceUrl(detail.commit, f.path)}
+                      >
+                        {short(f.path)}
+                      </a>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {f.variables || ''}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {f.colors || ''}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {f.imports || ''}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {f.units || ''}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </TabsContent>
           <TabsContent value="tumUi" className={`${scroll} grid gap-4`}>
             <InventoryTable entries={detail.inventory.tumUi} />
