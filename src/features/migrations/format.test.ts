@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { lockEntries, pullRequest, unitPath, type Summary } from './model'
 import { day, percent, velocity } from './format'
-import { bootstrapTarget, kitTarget } from './inventory'
+import { bootstrapTarget, kitTarget } from './targets'
 
 const summary = (day: number, hits: number): Summary => ({
   commit: 'a'.repeat(40),
