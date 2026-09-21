@@ -40,6 +40,9 @@ export function LockableTable({
   commit: string
 }) {
   if (!lockable.length) return null
+  const rows = [...lockable].sort(
+    (a, b) => b.units - a.units || a.dir.localeCompare(b.dir),
+  )
   return (
     <div className="grid gap-3">
       <Table>
@@ -53,7 +56,7 @@ export function LockableTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {lockable.map(({ dir, units }) => (
+          {rows.map(({ dir, units }) => (
             <TableRow key={dir}>
               <TableCell>
                 <a
@@ -82,7 +85,7 @@ export function LockableTable({
         variant="outline"
         size="sm"
         className="justify-self-start"
-        onClick={() => copyEntries(lockable.map((l) => l.dir))}
+        onClick={() => copyEntries(rows.map((l) => l.dir))}
       >
         <Copy aria-hidden="true" /> Copy all {lockable.length} lock entries
       </Button>

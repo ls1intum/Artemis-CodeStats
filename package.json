@@ -12,7 +12,7 @@
     "report:dto": "tsx report/server/dtoViolations.ts",
     "report:dto:thresholds": "tsx report/server/dtoViolations.ts --thresholds",
     "report:ui": "tsx report/ui/index.ts",
-    "test": "tsx --test report/ui/*.test.ts",
+    "test": "tsx --test report/ui/*.test.ts src/features/migrations/*.test.ts",
     "test:e2e": "playwright test",
     "typecheck:report": "tsc -p tsconfig.report.json",
     "test:coverage": "node --import tsx --test --experimental-test-coverage --test-coverage-include=\"report/ui/analyze.ts\" report/ui/*.test.ts",

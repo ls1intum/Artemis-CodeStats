@@ -13,17 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  commitUrl,
-  pullRequestNumber,
-  pullRequestUrl,
-  type Summary,
-} from './model'
-import { day } from './format'
+import { commitUrl, pullRequest, type Summary } from './model'
+import { day, free, hits } from './format'
 import { Delta } from './status'
-
-const hits = (s: Summary) => s.totals.classHits + s.totals.styleHits
-const free = (s: Summary) => s.totals.locked + s.totals.clean
 
 export function Changes({
   series,
@@ -43,8 +35,8 @@ export function Changes({
       const previous = series[from + i]
       return {
         ...s,
-        hits: hits(s) - hits(previous),
-        free: free(s) - free(previous),
+        hits: hits(s.totals) - hits(previous.totals),
+        free: free(s.totals) - free(previous.totals),
         locks: s.totals.lockedDirs - previous.totals.lockedDirs,
       }
     })
@@ -55,7 +47,7 @@ export function Changes({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
+        <CardTitle asChild>
           <h2>Commits that moved the numbers</h2>
         </CardTitle>
         <CardDescription>
@@ -81,7 +73,7 @@ export function Changes({
           </TableHeader>
           <TableBody>
             {shown.map((row) => {
-              const pr = pullRequestNumber(row.subject)
+              const pr = pullRequest(row.subject)
               return (
                 <TableRow key={row.commit}>
                   <TableCell className="whitespace-nowrap">
@@ -90,22 +82,22 @@ export function Changes({
                   <TableCell className="max-w-md">
                     <a
                       className="underline underline-offset-4"
-                      href={pr ? pullRequestUrl(pr) : commitUrl(row.commit)}
+                      href={pr.url ?? commitUrl(row.commit)}
                     >
-                      {pr ? `#${pr}` : row.commit.slice(0, 8)}
+                      {pr.number ? `#${pr.number}` : row.commit.slice(0, 8)}
                     </a>{' '}
-                    <span className="text-muted-foreground">
-                      {row.subject.replace(/\s*\(#\d+\)\s*$/, '')}
-                    </span>
+                    <span className="text-muted-foreground">{pr.title}</span>
                   </TableCell>
                   <TableCell className="text-right">
                     <Delta value={row.hits} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Delta value={row.free} positive="up" />
+                    {row.free !== 0 && <Delta value={row.free} positive="up" />}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Delta value={row.locks} positive="up" />
+                    {row.locks !== 0 && (
+                      <Delta value={row.locks} positive="up" />
+                    )}
                   </TableCell>
                 </TableRow>
               )

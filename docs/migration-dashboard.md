@@ -28,27 +28,40 @@ parses templates with `@angular/compiler`).
   found in an external or inline template (static `class`, `styleClass`, `*StyleClass`,
   `[class.x]`, string literals and unquoted keys inside `[class]`/`[ngClass]` bindings via
   the rule's `bannedClassesInBindingExpression`, plus the static parts of interpolated class
-  lists, which the lint cannot see) or in TypeScript class strings (`@HostBinding('class.x')`,
-  `host: { '[class.x]' }`, `addClass(...)`/`classList.add(...)` arguments, string literals
-  assigned to names matching `/class/i`). In SCSS a hit is `var(--bs-*)`, a hex color,
-  `rgb()`/`hsl()` or a Bootstrap Sass import, with comments removed.
-- **Unit** — an Angular component or directive: the TypeScript file plus its `templateUrl`
-  and `styleUrl(s)`. A structural directive's implicit template is counted once. Files that
-  no unit owns (shared partials, helpers, `content/scss`) are reported per section but are not
-  units. Style hits are counted once per file in totals; a shared stylesheet counts for every
-  unit that references it in that unit's own row.
+  lists, which the lint cannot see) or in the deterministic TypeScript forms
+  (`@HostBinding('class.x')`, `host: { class, '[class.x]' }`, `addClass(...)` and
+  `classList.add(...)` literals). Class strings assembled elsewhere in TypeScript (enum
+  members, signals, method returns) are not counted; neither Artemis gate sees them either.
+  In SCSS a hit is `var(--bs-*)`, a hex color, `rgb()`/`hsl()` or a Bootstrap Sass import,
+  with comments removed.
+- **Unit** — one `@Component` or `@Directive` declaration: its `templateUrl`, `styleUrl(s)`
+  and, for the first declaration in a file, the file's TypeScript hits. Further declarations
+  in the same file get ids `path#1`, `path#2`. A structural directive's implicit template is
+  counted once. Files that no unit owns (shared partials, helpers, `content/scss`) are reported
+  per section but are not units. Totals and sections count every file once; a template or
+  stylesheet shared by several units appears in each unit's own row (marked as shared).
 - **Status** — `locked` when the template path (or the `.html` sibling of a directive or
   inline-template component) matches a lock glob; otherwise `dirty` when the unit has hits,
   `clean` when it has none. Hits inside locked units are reported as _locked residue_: they
   exist outside what the lint gate scans.
-- **Rendered / closure** — units reachable through relative or `app/` imports, including
-  `import()` calls, so template children, dialogs opened from code and lazily loaded routes
-  are included. Content projected from outside a unit and selector-only references are not.
-- **Blocks** — for a unit with hits, the number of units without hits whose closure contains it.
+- **Imports with hits / closure** — units whose decorated class this unit imports by name
+  (relative or `app/` specifiers, `import()` calls), transitively: standalone `imports`,
+  dialogs opened from code and lazy loads. Type-only imports and imports of other symbols
+  from a unit's file (enums, constants) are not edges. Route files are not units, so pages
+  loaded through a route file are not connected to it. Content projection from outside a
+  unit is not resolved.
+- **Blocks** — for a unit with hits, the number of Bootstrap-free, unlocked units whose
+  closure contains it.
 - **Lockable** — a directory under `src/main/webapp/app` that is not locked, contains at
-  least one unlocked unit, and in which every unit and orphan file has zero hits and zero
-  closure hits. Only maximal directories are listed, with the three entries to add.
-- **Section** — the first directory below `src/main/webapp/app`; `content` for global styles.
+  least one unlocked unit and at least one external template, and in which every unit and
+  orphan file has zero hits and zero closure hits. Only maximal directories are listed, with
+  the three entries to add.
+- **Section** — the first directory below `src/main/webapp/app`; `app` for root files and
+  `content` for global styles.
+- **Inventories** — PrimeNG, ng-bootstrap and TUM UI usage is counted from template elements
+  and attributes (kit selectors are read from the kit sources of the same commit), plus PrimeNG
+  and ng-bootstrap imports whose names end in `Service` or `Modal`, which are usage without
+  template evidence. Other imports may be types and are not counted.
 
 ## Data
 
@@ -66,13 +79,14 @@ dependency-free today and the import fails loudly if it stops exporting the matc
 
 ## Dashboard
 
-One page, state in the URL (`snapshot`, `compare`, `section`): headline tiles with sparklines,
-a step-area burndown of hits for every integrated commit with lock-list changes marked,
-the commits that moved the numbers between the two selected checkpoints, a sections table
-opening a side sheet (units, blockers, lockable directories with copyable lock entries),
-shared units ranked by how many clean units they block, and inventories of remaining
-Bootstrap classes, PrimeNG, ng-bootstrap and TUM UI usage with the guideline's targets.
-Regressions (hits increased, new dirty units, locked residue) appear only when present.
+One page, state in the hash query (`snapshot`, `compare`, `section`; the comparison is always
+an earlier checkpoint): headline tiles, a step-area burndown of hits for every integrated
+commit with lock-list changes marked, the commits that moved the numbers between the two
+selected checkpoints, a sections table opening a side sheet (units, imported units with hits,
+lockable directories with copyable lock entries), shared units ranked by how many clean units
+they block, and inventories of remaining Bootstrap classes, PrimeNG, ng-bootstrap and TUM UI
+usage with the guideline's targets. Units whose hits grew since the comparison are listed
+only when there are any.
 
 ## Develop, verify, regenerate
 

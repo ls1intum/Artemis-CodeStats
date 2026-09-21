@@ -20,7 +20,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 import type { Summary } from './model'
-import { day, dayTime, number } from './format'
+import { day, dayTime, hits, number } from './format'
 
 const config = {
   hits: { label: 'Bootstrap hits', color: 'var(--color-status-locked)' },
@@ -37,24 +37,19 @@ export function Burndown({
 }) {
   const data = series.map((s, i) => ({
     time: Date.parse(s.date),
-    hits: s.totals.classHits + s.totals.styleHits,
-    delta:
-      i === 0
-        ? 0
-        : s.totals.classHits +
-          s.totals.styleHits -
-          (series[i - 1].totals.classHits + series[i - 1].totals.styleHits),
+    hits: hits(s.totals),
+    delta: i === 0 ? 0 : hits(s.totals) - hits(series[i - 1].totals),
     subject: s.subject,
-    lock: i > 0 && s.totals.lockedDirs !== series[i - 1].totals.lockedDirs,
+    locks: i === 0 ? 0 : s.totals.lockedDirs - series[i - 1].totals.lockedDirs,
   }))
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
+        <CardTitle asChild>
           <h2>Bootstrap hits per integrated commit</h2>
         </CardTitle>
         <CardDescription>
-          Every first-parent commit on develop since package adoption. Vertical
+          Every first-parent commit on develop since package adoption. Dashed
           lines mark commits that changed the lock list.
         </CardDescription>
       </CardHeader>
@@ -66,7 +61,7 @@ export function Burndown({
               dataKey="time"
               type="number"
               scale="time"
-              domain={['dataMin', 'dataMax']}
+              domain={['dataMin - 43200000', 'dataMax']}
               tickFormatter={(v: number) => day(new Date(v).toISOString())}
               minTickGap={48}
               tickLine={false}
@@ -113,9 +108,14 @@ export function Burndown({
               }
             />
             {data
-              .filter((d) => d.lock)
+              .filter((d) => d.locks)
               .map((d) => (
-                <ReferenceLine key={d.time} x={d.time} stroke="var(--border)" />
+                <ReferenceLine
+                  key={d.time}
+                  x={d.time}
+                  stroke="var(--muted-foreground)"
+                  strokeDasharray="3 3"
+                />
               ))}
             {!latest && (
               <ReferenceLine

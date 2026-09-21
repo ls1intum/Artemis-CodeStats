@@ -104,11 +104,11 @@ test('generator catches up missed commits, preserves source checkout, is idempot
     )
     assert.deepEqual(
       report.snapshots.map((s) => s.totals.dirty),
-      [3, 2, 3, 2, 3],
+      [6, 5, 6, 5, 6],
     )
     assert.deepEqual(
       report.snapshots.map((s) => s.totals.lockableDirs),
-      [0, 1, 0, 1, 0],
+      [1, 2, 1, 2, 1],
     )
     assert.equal(report.snapshots.at(-1)?.subject, 'day 5 (#5)')
     assert.equal(existsSync(join(output, `${oldHead}.json`)), false)
@@ -128,7 +128,7 @@ test('generator catches up missed commits, preserves source checkout, is idempot
     assert.equal(readFileSync(join(output, 'index.json'), 'utf8'), manifest)
     writeFileSync(join(output, 'index.json'), '{broken JSON')
     await generateReports({ ...options, rebuild: true })
-    assert.equal(JSON.parse(readFileSync(detailPath, 'utf8')).units.length, 6)
+    assert.equal(JSON.parse(readFileSync(detailPath, 'utf8')).units.length, 11)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

@@ -13,7 +13,7 @@ export function RootLayout() {
   const currentPath = useRouterState().location.pathname
   const archived = currentPath !== '/'
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-background text-foreground">
       <a
         href="#main-content"
         onClick={(event) => {
@@ -25,17 +25,17 @@ export function RootLayout() {
       >
         Skip to content
       </a>
-      <header className="border-b border-slate-200 bg-white px-4 sm:px-8">
+      <header className="border-b bg-card px-4 sm:px-8">
         <div className="mx-auto max-w-[1440px] flex flex-wrap items-center justify-between gap-4 py-4">
           <Link to="/" className="flex items-center gap-3">
-            <span className="rounded-lg bg-blue-900 p-2 text-white">
+            <span className="rounded-lg bg-primary p-2 text-primary-foreground">
               <Activity size={22} />
             </span>
             <span>
               <span className="block font-bold tracking-tight">
                 Artemis CodeStats
               </span>
-              <span className="block text-xs text-slate-500">
+              <span className="block text-xs text-muted-foreground">
                 Artemis client migration reports
               </span>
             </span>
@@ -47,7 +47,7 @@ export function RootLayout() {
             <Link
               to="/"
               aria-current={!archived ? 'page' : undefined}
-              className={`rounded-md px-3 py-2 font-medium ${!archived ? 'bg-blue-50 text-blue-800' : 'text-slate-600'}`}
+              className={`rounded-md px-3 py-2 font-medium ${!archived ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
             >
               UI modernization
             </Link>
@@ -56,7 +56,9 @@ export function RootLayout() {
                 <Button
                   variant="ghost"
                   className={
-                    archived ? 'bg-blue-50 text-blue-800' : 'text-slate-600'
+                    archived
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground'
                   }
                 >
                   Archived migrations <ChevronDown aria-hidden="true" />
@@ -73,7 +75,7 @@ export function RootLayout() {
                     aria-current={
                       currentPath === '/decoratorless' ? 'page' : undefined
                     }
-                    className="block rounded px-3 py-2 hover:bg-slate-100"
+                    className="block rounded px-3 py-2 hover:bg-accent"
                   >
                     Signals / decoratorless APIs
                   </Link>
@@ -84,7 +86,7 @@ export function RootLayout() {
                     aria-current={
                       currentPath === '/dto-usage' ? 'page' : undefined
                     }
-                    className="block rounded px-3 py-2 hover:bg-slate-100"
+                    className="block rounded px-3 py-2 hover:bg-accent"
                   >
                     DTO usage
                   </Link>
@@ -110,7 +112,7 @@ export function RootLayout() {
       )}
       <Outlet />
       <Toaster />
-      <footer className="border-t bg-white px-6 py-6 text-xs text-slate-500">
+      <footer className="border-t bg-card px-6 py-6 text-xs text-muted-foreground">
         <div className="mx-auto max-w-[1440px] flex flex-wrap justify-between gap-3">
           <span>Artemis CodeStats</span>
           <a

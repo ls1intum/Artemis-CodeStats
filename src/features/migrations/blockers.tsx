@@ -14,26 +14,22 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { sourceUrl, type Detail } from './model'
-import { number, short } from './format'
+import { hits, number, short, unitFile } from './format'
 
 export function Blockers({ detail }: { detail: Detail }) {
   const rows = detail.units
     .filter((u) => u.blocks > 0)
-    .sort(
-      (a, b) =>
-        b.blocks - a.blocks ||
-        a.classHits + a.styleHits - (b.classHits + b.styleHits),
-    )
+    .sort((a, b) => b.blocks - a.blocks || hits(a) - hits(b))
     .slice(0, 12)
   if (!rows.length) return null
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
+        <CardTitle asChild>
           <h2>Shared units that block the most</h2>
         </CardTitle>
         <CardDescription>
-          Units with Bootstrap that are rendered by Bootstrap-free units. Few
+          Units with Bootstrap that Bootstrap-free, unlocked units import. Few
           hits and many dependants means a cheap fix with a large effect.
         </CardDescription>
       </CardHeader>
@@ -54,13 +50,13 @@ export function Blockers({ detail }: { detail: Detail }) {
                 <TableCell className="max-w-md">
                   <a
                     className="underline underline-offset-4 break-all"
-                    href={sourceUrl(detail.commit, u.template ?? u.id)}
+                    href={sourceUrl(detail.commit, unitFile(u))}
                   >
                     {u.selector ?? short(u.id)}
                   </a>
                   {u.status === 'locked' && (
                     <span className="ml-2 text-xs text-muted-foreground">
-                      locked · residue outside templates
+                      locked · hits outside its templates
                     </span>
                   )}
                 </TableCell>
@@ -69,7 +65,7 @@ export function Blockers({ detail }: { detail: Detail }) {
                   {number(u.blocks)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {u.classHits + u.styleHits}
+                  {hits(u)}
                 </TableCell>
                 <TableCell>
                   {Object.entries(u.tokens)

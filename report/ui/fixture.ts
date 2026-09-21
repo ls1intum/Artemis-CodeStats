@@ -61,11 +61,24 @@ export class PageComponent { open() { return import('../dialog/dialog.component'
   [`${app}/exam/manage/dialog/dialog.component.html`]: `<div class="grid"></div>`,
   [`${app}/exam/manage/clean/clean.component.ts`]: `import { Component } from '@angular/core'
 import { ButtonComponent } from 'app/shared-ui/button/button.component'
-@Component({ selector: 'jhi-clean', templateUrl: './clean.component.html', imports: [ButtonComponent] }) export class CleanComponent { buttonClass = 'primary' }`,
+@Component({ selector: 'jhi-clean', templateUrl: './clean.component.html', imports: [ButtonComponent] }) export class CleanComponent { buttonClass = 'btn' }`,
+  [`${app}/exam/manage/enum-only/enum-only.component.ts`]: `import { Component } from '@angular/core'
+import { ButtonType } from 'app/shared-ui/button/button.component'
+import type { PageComponent } from '../page/page.component'
+@Component({ selector: 'jhi-enum-only', templateUrl: './enum-only.component.html' }) export class EnumOnlyComponent { type = ButtonType.PRIMARY }`,
+  [`${app}/exam/manage/enum-only/enum-only.component.html`]: `<div class="flex"></div>`,
+  [`${app}/exam/manage/pair/pair.component.ts`]: `import { Component } from '@angular/core'
+@Component({ selector: 'jhi-pair-a', templateUrl: './pair.component.html', host: { class: 'row' } }) export class PairAComponent {}
+@Component({ selector: 'jhi-pair-b', template: '<div class="btn"></div>' }) export class PairBComponent {}
+@Component({ selector: 'jhi-pair-c', templateUrl: './pair.component.html' }) export class PairCComponent {}`,
+  [`${app}/exam/manage/pair/pair.component.html`]: `<div class="d-flex"></div>`,
+  [`${app}/app.component.ts`]: `import { Component } from '@angular/core'
+@Component({ selector: 'jhi-app', template: '<router-outlet />' }) export class AppComponent {}`,
   [`${app}/exam/manage/clean/clean.component.html`]: `<div class="flex"></div>`,
   [`${app}/shared-ui/button/button.component.ts`]: `import { Component, input } from '@angular/core'
 @Component({ selector: 'jhi-button', templateUrl: './button.component.html', host: { '[class.d-flex]': 'inline()' } })
-export class ButtonComponent { readonly buttonClass = input('btn btn-primary'); ngOnInit() { this.renderer.addClass(this.el, 'btn-sm') } }`,
+export class ButtonComponent { readonly buttonClass = input('btn btn-primary'); ngOnInit() { this.renderer.addClass(this.el, 'btn-sm') } }
+export enum ButtonType { PRIMARY = 'btn-primary' }`,
   [`${app}/shared-ui/button/button.component.html`]: `<button [class]="buttonClass()"></button>`,
   [`${app}/shared-ui/button/button.component.spec.ts`]: `const x = 'btn'`,
   [`${app}/shared-ui/util.ts`]: `export const rowClass = 'row'`,

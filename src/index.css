@@ -1,5 +1,5 @@
-@import "tailwindcss" source(".");
-@import "tw-animate-css";
+@import 'tailwindcss' source('.');
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -41,7 +41,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-status-locked: #2a78d6;
   --color-status-clean: #8cbcec;
-  --color-status-dirty: #e4e3df;
+  --color-status-dirty: #b9b7b1;
   --color-progress: #006300;
 }
 

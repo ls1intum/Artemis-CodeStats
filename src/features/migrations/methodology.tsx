@@ -13,6 +13,9 @@ export function Methodology({
   manifest: Manifest
   detail: Detail
 }) {
+  const unscanned = detail.units.filter(
+    (u) => !u.scanned && Object.keys(u.tumUi).length > 0,
+  ).length
   const link = (path: string, text = path) => (
     <a
       className="underline underline-offset-4"
@@ -33,9 +36,8 @@ export function Methodology({
               {link('rules/no-bootstrap-classes.mjs', 'no-bootstrap-classes')}{' '}
               rule at this commit, in templates (also inline templates and the
               static parts of interpolated class lists, which the lint does not
-              scan) and in TypeScript class strings (host bindings,{' '}
-              <code>addClass</code>, properties named <code>*class*</code>); or,
-              in SCSS, a <code>--bs-*</code> variable, a hex or{' '}
+              scan) and in host class bindings and <code>addClass</code> calls;
+              or, in SCSS, a <code>--bs-*</code> variable, a hex or{' '}
               <code>rgb()</code>/<code>hsl()</code> color, or a Bootstrap Sass
               import, which the stylelint lock rejects. Shared spacing utilities
               such as <code>mb-3</code> are not hits.
@@ -51,26 +53,25 @@ export function Methodology({
             <dd>
               The unit's template path matches the regression-lock list in{' '}
               {link('eslint.config.mjs')} ({detail.lockGlobs.length} entries at
-              this commit). Locked is Artemis's definition of done for the
-              Bootstrap phase; a locked unit may still use PrimeNG.
+              this commit). A locked unit may still use PrimeNG.
             </dd>
             <dt className="font-medium">Bootstrap-free, unlocked</dt>
             <dd>
               Zero hits, not yet locked. It may still render Bootstrap through
               the units it imports.
             </dd>
-            <dt className="font-medium">Rendered</dt>
+            <dt className="font-medium">Imports with hits</dt>
             <dd>
-              The units reachable through TypeScript imports: template children,
-              dialogs opened from code and lazily loaded routes. Routing by
-              string selector or content projection from outside a unit is not
-              resolved.
+              Units whose class this unit imports, transitively: standalone{' '}
+              <code>imports</code>, dialogs opened from code and{' '}
+              <code>import()</code> calls. Type-only imports do not count;
+              content projected from outside a unit is not resolved.
             </dd>
             <dt className="font-medium">Lockable</dt>
             <dd>
-              A directory that is not locked, in which every unit and file has
-              zero hits and renders nothing with hits. The copied entries follow
-              the three lists that Artemis's{' '}
+              A directory with templates that is not locked, in which every unit
+              and file has zero hits and imports nothing with hits. The copied
+              entries follow the three lists that Artemis's{' '}
               {link(
                 'rules/migration-source-coverage.spec.mjs',
                 'migration-source-coverage',
@@ -92,9 +93,9 @@ export function Methodology({
             </dd>
           </dl>
           <p>
-            Counts are static evidence, not a visual-parity or accessibility
-            certificate. Runtime class construction that the rule cannot see is
-            not counted.
+            Class names built at runtime are not counted.
+            {unscanned > 0 &&
+              ` ${unscanned} units use TUM UI outside the Tailwind @source list, so their utilities are not generated.`}
           </p>
           {detail.diagnostics.length > 0 && (
             <p>

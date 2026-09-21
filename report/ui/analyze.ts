@@ -1,11 +1,12 @@
 import {
   parseTemplate,
+  tmplAstVisitAll,
+  TmplAstRecursiveVisitor,
   TmplAstElement,
   TmplAstTemplate,
   ASTWithSource,
   Interpolation,
   BindingType,
-  type TmplAstNode,
 } from '@angular/compiler'
 import ts from 'typescript'
 import { createHash } from 'node:crypto'
@@ -16,6 +17,7 @@ import {
   analyzerVersion,
   appRoot,
   sectionOf,
+  unitPath,
   type Detail,
   type InventoryEntry,
   type Section,
@@ -35,28 +37,32 @@ export type Kit = {
   components: number
 }
 type Usage = Record<string, number>
-type TemplateResult = {
-  tokens: Usage
-  primeng: Usage
-  ngBootstrap: Usage
-  tumUi: Usage
-  errors: string[]
-}
-type ScriptResult = {
-  declarations: { kind: 'component' | 'directive'; selector?: string }[]
+type Library = 'primeng' | 'ngBootstrap' | 'tumUi'
+type TemplateResult = Record<Library | 'tokens', Usage> & { errors: string[] }
+type Declaration = {
+  kind: 'component' | 'directive'
+  className?: string
+  selector?: string
   templateUrl?: string
   template?: string
   styleUrls: string[]
-  dependencies: string[]
-  primeng: Usage
-  ngBootstrap: Usage
-  tumUi: Usage
+}
+type ScriptResult = {
+  declarations: Declaration[]
+  // Value imports of app files with the imported names; dynamic imports carry no names.
+  dependencies: { base: string; names?: string[] }[]
+  services: Record<'primeng' | 'ngBootstrap', Usage>
   tokens: Usage
 }
 
 const kitSourceDirs = ['packages/tum-ui/src/lib', `${appRoot}/shared-ui/tum-ui`]
+const libraries: Library[] = ['primeng', 'ngBootstrap', 'tumUi']
 const bump = (usage: Usage, key: string, by = 1) => {
   usage[key] = (usage[key] ?? 0) + by
+}
+const merge = (into: Usage, from: Usage | undefined) => {
+  for (const [key, n] of Object.entries(from ?? {})) bump(into, key, n)
+  return into
 }
 const sum = (usage: Usage) => Object.values(usage).reduce((a, b) => a + b, 0)
 const isClassList = (name: string) =>
@@ -65,6 +71,8 @@ const stringText = (node: ts.Node) =>
   ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)
     ? node.text
     : undefined
+const propertyName = (name: ts.PropertyName) =>
+  ts.isIdentifier(name) || ts.isStringLiteral(name) ? name.text : undefined
 
 export function parseLockGlobs(eslintConfig: string): string[] {
   const file = ts.createSourceFile(
@@ -73,42 +81,44 @@ export function parseLockGlobs(eslintConfig: string): string[] {
     ts.ScriptTarget.Latest,
     true,
   )
-  let globs: string[] | undefined
+  const blocks: string[][] = []
   const visit = (node: ts.Node) => {
     if (ts.isObjectLiteralExpression(node)) {
       const property = (name: string) =>
         node.properties.find(
           (p): p is ts.PropertyAssignment =>
-            ts.isPropertyAssignment(p) &&
-            (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
-            p.name.text === name,
-        )
-      const rules = property('rules')?.initializer
-      const files = property('files')?.initializer
+            ts.isPropertyAssignment(p) && propertyName(p.name) === name,
+        )?.initializer
+      const rules = property('rules')
+      const files = property('files')
       if (
         rules &&
         ts.isObjectLiteralExpression(rules) &&
         rules.properties.some(
           (p) =>
             ts.isPropertyAssignment(p) &&
-            ts.isStringLiteral(p.name) &&
-            p.name.text === 'localRules/no-bootstrap-classes',
+            propertyName(p.name) === 'localRules/no-bootstrap-classes',
         ) &&
         files &&
         ts.isArrayLiteralExpression(files)
       )
-        globs = files.elements.map((e) => {
-          const text = stringText(e)
-          if (text === undefined)
-            throw new Error('Lock list contains a non-literal entry')
-          return text
-        })
+        blocks.push(
+          files.elements.map((e) => {
+            const text = stringText(e)
+            if (text === undefined)
+              throw new Error('Lock list contains a non-literal entry')
+            return text
+          }),
+        )
     }
     ts.forEachChild(node, visit)
   }
   visit(file)
-  if (!globs?.length) throw new Error('Regression lock block not found')
-  return globs
+  if (blocks.length !== 1 || !blocks[0].length)
+    throw new Error(
+      `Expected one regression lock block, found ${blocks.length}`,
+    )
+  return blocks[0]
 }
 
 export function parseTailwindSources(tailwindCss: string): string[] {
@@ -123,7 +133,7 @@ export function readKit(root: string): Kit {
   if (!dir) throw new Error('TUM UI kit sources not found')
   for (const path of listFiles(root, dir).filter(
     (p) => p.endsWith('.ts') && !/\.(spec|stories|d)\.ts$/.test(p),
-  )) {
+  ))
     for (const { kind, selector } of analyzeScript(
       path,
       readFileSync(join(root, path), 'utf8'),
@@ -135,7 +145,6 @@ export function readKit(root: string): Kit {
         else if (/^[\w-]+$/.test(part.trim())) kit.elements.add(part.trim())
       }
     }
-  }
   return kit
 }
 
@@ -156,61 +165,52 @@ export function analyzeTemplate(
     for (const token of value.split(/\s+/))
       if (token && rule.isBanned(token)) bump(result.tokens, token)
   }
-  const parsed = parseTemplate(text, path, { preserveWhitespaces: false })
-  result.errors = parsed.errors?.map((e) => e.msg) ?? []
-  const walk = (node: TmplAstNode | TmplAstNode[] | undefined): void => {
-    if (!node) return
-    if (Array.isArray(node)) return node.forEach(walk)
-    if (node instanceof TmplAstElement || node instanceof TmplAstTemplate) {
-      const name =
-        node instanceof TmplAstElement ? node.name : (node.tagName ?? '')
-      if (name.startsWith('p-')) bump(result.primeng, name)
-      if (name.startsWith('ngb-')) bump(result.ngBootstrap, name)
-      if (kit.elements.has(name)) bump(result.tumUi, name)
-      // A structural directive's implicit template repeats the host element's attributes.
-      const attrs =
-        node instanceof TmplAstTemplate && node.tagName !== 'ng-template'
-          ? node.templateAttrs
-          : [...node.attributes, ...node.inputs, ...node.outputs]
-      for (const attr of attrs) {
-        if (/^p[A-Z]\w*$/.test(attr.name)) bump(result.primeng, attr.name)
-        if (/^ngb[A-Z]\w*$/.test(attr.name)) bump(result.ngBootstrap, attr.name)
-        if (kit.attributes.has(attr.name)) bump(result.tumUi, attr.name)
-        if (!('value' in attr)) continue
-        if (typeof attr.value === 'string') {
-          if (isClassList(attr.name)) classes(attr.value)
-          continue
-        }
-        // [class.btn] normalizes to the binding name; interpolations keep their static chunks.
-        if ('type' in attr && attr.type === BindingType.Class)
-          classes(attr.name)
-        if (!isClassList(attr.name) && attr.name !== 'ngClass') continue
-        const ast =
-          attr.value instanceof ASTWithSource ? attr.value.ast : attr.value
-        if (ast instanceof Interpolation) ast.strings.forEach(classes)
-        else
-          for (const token of rule.bannedClassesInBindingExpression(
-            attr.value instanceof ASTWithSource
-              ? (attr.value.source ?? '')
-              : '',
-          ))
-            bump(result.tokens, token)
+  const inspect = (node: TmplAstElement | TmplAstTemplate) => {
+    const name =
+      node instanceof TmplAstElement ? node.name : (node.tagName ?? '')
+    if (name.startsWith('p-')) bump(result.primeng, name)
+    if (name.startsWith('ngb-')) bump(result.ngBootstrap, name)
+    if (kit.elements.has(name)) bump(result.tumUi, name)
+    // A structural directive's implicit template repeats the host element's attributes.
+    const attrs =
+      node instanceof TmplAstTemplate && node.tagName !== 'ng-template'
+        ? node.templateAttrs
+        : [...node.attributes, ...node.inputs, ...node.outputs]
+    for (const attr of attrs) {
+      if (/^p[A-Z]\w*$/.test(attr.name)) bump(result.primeng, attr.name)
+      if (/^ngb[A-Z]\w*$/.test(attr.name)) bump(result.ngBootstrap, attr.name)
+      if (kit.attributes.has(attr.name)) bump(result.tumUi, attr.name)
+      if (!('value' in attr)) continue
+      if (typeof attr.value === 'string') {
+        if (isClassList(attr.name)) classes(attr.value)
+        continue
       }
-    }
-    // Control-flow blocks nest children under version-specific keys; descend into every child node.
-    for (const [key, value] of Object.entries(node)) {
-      if (/Span$|^i18n$/.test(key)) continue
-      for (const child of Array.isArray(value) ? value : [value])
-        if (
-          child &&
-          typeof child === 'object' &&
-          'sourceSpan' in child &&
-          typeof child.visit === 'function'
-        )
-          walk(child as TmplAstNode)
+      // [class.btn] normalizes to the binding name; interpolations keep their static chunks.
+      if ('type' in attr && attr.type === BindingType.Class) classes(attr.name)
+      if (!isClassList(attr.name) && attr.name !== 'ngClass') continue
+      const value = attr.value instanceof ASTWithSource ? attr.value : undefined
+      if (value?.ast instanceof Interpolation)
+        value.ast.strings.forEach(classes)
+      else
+        for (const token of rule.bannedClassesInBindingExpression(
+          value?.source ?? '',
+        ))
+          bump(result.tokens, token)
     }
   }
-  walk(parsed.nodes)
+  class Visitor extends TmplAstRecursiveVisitor {
+    override visitElement(element: TmplAstElement) {
+      inspect(element)
+      super.visitElement(element)
+    }
+    override visitTemplate(template: TmplAstTemplate) {
+      inspect(template)
+      super.visitTemplate(template)
+    }
+  }
+  const parsed = parseTemplate(text, path, { preserveWhitespaces: false })
+  result.errors = parsed.errors?.map((e) => e.msg) ?? []
+  tmplAstVisitAll(new Visitor(), parsed.nodes)
   return result
 }
 
@@ -218,54 +218,58 @@ export function analyzeScript(path: string, source: string): ScriptResult {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
   const result: ScriptResult = {
     declarations: [],
-    styleUrls: [],
     dependencies: [],
-    primeng: {},
-    ngBootstrap: {},
-    tumUi: {},
+    services: { primeng: {}, ngBootstrap: {} },
     tokens: {},
   }
   const angular = new Map<string, string>()
   const namespaces = new Set<string>()
+  const dependency = (specifier: string, names?: string[]) => {
+    const base = specifier.startsWith('.')
+      ? posix.join(dirname(path), specifier)
+      : specifier.startsWith('app/')
+        ? `${appRoot}/${specifier.slice(4)}`
+        : undefined
+    if (base) result.dependencies.push({ base, names })
+  }
   for (const statement of file.statements) {
     if (
       !ts.isImportDeclaration(statement) ||
-      !ts.isStringLiteral(statement.moduleSpecifier)
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.importClause?.isTypeOnly
     )
       continue
     const pkg = statement.moduleSpecifier.text
     const bindings = statement.importClause?.namedBindings
     const names =
       bindings && ts.isNamedImports(bindings)
-        ? bindings.elements.map((e) => ({
-            local: e.name.text,
-            exported: (e.propertyName ?? e.name).text,
-          }))
+        ? bindings.elements
+            .filter((e) => !e.isTypeOnly)
+            .map((e) => ({
+              local: e.name.text,
+              exported: (e.propertyName ?? e.name).text,
+            }))
         : []
     if (pkg === '@angular/core') {
       if (bindings && ts.isNamespaceImport(bindings))
         namespaces.add(bindings.name.text)
       for (const { local, exported } of names) angular.set(local, exported)
     }
+    // Services and modal handles are usage without template evidence; other names may be types.
     const library = /^primeng(?:\/|$)/.test(pkg)
-      ? result.primeng
+      ? result.services.primeng
       : /^@ng-bootstrap\//.test(pkg)
-        ? result.ngBootstrap
-        : /^@tumaet\/ui-angular(?:\/|$)/.test(pkg) ||
-            /(?:^|\/)tum-ui(?:\/|$)/.test(pkg)
-          ? result.tumUi
-          : undefined
-    if (library)
-      for (const { exported } of names.length ? names : [{ exported: pkg }])
-        bump(library, exported)
-  }
-  const dependency = (specifier: string) => {
-    const base = specifier.startsWith('.')
-      ? posix.join(dirname(path), specifier)
-      : specifier.startsWith('app/')
-        ? `${appRoot}/${specifier.slice(4)}`
+        ? result.services.ngBootstrap
         : undefined
-    if (base) result.dependencies.push(base)
+    if (library)
+      for (const { exported } of names)
+        if (/(?:Service|Modal)$/.test(exported)) bump(library, exported)
+    dependency(
+      pkg,
+      bindings && ts.isNamespaceImport(bindings)
+        ? undefined
+        : names.map((n) => n.exported),
+    )
   }
   const decoratorName = (decorator: ts.Decorator) => {
     if (!ts.isCallExpression(decorator.expression)) return
@@ -281,71 +285,49 @@ export function analyzeScript(path: string, source: string): ScriptResult {
   const classTokens = (text: string) => {
     for (const token of text.split(/\s+/)) if (token) bump(result.tokens, token)
   }
-  const literals = (node: ts.Node) => {
-    const text = stringText(node)
-    if (text !== undefined) classTokens(text)
-    if (ts.isTemplateExpression(node)) {
-      classTokens(node.head.text)
-      node.templateSpans.forEach((span) => classTokens(span.literal.text))
-    }
-    ts.forEachChild(node, literals)
-  }
-  const metadata = (
-    decorator: ts.Decorator,
-    declaration: ScriptResult['declarations'][number],
-  ) => {
+  const metadata = (decorator: ts.Decorator, declaration: Declaration) => {
     const argument = (decorator.expression as ts.CallExpression).arguments[0]
     if (!argument || !ts.isObjectLiteralExpression(argument)) return
     for (const property of argument.properties) {
-      if (
-        !ts.isPropertyAssignment(property) ||
-        !(ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))
-      )
-        continue
+      if (!ts.isPropertyAssignment(property)) continue
       const value = property.initializer
       const text = stringText(value)
-      switch (property.name.text) {
+      switch (propertyName(property.name)) {
         case 'selector':
           declaration.selector = text
           break
         case 'templateUrl':
-          result.templateUrl = text
+          declaration.templateUrl = text
           break
         case 'template':
-          result.template = text
+          declaration.template = text
           break
         case 'styleUrl':
-          if (text) result.styleUrls.push(text)
+          if (text) declaration.styleUrls.push(text)
           break
         case 'styleUrls':
           if (ts.isArrayLiteralExpression(value))
             for (const element of value.elements) {
               const url = stringText(element)
-              if (url) result.styleUrls.push(url)
+              if (url) declaration.styleUrls.push(url)
             }
           break
         case 'host':
           if (ts.isObjectLiteralExpression(value))
             for (const binding of value.properties) {
               if (!ts.isPropertyAssignment(binding)) continue
-              const key = ts.isStringLiteral(binding.name)
-                ? binding.name.text
-                : ts.isIdentifier(binding.name)
-                  ? binding.name.text
-                  : ''
+              const key = propertyName(binding.name) ?? ''
               const bound = /^\[?class\.([\w-]+)\]?$/.exec(key)?.[1]
               if (bound) classTokens(bound)
+              else if (key === 'class') {
+                const text = stringText(binding.initializer)
+                if (text) classTokens(text)
+              }
             }
       }
     }
   }
   const visit = (node: ts.Node) => {
-    if (
-      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-      node.moduleSpecifier &&
-      ts.isStringLiteral(node.moduleSpecifier)
-    )
-      dependency(node.moduleSpecifier.text)
     if (
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword
@@ -356,9 +338,13 @@ export function analyzeScript(path: string, source: string): ScriptResult {
     if (ts.isDecorator(node)) {
       const name = decoratorName(node)
       if (name === 'Component' || name === 'Directive') {
-        const declaration = {
+        const declaration: Declaration = {
           kind: name === 'Component' ? 'component' : 'directive',
-        } as const
+          className: ts.isClassDeclaration(node.parent)
+            ? node.parent.name?.text
+            : undefined,
+          styleUrls: [],
+        }
         result.declarations.push(declaration)
         metadata(node, declaration)
       }
@@ -369,7 +355,7 @@ export function analyzeScript(path: string, source: string): ScriptResult {
         if (bound) classTokens(bound)
       }
     }
-    // Class lists assembled in TypeScript: `buttonClass = 'btn'`, `renderer.addClass(el, 'btn')`.
+    // Classes applied from code: `renderer.addClass(el, 'btn')`, `classList.add('btn')`.
     if (
       ts.isCallExpression(node) &&
       ts.isPropertyAccessExpression(node.expression) &&
@@ -378,24 +364,10 @@ export function analyzeScript(path: string, source: string): ScriptResult {
           ts.isPropertyAccessExpression(node.expression.expression) &&
           node.expression.expression.name.text === 'classList'))
     )
-      node.arguments.forEach(literals)
-    const named =
-      ts.isPropertyDeclaration(node) ||
-      ts.isVariableDeclaration(node) ||
-      ts.isPropertyAssignment(node) ||
-      ts.isParameter(node)
-        ? { name: node.name, value: node.initializer }
-        : ts.isBinaryExpression(node) &&
-            node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-            ts.isPropertyAccessExpression(node.left)
-          ? { name: node.left.name, value: node.right }
-          : undefined
-    if (
-      named?.value &&
-      (ts.isIdentifier(named.name) || ts.isStringLiteral(named.name)) &&
-      /class/i.test(named.name.text)
-    )
-      literals(named.value)
+      for (const argument of node.arguments) {
+        const text = stringText(argument)
+        if (text) classTokens(text)
+      }
     ts.forEachChild(node, visit)
   }
   visit(file)
@@ -424,6 +396,7 @@ function listFiles(root: string, directory: string): string[] {
   return files
 }
 
+// Callers must extract each commit to its own directory: ESM caches modules by URL.
 export async function loadRule(root: string) {
   const path = join(root, 'rules/no-bootstrap-classes.mjs')
   const source = readFileSync(path)
@@ -495,61 +468,79 @@ export async function analyzeTree(
       diagnostics.push(...template.errors.map((message) => ({ path, message })))
     } else styles.set(path, analyzeStyles(source))
   }
-  const units = new Map<string, Unit>()
-  const owned = new Set<string>()
-  const scriptTokens = (path: string) => {
-    const tokens: Usage = {}
-    for (const [token, n] of Object.entries(scripts.get(path)!.tokens))
-      if (rule.isBanned(token)) tokens[token] = n
-    return tokens
-  }
+  // Class hits per file, counted once regardless of how many units share the file.
+  const scriptTokens = new Map<string, Usage>()
+  const fileTokens = new Map<string, Usage>()
+  for (const [path, template] of templates)
+    fileTokens.set(path, template.tokens)
   for (const [path, script] of scripts) {
-    const declaration = script.declarations[0]
-    if (!declaration) continue
-    const tokens = scriptTokens(path)
+    const tokens: Usage = {}
+    for (const [token, n] of Object.entries(script.tokens))
+      if (rule.isBanned(token)) tokens[token] = n
+    scriptTokens.set(path, tokens)
+    fileTokens.set(path, { ...tokens })
+  }
+  const units = new Map<string, Unit>()
+  const classNames = new Map<string, Map<string, string>>()
+  const owned = new Set<string>()
+  for (const [path, script] of scripts) {
     const resolve = (url: string) => posix.join(dirname(path), url)
-    const template = script.templateUrl && resolve(script.templateUrl)
-    const inline =
-      script.template !== undefined
-        ? analyzeTemplate(script.template, path, rule, kit)
-        : undefined
-    if (inline)
-      diagnostics.push(...inline.errors.map((message) => ({ path, message })))
-    const external = template ? templates.get(template) : undefined
-    if (template) owned.add(template)
-    const styleFiles = script.styleUrls
-      .map(resolve)
-      .filter((s) => styles.has(s))
-    styleFiles.forEach((s) => owned.add(s))
-    const usage = (key: 'primeng' | 'ngBootstrap' | 'tumUi') => {
-      const merged: Usage = { ...script[key] }
-      for (const source of [inline, external])
-        for (const [name, n] of Object.entries(source?.[key] ?? {}))
-          bump(merged, name, n)
-      return merged
-    }
-    for (const source of [inline, external])
-      for (const [token, n] of Object.entries(source?.tokens ?? {}))
-        bump(tokens, token, n)
-    const locked = isLocked(template ?? path.replace(/\.ts$/, '.html'))
-    units.set(path, {
-      id: path,
-      kind: declaration.kind,
-      selector: declaration.selector,
-      section: sectionOf(path),
-      template: external ? template : undefined,
-      styles: styleFiles,
-      status: locked ? 'locked' : 'clean',
-      scanned: isScanned(template ?? path),
-      classHits: sum(tokens),
-      styleHits: styleFiles.reduce((n, s) => n + styles.get(s)!, 0),
-      closureHits: 0,
-      blocks: 0,
-      blockers: [],
-      tokens,
-      primeng: usage('primeng'),
-      ngBootstrap: usage('ngBootstrap'),
-      tumUi: usage('tumUi'),
+    script.declarations.forEach((declaration, index) => {
+      const id = index ? `${path}#${index}` : path
+      if (declaration.className)
+        classNames.set(
+          path,
+          (classNames.get(path) ?? new Map()).set(declaration.className, id),
+        )
+      const template =
+        declaration.templateUrl && resolve(declaration.templateUrl)
+      const external = template ? templates.get(template) : undefined
+      if (template) owned.add(template)
+      const inline =
+        declaration.template !== undefined
+          ? analyzeTemplate(declaration.template, path, rule, kit)
+          : undefined
+      if (inline) {
+        diagnostics.push(...inline.errors.map((message) => ({ path, message })))
+        merge(fileTokens.get(path)!, inline.tokens)
+      }
+      const styleFiles = declaration.styleUrls
+        .map(resolve)
+        .filter((s) => styles.has(s))
+      styleFiles.forEach((s) => owned.add(s))
+      // Script-level evidence (host bindings, addClass, services) belongs to the file's first unit.
+      const tokens = merge(
+        merge({ ...(index ? {} : scriptTokens.get(path)) }, external?.tokens),
+        inline?.tokens,
+      )
+      const usage = (library: Library) =>
+        merge(
+          merge(
+            index || library === 'tumUi' ? {} : { ...script.services[library] },
+            external?.[library],
+          ),
+          inline?.[library],
+        )
+      const locked = isLocked(template ?? path.replace(/\.ts$/, '.html'))
+      units.set(id, {
+        id,
+        kind: declaration.kind,
+        selector: declaration.selector,
+        section: sectionOf(path),
+        template: external ? template : undefined,
+        styles: styleFiles,
+        status: locked ? 'locked' : 'clean',
+        scanned: isScanned(template ?? path),
+        classHits: sum(tokens),
+        styleHits: styleFiles.reduce((n, s) => n + styles.get(s)!, 0),
+        closureHits: 0,
+        blocks: 0,
+        blockers: [],
+        tokens,
+        primeng: usage('primeng'),
+        ngBootstrap: usage('ngBootstrap'),
+        tumUi: usage('tumUi'),
+      })
     })
   }
   if (!units.size || !templates.size)
@@ -557,19 +548,22 @@ export async function analyzeTree(
   const ownHits = (unit: Unit) => unit.classHits + unit.styleHits
   for (const unit of units.values())
     if (unit.status !== 'locked' && ownHits(unit) > 0) unit.status = 'dirty'
-  // Render closure: every unit reachable through imports (template children, dialogs, lazy routes).
+  // Render closure: units whose class this file imports (standalone `imports`, dialogs, lazy loads).
   const edges = new Map<string, string[]>()
-  for (const [path, script] of scripts) {
-    if (!units.has(path)) continue
-    edges.set(
-      path,
-      script.dependencies.flatMap((base) =>
-        [`${base}.ts`, `${base}/index.ts`, base].filter(
-          (candidate) => candidate !== path && units.has(candidate),
-        ),
-      ),
-    )
-  }
+  for (const [path, script] of scripts)
+    for (const id of classNames.get(path)?.values() ?? [])
+      edges.set(
+        id,
+        script.dependencies.flatMap(({ base, names }) => {
+          const target = [`${base}.ts`, `${base}/index.ts`, base].find((c) =>
+            classNames.has(c),
+          )
+          if (!target || target === path) return []
+          return [...classNames.get(target)!]
+            .filter(([name]) => !names || names.includes(name))
+            .map(([, id]) => id)
+        }),
+      )
   const reachable = new Map<string, Set<string>>()
   for (const id of units.keys()) {
     const seen = new Set<string>()
@@ -586,23 +580,23 @@ export async function analyzeTree(
   for (const unit of units.values()) {
     const closure = [...reachable.get(unit.id)!].map((id) => units.get(id)!)
     unit.closureHits = closure.reduce((n, other) => n + ownHits(other), 0)
-    if (ownHits(unit) === 0) {
-      unit.blockers = closure
-        .filter((other) => ownHits(other) > 0)
-        .map((other) => other.id)
-        .sort()
+    if (ownHits(unit) > 0) continue
+    unit.blockers = closure
+      .filter((other) => ownHits(other) > 0)
+      .map((other) => other.id)
+      .sort()
+    if (unit.status === 'clean')
       for (const id of unit.blockers) units.get(id)!.blocks++
-    }
   }
   const orphanFiles: Detail['files'] = []
-  for (const [path, template] of templates)
-    if (!owned.has(path) && sum(template.tokens) > 0)
+  for (const [path, tokens] of fileTokens)
+    if (!owned.has(path) && !units.has(path) && sum(tokens) > 0)
       orphanFiles.push({
         path,
         section: sectionOf(path),
-        classHits: sum(template.tokens),
+        classHits: sum(tokens),
         styleHits: 0,
-        tokens: template.tokens,
+        tokens,
       })
   for (const [path, hits] of styles)
     if (!owned.has(path) && hits > 0)
@@ -613,51 +607,45 @@ export async function analyzeTree(
         styleHits: hits,
         tokens: {},
       })
-  for (const path of scripts.keys()) {
-    if (units.has(path)) continue
-    const tokens = scriptTokens(path)
-    if (sum(tokens) > 0)
-      orphanFiles.push({
-        path,
-        section: sectionOf(path),
-        classHits: sum(tokens),
-        styleHits: 0,
-        tokens,
-      })
-  }
   orphanFiles.sort((a, b) => a.path.localeCompare(b.path))
   // A directory is lockable when nothing under it, nor anything it renders, still carries Bootstrap.
   const dirs = new Map<
     string,
-    { units: number; unlocked: number; clean: boolean }
+    { units: number; unlocked: number; templates: number; clean: boolean }
   >()
   const ancestors = (path: string) => {
-    const parts = dirname(path)
-      .slice(appRoot.length + 1)
-      .split('/')
+    const relative = dirname(path).slice(appRoot.length + 1)
+    if (!path.startsWith(`${appRoot}/`) || !relative) return []
+    const parts = relative.split('/')
     return parts.map((_, i) => `${appRoot}/${parts.slice(0, i + 1).join('/')}`)
   }
-  for (const unit of units.values()) {
-    if (!unit.id.startsWith(`${appRoot}/`)) continue
-    for (const dir of ancestors(unit.id)) {
-      const entry = dirs.get(dir) ?? { units: 0, unlocked: 0, clean: true }
+  for (const unit of units.values())
+    for (const dir of ancestors(unitPath(unit.id))) {
+      const entry = dirs.get(dir) ?? {
+        units: 0,
+        unlocked: 0,
+        templates: 0,
+        clean: true,
+      }
       entry.units++
       if (unit.status !== 'locked') entry.unlocked++
+      if (unit.template) entry.templates++
       entry.clean &&= ownHits(unit) === 0 && unit.closureHits === 0
       dirs.set(dir, entry)
     }
-  }
   for (const file of orphanFiles)
-    if (file.path.startsWith(`${appRoot}/`))
-      for (const dir of ancestors(file.path)) {
-        const entry = dirs.get(dir)
-        if (entry) entry.clean = false
-      }
+    for (const dir of ancestors(file.path)) {
+      const entry = dirs.get(dir)
+      if (entry) entry.clean = false
+    }
   const lockableDirs = new Set(
     [...dirs]
       .filter(
         ([dir, entry]) =>
-          entry.clean && entry.unlocked > 0 && !isLocked(`${dir}/x.html`),
+          entry.clean &&
+          entry.unlocked > 0 &&
+          entry.templates > 0 &&
+          !isLocked(`${dir}/x.html`),
       )
       .map(([dir]) => dir),
   )
@@ -686,7 +674,6 @@ export async function analyzeTree(
     const entry = section(unit.section)
     entry.units++
     entry[unit.status]++
-    entry.classHits += unit.classHits
     for (const blocker of unit.blockers)
       if (units.get(blocker)!.section !== unit.section) {
         const set = externalBlockers.get(unit.section) ?? new Set()
@@ -694,9 +681,9 @@ export async function analyzeTree(
         externalBlockers.set(unit.section, set)
       }
   }
+  for (const [path, tokens] of fileTokens)
+    section(sectionOf(path)).classHits += sum(tokens)
   for (const [path, hits] of styles) section(sectionOf(path)).styleHits += hits
-  for (const file of orphanFiles)
-    section(file.section).classHits += file.classHits
   for (const { dir } of lockable) section(sectionOf(`${dir}/x`)).lockableDirs++
   for (const [name, set] of externalBlockers) section(name).blockers = set.size
   const all = [...units.values()]
@@ -705,7 +692,7 @@ export async function analyzeTree(
     locked: all.filter((u) => u.status === 'locked').length,
     clean: all.filter((u) => u.status === 'clean').length,
     dirty: all.filter((u) => u.status === 'dirty').length,
-    classHits: [...sections.values()].reduce((n, s) => n + s.classHits, 0),
+    classHits: [...fileTokens.values()].reduce((n, t) => n + sum(t), 0),
     styleHits: [...styles.values()].reduce((n, h) => n + h, 0),
     lockedResidue: all
       .filter((u) => u.status === 'locked')
@@ -738,10 +725,10 @@ export async function analyzeTree(
           ...all.map((u) => u.tokens),
           ...orphanFiles.map((f) => f.tokens),
         ]),
-        primeng: inventory(all.map((u) => u.primeng)),
-        ngBootstrap: inventory(all.map((u) => u.ngBootstrap)),
-        tumUi: inventory(all.map((u) => u.tumUi)),
-      },
+        ...Object.fromEntries(
+          libraries.map((l) => [l, inventory(all.map((u) => u[l]))]),
+        ),
+      } as Detail['inventory'],
       diagnostics,
     },
   }

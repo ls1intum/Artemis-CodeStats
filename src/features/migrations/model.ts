@@ -144,14 +144,22 @@ export const sectionOf = (path: string) =>
       ? path.slice(appRoot.length + 1).split('/')[0]
       : 'app'
 
+// Files with several declarations produce units `path#1`, `path#2`, … after the first.
+export const unitPath = (id: string) => id.replace(/#\d+$/, '')
 export const sourceUrl = (commit: string, path: string) =>
   `https://github.com/ls1intum/Artemis/blob/${commit}/${path.split('/').map(encodeURIComponent).join('/')}`
 export const commitUrl = (commit: string) =>
   `https://github.com/ls1intum/Artemis/commit/${commit}`
-export const pullRequestNumber = (subject: string) =>
-  /\(#(\d+)\)\s*$/.exec(subject)?.[1]
-export const pullRequestUrl = (number: string) =>
-  `https://github.com/ls1intum/Artemis/pull/${number}`
+export const pullRequest = (subject: string) => {
+  const match = /^(.*?)\s*\(#(\d+)\)\s*$/.exec(subject)
+  return match
+    ? {
+        title: match[1],
+        number: match[2],
+        url: `https://github.com/ls1intum/Artemis/pull/${match[2]}`,
+      }
+    : { title: subject }
+}
 
 // The three lists the Artemis migration-source-coverage test keeps consistent.
 export const lockEntries = (dir: string) => ({

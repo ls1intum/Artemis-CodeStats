@@ -101,15 +101,15 @@ test('tree analysis derives units, status, closure, lockability and inventories'
   summarySchema.parse(summary)
   detailSchema.parse(detail)
   assert.deepEqual(summary.totals, {
-    units: 6,
+    units: 11,
     locked: 2,
-    clean: 2,
-    dirty: 2,
+    clean: 4,
+    dirty: 5,
     classHits: 12,
     styleHits: 6,
     lockedResidue: 2,
     lockedDirs: 2,
-    lockableDirs: 1,
+    lockableDirs: 2,
     primeng: 2,
     ngBootstrap: 1,
     tumUi: 1,
@@ -120,53 +120,61 @@ test('tree analysis derives units, status, closure, lockability and inventories'
   assert.equal(list.status, 'locked')
   assert.deepEqual(list.tokens, { row: 1 })
   assert.equal(list.styleHits, 1)
-  assert.deepEqual(list.tumUi, {
-    TumUiButtonComponent: 1,
-    'tum-ui-button': 1,
-    tumUiButton: 1,
-  })
-  assert.deepEqual(list.primeng, { ButtonModule: 1, pButton: 1 })
+  assert.deepEqual(list.tumUi, { 'tum-ui-button': 1, tumUiButton: 1 })
+  assert.deepEqual(list.primeng, { pButton: 1 })
   const alert = unit('alert.component.ts')
   assert.equal(alert.status, 'locked')
   assert.equal(alert.classHits, 0, 'custom alert-* names are not Bootstrap')
   const button = unit('button.component.ts')
-  assert.deepEqual(button.tokens, {
-    'd-flex': 1,
-    btn: 1,
-    'btn-primary': 1,
-    'btn-sm': 1,
-  })
+  assert.deepEqual(
+    button.tokens,
+    { 'd-flex': 1, 'btn-sm': 1 },
+    'host bindings and addClass count; other strings do not',
+  )
   assert.equal(button.blocks, 1, 'blocks the clean unit that renders it')
   const page = unit('page.component.ts')
   assert.equal(page.status, 'dirty')
   assert.equal(page.styleHits, 3)
-  assert.equal(page.closureHits, 4)
-  assert.deepEqual(
-    page.blockers,
-    [],
-    'blockers are listed for clean units only',
-  )
+  assert.equal(page.closureHits, 2)
+  assert.deepEqual(page.blockers, [], 'blockers are listed for hit-free units')
   assert.deepEqual(page.styles, [
     `${app}/exam/manage/page/page.component.scss`,
     `${app}/exam/manage/shared.scss`,
   ])
-  const dialog = unit('dialog.component.ts')
-  assert.equal(dialog.status, 'clean')
-  assert.equal(dialog.scanned, true)
+  assert.deepEqual(page.primeng, { 'p-dialog': 1 })
+  assert.deepEqual(page.ngBootstrap, { ngbTooltip: 1 })
   const clean = unit('clean.component.ts')
-  assert.deepEqual(clean.tokens, {})
   assert.equal(clean.status, 'clean')
-  assert.equal(clean.closureHits, 4)
+  assert.equal(clean.closureHits, 2)
   assert.deepEqual(clean.blockers, [button.id])
+  assert.equal(
+    unit('enum-only.component.ts').closureHits,
+    0,
+    'importing only an enum or a type does not render the component',
+  )
+  assert.deepEqual(
+    detail.units
+      .filter((u) => u.id.includes('pair'))
+      .map((u) => [
+        u.id.slice(u.id.lastIndexOf('/') + 1),
+        u.selector,
+        u.tokens,
+      ]),
+    [
+      ['pair.component.ts', 'jhi-pair-a', { row: 1, 'd-flex': 1 }],
+      ['pair.component.ts#1', 'jhi-pair-b', { btn: 1 }],
+      ['pair.component.ts#2', 'jhi-pair-c', { 'd-flex': 1 }],
+    ],
+    'every declaration is a unit; a shared template counts once in totals',
+  )
+  assert.equal(unit('app.component.ts').section, 'app')
   assert.deepEqual(detail.lockable, [
     { dir: `${app}/exam/manage/dialog`, units: 1 },
+    { dir: `${app}/exam/manage/enum-only`, units: 1 },
   ])
   assert.deepEqual(
     detail.files.map((f) => [f.path, f.classHits, f.styleHits]),
-    [
-      [`${app}/shared-ui/util.ts`, 1, 0],
-      ['src/main/webapp/content/scss/global.scss', 0, 2],
-    ],
+    [['src/main/webapp/content/scss/global.scss', 0, 2]],
   )
   assert.deepEqual(
     detail.sections.map((s) => [
@@ -175,22 +183,23 @@ test('tree analysis derives units, status, closure, lockability and inventories'
       s.classHits,
       s.styleHits,
       s.blockers,
+      s.lockableDirs,
     ]),
     [
-      ['exam', 3, 6, 3, 1],
-      ['shared-ui', 1, 5, 0, 0],
-      ['admin', 1, 1, 1, 0],
-      ['content', 0, 0, 2, 0],
-      ['core', 1, 0, 0, 0],
+      ['exam', 7, 9, 3, 1, 2],
+      ['admin', 1, 1, 1, 0, 0],
+      ['content', 0, 0, 2, 0, 0],
+      ['shared-ui', 1, 2, 0, 0, 0],
+      ['app', 1, 0, 0, 0, 0],
+      ['core', 1, 0, 0, 0, 0],
     ],
   )
   assert.deepEqual(detail.inventory.bootstrap.slice(0, 2), [
+    { name: 'd-flex', occurrences: 4, units: 4 },
     { name: 'row', occurrences: 3, units: 3 },
-    { name: 'btn', occurrences: 2, units: 2 },
   ])
-  assert.deepEqual(detail.inventory.ngBootstrap.map((e) => e.name).sort(), [
-    'NgbTooltip',
-    'ngbTooltip',
+  assert.deepEqual(detail.inventory.ngBootstrap, [
+    { name: 'ngbTooltip', occurrences: 1, units: 1 },
   ])
   assert.equal(detail.diagnostics.length, 0)
   assert.match(detail.rule, /^[a-f0-9]{40}$/)

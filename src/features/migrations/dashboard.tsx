@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { useLoaderData, useNavigate, useSearch } from '@tanstack/react-router'
 import {
   Card,
@@ -7,7 +8,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { sourceUrl } from './model'
-import { checkpoints } from './load-report'
 import { Controls } from './controls'
 import { Headline } from './headline'
 import { Regressions } from './regressions'
@@ -21,14 +21,13 @@ import { Inventory } from './inventory'
 import { Methodology } from './methodology'
 
 export function MigrationDashboard() {
-  const { manifest, snapshot, compare, detail, compareDetail } = useLoaderData({
-    from: '/',
-  })
+  const { manifest, points, snapshot, compare, detail, compareDetail } =
+    useLoaderData({ from: '/' })
   const search = useSearch({ from: '/' })
+  const opener = useRef<HTMLElement | null>(null)
   const navigate = useNavigate({ from: '/' })
   const update = (patch: Partial<typeof search>) =>
     void navigate({ search: (previous) => ({ ...previous, ...patch }) })
-  const points = checkpoints(manifest)
   const adoption = manifest.snapshots.findIndex(
     (s) => s.commit === manifest.packageAdoption,
   )
@@ -76,12 +75,17 @@ export function MigrationDashboard() {
       {(search.snapshot && search.snapshot !== snapshot.commit) ||
       (search.compare && search.compare !== compare.commit) ? (
         <p role="status" className="text-sm text-destructive">
-          A requested snapshot is not a retained checkpoint; showing the nearest
-          available one.
+          A requested snapshot is not a retained checkpoint or is not earlier
+          than the snapshot; showing the nearest available one.
         </p>
       ) : null}
+      <Headline
+        series={series}
+        snapshot={snapshot}
+        compare={compare}
+        lockableUnits={detail.lockable.reduce((n, l) => n + l.units, 0)}
+      />
       <Regressions detail={detail} compare={compareDetail} />
-      <Headline series={series} snapshot={snapshot} compare={compare} />
       <Burndown
         series={series}
         snapshot={snapshot}
@@ -95,26 +99,29 @@ export function MigrationDashboard() {
       <Sections
         detail={detail}
         compare={compareDetail}
-        onSelect={(section) => update({ section })}
+        onSelect={(section, trigger) => {
+          opener.current = trigger
+          update({ section })
+        }}
       />
       <SectionSheet
-        key={section}
         section={section}
         detail={detail}
         compare={compareDetail}
         onClose={() => update({ section: undefined })}
+        opener={opener}
       />
       <Blockers detail={detail} />
       {detail.lockable.length > 0 && (
         <Card id="lockable">
           <CardHeader>
-            <CardTitle>
-              <h2>Lockable now</h2>
+            <CardTitle asChild>
+              <h2>Lockable directories</h2>
             </CardTitle>
             <CardDescription>
-              Directories with zero hits whose rendered units also have zero
-              hits. Locking them is a configuration-only change to the three
-              lists.
+              Nothing under these directories, nor anything they import, has
+              Bootstrap left. Locking them is a configuration-only change to the
+              three lists.
             </CardDescription>
           </CardHeader>
           <CardContent className="max-h-[28rem] overflow-auto">

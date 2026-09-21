@@ -47,7 +47,7 @@ export function StatusBar({
   legend = false,
   className,
 }: {
-  counts: Record<Status, number>
+  counts: Pick<Record<Status, number>, Status>
   legend?: boolean
   className?: string
 }) {
@@ -60,7 +60,7 @@ export function StatusBar({
       <div
         role="img"
         aria-label={summary}
-        className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-sm bg-status-dirty"
+        className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-sm bg-muted"
       >
         {statuses.map(
           (s) =>
