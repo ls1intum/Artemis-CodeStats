@@ -72,10 +72,18 @@ import type { PageComponent } from '../page/page.component'
 @Component({ selector: 'jhi-pair-b', template: '<div class="btn"></div>' }) export class PairBComponent {}
 @Component({ selector: 'jhi-pair-c', templateUrl: './pair.component.html' }) export class PairCComponent {}`,
   [`${app}/exam/manage/pair/pair.component.html`]: `<div class="d-flex"></div>`,
+  [`${app}/app.routes.ts`]: `import { Routes } from '@angular/router'
+export const routes: Routes = [
+  { path: '', loadComponent: () => import('./app.component').then((c) => c.AppComponent) },
+  { path: 'exams', loadChildren: () => import('app/exam/manage/exam.routes').then((r) => r.examRoutes) },
+  { path: '', outlet: 'navbar', loadComponent: () => import('./shared-ui/button/button.component').then((m) => m.ButtonComponent) },
+]`,
   [`${app}/exam/manage/exam.routes.ts`]: `import { DialogComponent } from './dialog/dialog.component'
-export const routes = [
-  { path: 'page/:id', loadComponent: () => import('./page/page.component').then((m) => m.PageComponent) },
-  { path: 'dialog', component: DialogComponent, children: [{ path: 'nested', component: DialogComponent }] },
+const nested = [{ path: 'nested', component: DialogComponent }]
+export const examRoutes = [
+  { path: 'page/:id', loadComponent: () => import('./page/page.component').then((m) => m.PageComponent), children: nested },
+  { path: 'dialog', component: DialogComponent },
+  { path: PREFIX + '/clean', loadComponent: () => import('./clean/clean.component').then((m) => m.CleanComponent) },
 ]`,
   [`${app}/app.component.ts`]: `import { Component } from '@angular/core'
 @Component({ selector: 'jhi-app', template: '<router-outlet />' }) export class AppComponent {}`,

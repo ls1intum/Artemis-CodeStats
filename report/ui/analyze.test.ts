@@ -119,7 +119,7 @@ test('tree analysis derives units, status, closure, lockability and inventories'
     ngBootstrap: 1,
     tumUi: 1,
     kit: 1,
-    pages: 2,
+    pages: 4,
     pagesClean: 1,
   })
   assert.deepEqual(summary.sections.exam, [7, 0, 3, 4, 9, 3])
@@ -144,7 +144,6 @@ test('tree analysis derives units, status, closure, lockability and inventories'
   assert.equal(page.status, 'dirty')
   assert.equal(page.styleHits, 3)
   assert.equal(page.closureHits, 2)
-  assert.deepEqual(page.blockers, [], 'blockers are listed for hit-free units')
   assert.deepEqual(page.styles, [
     `${app}/exam/manage/page/page.component.scss`,
     `${app}/exam/manage/shared.scss`,
@@ -155,6 +154,49 @@ test('tree analysis derives units, status, closure, lockability and inventories'
   assert.equal(clean.status, 'clean')
   assert.equal(clean.closureHits, 2)
   assert.deepEqual(clean.blockers, [button.id])
+  const dialog = unit('dialog.component.ts')
+  assert.equal(dialog.status, 'clean')
+  assert.equal(dialog.scanned, true)
+  assert.equal(dialog.tailwind, true)
+  assert.equal(
+    dialog.spacing,
+    2,
+    'gap-2 and mb-3 keep their names but change value',
+  )
+  assert.equal(
+    dialog.route,
+    '/exams/page/:id/nested',
+    'paths join through children arrays',
+  )
+  assert.equal(dialog.routeHits, 11, 'route parents with hits block the page')
+  assert.equal(page.route, '/exams/page/:id')
+  assert.equal(
+    clean.route,
+    '/exams/:dynamic',
+    'non-literal segments are marked',
+  )
+  assert.equal(button.route, undefined, 'named outlets are not pages')
+  assert.equal(unit('app.component.ts').route, '/')
+  assert.deepEqual(
+    detail.styles.map((f) => [
+      f.path.split('/').pop(),
+      f.variables,
+      f.colors,
+      f.imports,
+      f.units,
+    ]),
+    [
+      ['page.component.scss', 0, 2, 0, 1],
+      ['global.scss', 1, 1, 0, 0],
+      ['list.component.scss', 1, 0, 0, 1],
+      ['shared.scss', 0, 0, 1, 1],
+    ],
+  )
+  assert.deepEqual(
+    page.blockers,
+    [button.id],
+    'blockers are listed for every unit',
+  )
   assert.equal(
     unit('enum-only.component.ts').closureHits,
     0,
@@ -218,27 +260,43 @@ test('the brief lists lock entries, blockers and unit tasks with targets', async
   const { markdown, json } = renderBrief(summary, detail)
   assert.match(
     markdown,
-    /## Lock now\n\n- `app\/exam\/manage\/dialog` \(1 unit\)/,
+    /## Lock now\n\n- `src\/main\/webapp\/app\/exam\/manage\/dialog` \(1 unit\)/,
   )
   assert.match(markdown, /@source '\.\/app\/exam\/manage\/dialog';/)
   assert.match(
     markdown,
-    /## Shared units to fix first\n\n- `app\/shared-ui\/button\/button.component.html` \(jhi-button\): imported by 1 Bootstrap-free unit;/,
+    /## Shared units to fix first\n\n- `src\/main\/webapp\/app\/shared-ui\/button\/button.component.html` \(jhi-button\): imported by 1 Bootstrap-free unit;/,
   )
-  assert.match(markdown, /`btn`×1 → tum-ui-button \/ tumUiButton/)
-  assert.match(
+  assert.match(markdown, /## Sections\n\n- exam: 12 hits in 4 units/)
+  assert.doesNotMatch(
     markdown,
-    /`app\/exam\/manage\/page\/page.component.scss`: 2 raw colors/,
+    /×1 →/,
+    'the global brief links section briefs instead of listing tasks',
   )
-  assert.match(markdown, /PrimeNG: p-dialog/)
   assert.equal(json.lockable.length, 2)
+  const scoped = renderBrief(summary, detail, { section: 'exam' })
+  assert.equal(scoped.json.scope, 'exam')
+  assert.match(scoped.markdown, /`btn`×1 → tum-ui-button \/ tumUiButton/)
+  assert.match(scoped.markdown, /`d-flex`×1 → flex/)
+  assert.match(
+    scoped.markdown,
+    /`src\/main\/webapp\/app\/exam\/manage\/page\/page.component.scss`: 2 raw colors/,
+  )
+  assert.match(scoped.markdown, /PrimeNG: p-dialog/)
+  assert.match(
+    scoped.markdown,
+    /imports 1 unit with Bootstrap \(2 hits\): `app\/shared-ui\/button\/button.component.html`/,
+  )
+  const tasks = scoped.json.sections[0].tasks
   assert.equal(
-    json.sections.find((s) => s.name === 'exam')?.tasks[0].path,
+    tasks[0].path,
+    `${app}/exam/manage/pair/pair.component.ts`,
+    'fewest imported hits, then fewest hits first',
+  )
+  assert.equal(
+    tasks.at(-1)?.path,
     `${app}/exam/manage/page/page.component.html`,
   )
-  const scoped = renderBrief(summary, detail, { section: 'shared-ui' })
-  assert.equal(scoped.json.scope, 'shared-ui')
-  assert.equal(scoped.json.sections.length, 1)
 })
 
 test('missing Angular units fail loudly instead of reporting success', async () => {

@@ -1,0 +1,610 @@
+# Artemis client migration brief: atlas
+
+> Bootstrap → Tailwind / TUM UI. Generated from Artemis `5be30e1d` (Development: Improve input validation for assessment feedback and text block ids (#13917), https://github.com/ls1intum/Artemis/pull/13917). Paths are relative to the Artemis repository. Hits are class tokens matched by Artemis's own `no-bootstrap-classes` rule plus SCSS residue; a unit is done when its directory is in the lock list. Guideline: https://github.com/ls1intum/Artemis/blob/develop/documentation/docs/developer/guidelines/client-development.mdx
+
+## Status
+
+- 9123 Bootstrap hits in 584 of 1004 units; 137 units locked, 283 Bootstrap-free but unlocked
+- 41 of 189 routed pages import no Bootstrap, not counting the global shell
+- 80 directories can be locked now (configuration-only change)
+
+## How to migrate
+
+1. Convert the whole rendering closure of a unit, never half: a migrated element under a Bootstrap ancestor loses the cascade. Leave app-wide shared units (navbar, footer, delete dialog) as they are until they are migrated as their own locked units; do not put a Tailwind utility on their host.
+2. Replace each Bootstrap class with the target listed for it; use the TUM UI kit component where one exists (reference: https://github.com/ls1intum/Artemis/blob/develop/documentation/docs/developer/tum-ui.mdx). Import kit symbols from `@tumaet/ui-angular`.
+3. Convert spacing by size, not by name: Bootstrap `mb-3` is 1rem, Tailwind `mb-4` is 1rem. Replace raw colors and `--bs-*` variables in SCSS with semantic tokens (`text-state-*`, `--text-body-secondary`); delete SCSS that only restyled Bootstrap.
+4. Verify locally with `pnpm migrate:check <path under src/main/webapp/app>` (prints remaining hits, exit 0 when ready to lock) and `pnpm migrate:status`.
+5. When a directory is ready, add its three entries: the `.html` glob to the `files` array of the block that enables `localRules/no-bootstrap-classes` in `eslint.config.mjs`, the `.scss` glob to the `--bs-`/hex override in `.stylelintrc.json`, and the `@source` line (relative to `src/main/webapp/tailwind.css`) to `tailwind.css`. Then run `pnpm run test:rules && pnpm run lint && pnpm run stylelint && pnpm run prettier:check`, restart the dev server and check light and dark mode.
+
+Work order: shared units with few hits and many dependants first, then units that import nothing with hits (they can be locked right after), then the rest.
+
+## Lock now
+
+- `src/main/webapp/app/atlas/manage/taxonomy-select` (1 unit)
+  ```
+  'src/main/webapp/app/atlas/manage/taxonomy-select/**/*.html',
+  "src/main/webapp/app/atlas/manage/taxonomy-select/**/*.scss",
+  @source './app/atlas/manage/taxonomy-select';
+  ```
+- `src/main/webapp/app/atlas/shared/competency-rings` (1 unit)
+  ```
+  'src/main/webapp/app/atlas/shared/competency-rings/**/*.html',
+  "src/main/webapp/app/atlas/shared/competency-rings/**/*.scss",
+  @source './app/atlas/shared/competency-rings';
+  ```
+- `src/main/webapp/app/atlas/shared/dag-graph` (1 unit)
+  ```
+  'src/main/webapp/app/atlas/shared/dag-graph/**/*.html',
+  "src/main/webapp/app/atlas/shared/dag-graph/**/*.scss",
+  @source './app/atlas/shared/dag-graph';
+  ```
+- `src/main/webapp/app/atlas/shared/orchestration-result-dialog` (1 unit)
+  ```
+  'src/main/webapp/app/atlas/shared/orchestration-result-dialog/**/*.html',
+  "src/main/webapp/app/atlas/shared/orchestration-result-dialog/**/*.scss",
+  @source './app/atlas/shared/orchestration-result-dialog';
+  ```
+
+## Shared units to fix first
+
+- `src/main/webapp/app/shared-ui/components/buttons/button/button.component.html` (jhi-button): imported by 44 Bootstrap-free units; 5 hits: w-100, btn, d-none, d-md-inline, d-xl-inline
+- `src/main/webapp/app/shared-ui/directives/resizable.directive.ts` ([jhiResizable]): imported by 16 Bootstrap-free units; 1 hit: card-resizable
+- `src/main/webapp/app/shared-ui/profile-picture/profile-picture.component.html` (jhi-profile-picture): imported by 15 Bootstrap-free units; 3 hits: SCSS only
+- `src/main/webapp/app/editor/monaco-editor/monaco-editor.component.ts` (jhi-monaco-editor): imported by 14 Bootstrap-free units; 1 hit: SCSS only
+- `src/main/webapp/app/iris/overview/iris-logo/iris-logo.component.html` (jhi-iris-logo): imported by 14 Bootstrap-free units; 1 hit: SCSS only
+- `src/main/webapp/app/shared-ui/delete-dialog/directive/delete-button.directive.ts` ([jhiDeleteButton]): imported by 13 Bootstrap-free units; 3 hits: btn, d-none, d-xl-inline
+- `src/main/webapp/app/communication/posting-button/posting-button.component.html` (button[jhi-posting-button]): imported by 10 Bootstrap-free units; 3 hits: btn, btn-outline-primary, btn-sm
+- `src/main/webapp/app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html` (jhi-redirect-to-iris-button): imported by 10 Bootstrap-free units; 3 hits: btn, btn-sm, btn-outline-secondary
+- `src/main/webapp/app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html` (jhi-markdown-editor-monaco): imported by 10 Bootstrap-free units; 4 hits: btn, btn-sm, btn-outline-secondary
+- `src/main/webapp/app/foundation/feature-toggle/feature-toggle-hide.directive.ts` ([jhiFeatureToggleHide]): imported by 8 Bootstrap-free units; 1 hit: d-none
+
+## atlas — 786 hits, 15 of 65 units Bootstrap-free
+
+Units in work order (fewest imported hits first):
+
+- `src/main/webapp/app/atlas/overview/fireworks/fireworks.component.ts` — 2 hits
+  - `src/main/webapp/app/atlas/overview/fireworks/fireworks.component.scss`: 2 raw colors
+- `src/main/webapp/app/atlas/shared/competencies-popover/competencies-popover.component.html` — 5 hits
+  - `list-group`×1, `list-group-item`×1 → tum-ui-list
+  - `btn`×1, `btn-sm`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - ng-bootstrap: ngbPopover
+- `src/main/webapp/app/atlas/manage/course-competency-explanation-modal/course-competency-explanation-modal.component.html` — 6 hits
+  - `col`×2 → flex-1
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `align-self-center`×1 → self-center
+  - `col-md-auto`×1 → md:flex-1
+  - `h-100`×1 → h-full
+  - 11 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/manage/course-competency-relation-node/course-competency-relation-node.component.html` — 9 hits
+  - `d-inline-block`×3 → inline-block
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/atlas/manage/course-competency-relation-node/course-competency-relation-node.component.scss`: 6 --bs-* variables
+  - 1 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/manage/competency-node/competency-node.component.html` — 10 hits
+  - `d-inline-block`×3 → inline-block
+  - `src/main/webapp/app/atlas/manage/competency-node/competency-node.component.scss`: 7 --bs-* variables
+  - 1 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/manage/import/import-competencies-table.component.html` — 12 hits
+  - `col-2`×4 → col-span-2
+  - `col-6`×2 → col-span-6
+  - `col-1`×2 → col-span-1
+  - `table`×1, `table-striped`×1 → tum-ui-table / tumUiTable
+  - `d-flex`×1 → flex
+  - `justify-content-between`×1 → justify-between
+  - PrimeNG: p-paginator → tum-ui-paginator
+  - 1 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/shared/competency-contribution/competency-contribution-card/competency-contribution-card.component.html` — 12 hits
+  - `d-flex`×2 → flex
+  - `justify-content-between`×2 → justify-between
+  - `card`×1, `card-body`×1, `card-title`×1 → tum-ui-card / tum-ui-panel
+  - `align-items-center`×1 → items-center
+  - `text-truncate`×1 → truncate
+  - `text-success`×1 → text-state-success
+  - `align-items-baseline`×1 → items-baseline
+  - `w-100`×1 → w-full
+  - PrimeNG: p-progressbar → tum-ui-progress-bar
+  - ng-bootstrap: ngbTooltip
+  - 1 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/manage/import-course-competencies-settings/import-course-competencies-settings.component.html` — 20 hits
+  - `d-flex`×4 → flex
+  - `align-items-center`×4 → items-center
+  - `col`×3 → flex-1
+  - `text-secondary`×3 → --text-body-secondary
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `w-100`×1 → w-full
+  - `form-select`×1 → tum-ui-select
+  - PrimeNG: p-datepicker → tum-ui-date-picker
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/atlas/manage/import-course-competencies-settings/import-course-competencies-settings.component.scss`: 2 --bs-* variables
+  - 13 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/manage/learning-paths-configuration/learning-paths-configuration.component.html` — 21 hits
+  - `col-md-auto`×6 → md:flex-1
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `align-items-center`×2 → items-center
+  - `btn`×2, `btn-sm`×2, `btn-primary`×1, `btn-secondary`×1 → tum-ui-button / tumUiButton
+  - `justify-content-between`×1 → justify-between
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - 7 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/overview/learning-path-nav-overview-learning-objects/learning-path-nav-overview-learning-objects.component.html` — 21 hits
+  - `col-md-auto`×5 → md:flex-1
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `text-muted`×2 → --text-body-secondary
+  - `align-items-center`×1 → items-center
+  - `text-success`×1 → text-state-success
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `src/main/webapp/app/atlas/overview/learning-path-nav-overview-learning-objects/learning-path-nav-overview-learning-objects.component.scss`: 4 --bs-* variables, 3 Bootstrap Sass imports
+  - 9 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/manage/learning-paths-state/learning-paths-state.component.html` — 22 hits
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `col-md-auto`×2 → md:flex-1
+  - `btn`×2, `btn-sm`×2, `btn-secondary`×1, `btn-outline-secondary`×1 → tum-ui-button / tumUiButton
+  - `justify-content-center`×2 → justify-center
+  - `col`×1 → flex-1
+  - `align-items-center`×1 → items-center
+  - `justify-content-between`×1 → justify-between
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `align-self-end`×1 → self-end
+  - `text-secondary`×1 → --text-body-secondary
+  - `src/main/webapp/app/atlas/manage/learning-paths-state/learning-paths-state.component.scss`: 2 Bootstrap Sass imports
+  - 12 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/manage/import-list/import-table.component.html` — 24 hits
+  - `d-flex`×5 → flex
+  - `align-items-center`×4 → items-center
+  - `col-1`×3 → col-span-1
+  - `justify-content-between`×2 → justify-between
+  - `col-4`×2 → col-span-4
+  - `form-control`×1 → tumUiInput
+  - `table`×1, `table-striped`×1 → tum-ui-table / tumUiTable
+  - `btn`×1, `btn-sm`×1, `btn-outline-secondary`×1 → tum-ui-button / tumUiButton
+  - `text-secondary`×1 → --text-body-secondary
+  - PrimeNG: p-paginator → tum-ui-paginator
+  - ng-bootstrap: ngb-highlight
+  - `src/main/webapp/app/atlas/manage/import-list/import-table.component.scss`: 1 --bs-* variables
+  - 6 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/overview/competency-card/competency-card.component.html` — 30 hits
+  - `badge`×5 → tum-ui-tag
+  - `col`×4 → flex-1
+  - `col-sm`×3 → sm:flex-1
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `align-items-center`×1 → items-center
+  - `justify-content-between`×1 → justify-between
+  - `border-success`×1 → border-state-success
+  - `text-secondary`×1 → --text-body-secondary
+  - `d-none`×1 → hidden
+  - `d-sm-block`×1 → sm:block
+  - `d-sm-none`×1 → sm:hidden
+  - `bg-warning`×1 → bg-state-warning
+  - `bg-danger`×1 → bg-state-danger
+  - `bg-success`×1 → bg-state-success
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/course/overview/course-exercises/course-exercise-row/course-exercise-row.scss`: 2 --bs-* variables, 1 raw colors, 3 Bootstrap Sass imports (shared by 3 units)
+  - 8 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/atlas/manage/generate-competencies/course-description-form.component.html` — 8 hits
+  - `d-flex`×1 → flex
+  - `align-items-center`×1 → items-center
+  - `form-control-label`×1, `form-group`×1 → tum-ui-form-field
+  - `text-secondary`×1 → --text-body-secondary
+  - `form-control`×1 → tumUiInput
+  - `alert`×1, `alert-danger`×1 → tum-ui-message
+  - ng-bootstrap: ngbTooltip
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (2 hits): `app/iris/overview/iris-logo-button/iris-logo-button.component.html`, `app/iris/overview/iris-logo/iris-logo.component.html`
+- `src/main/webapp/app/atlas/manage/import/competency-search.component.html` — 18 hits
+  - `form-group`×4 → tum-ui-form-field
+  - `form-control`×3 → tumUiInput
+  - `col`×2 → flex-1
+  - `d-flex`×2 → flex
+  - `card`×1, `card-header`×1, `card-body`×1 → tum-ui-card / tum-ui-panel
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `form-select`×1 → tum-ui-select
+  - `justify-content-end`×1 → justify-end
+  - `justify-content-center`×1 → justify-center
+  - ng-bootstrap: ngbCollapse
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (5 hits): `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/manage/competency-management/import-all-competencies.component.html` — 23 hits
+  - `col-1`×4 → col-span-1
+  - `d-flex`×3 → flex
+  - `flex-column`×2 → flex-col
+  - `flex-grow-1`×2 → grow
+  - `col-4`×2 → col-span-4
+  - `h-100`×1 → h-full
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1 → tum-ui-dialog
+  - `btn-close`×1 → tum-ui-button
+  - `form-group`×1 → tum-ui-form-field
+  - `form-control`×1 → tumUiInput
+  - `table`×1, `table-striped`×1 → tum-ui-table / tumUiTable
+  - `justify-content-between`×1 → justify-between
+  - PrimeNG: p-paginator → tum-ui-paginator
+  - ng-bootstrap: ngb-highlight
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (5 hits): `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/manage/import-standardized-competencies/course-import-standardized-competencies.component.html` — 31 hits · route `/course-management/:courseId/competency-management/import-standardized`
+  - `d-flex`×7 → flex
+  - `col-2`×4 → col-span-2
+  - `align-items-center`×3 → items-center
+  - `flex-grow-1`×2 → grow
+  - `h-100`×2 → h-full
+  - `col`×2 → flex-1
+  - `col-1`×2 → col-span-1
+  - `w-50`×1 → w-1/2
+  - `form-check-input`×1 → tum-ui-checkbox / tum-ui-radio-button
+  - `card`×1 → tum-ui-card / tum-ui-panel
+  - `w-100`×1 → w-full
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `table`×1, `table-striped`×1 → tum-ui-table / tumUiTable
+  - PrimeNG: pTooltip → tumUiTooltip
+  - 13 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (5 hits): `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/manage/import-standardized-competencies/course-import-standardized-prerequisites.component.html` — 31 hits · route `/course-management/:courseId/prerequisite-management/import-standardized`
+  - `d-flex`×7 → flex
+  - `col-2`×4 → col-span-2
+  - `align-items-center`×3 → items-center
+  - `flex-grow-1`×2 → grow
+  - `h-100`×2 → h-full
+  - `col`×2 → flex-1
+  - `col-1`×2 → col-span-1
+  - `w-50`×1 → w-1/2
+  - `form-check-input`×1 → tum-ui-checkbox / tum-ui-radio-button
+  - `card`×1 → tum-ui-card / tum-ui-panel
+  - `w-100`×1 → w-full
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `table`×1, `table-striped`×1 → tum-ui-table / tumUiTable
+  - PrimeNG: pTooltip → tumUiTooltip
+  - 13 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (5 hits): `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/shared/competency-selection-primeng/competency-selection-primeng.component.html` — 8 hits
+  - `d-flex`×3 → flex
+  - `align-items-center`×3 → items-center
+  - `text-secondary`×1 → --text-body-secondary
+  - `text-warning`×1 → text-state-warning
+  - ng-bootstrap: ngbTooltip
+  - 8 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (6 hits): `app/foundation/feature-toggle/feature-toggle-hide.directive.ts`, `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/shared/competency-selection/competency-selection.component.html` — 13 hits
+  - `d-flex`×3 → flex
+  - `align-items-center`×3 → items-center
+  - `text-secondary`×1 → --text-body-secondary
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `text-warning`×1 → text-state-warning
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/atlas/shared/competency-selection/competency-selection.component.scss`: 3 --bs-* variables
+  - 8 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (6 hits): `app/foundation/feature-toggle/feature-toggle-hide.directive.ts`, `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/manage/course-competency-relation-form/course-competency-relation-form.component.html` — 44 hits
+  - `d-flex`×5 → flex
+  - `align-items-center`×4 → items-center
+  - `form-group`×3 → tum-ui-form-field
+  - `col`×3 → flex-1
+  - `form-select`×3 → tum-ui-select
+  - `border-danger`×3 → border-state-danger
+  - `btn`×3, `btn-danger`×1, `btn-info`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - `justify-content-between`×2 → justify-between
+  - `text-muted`×2 → --text-body-secondary
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `gx-2`×1 → gap-x-2 (convert by size)
+  - `align-items-end`×1 → items-end
+  - `col-3`×1 → col-span-3
+  - `justify-content-end`×1 → justify-end
+  - `text-danger`×1 → text-state-danger
+  - `list-group`×1, `list-group-item`×1 → tum-ui-list
+  - `form-check-input`×1 → tum-ui-checkbox / tum-ui-radio-button
+  - `flex-grow-1`×1 → grow
+  - `badge`×1 → tum-ui-tag
+  - `src/main/webapp/app/atlas/manage/course-competency-relation-form/course-competency-relation-form.component.scss`: 2 --bs-* variables
+  - 26 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (6 hits): `app/foundation/feature-toggle/feature-toggle-hide.directive.ts`, `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/manage/course-competencies-relation-graph/course-competencies-relation-graph.component.html` — 2 hits
+  - `h-100`×1 → h-full
+  - `src/main/webapp/app/atlas/manage/course-competencies-relation-graph/course-competencies-relation-graph.component.scss`: 1 --bs-* variables
+  - imports 1 unit with Bootstrap (9 hits): `app/atlas/manage/course-competency-relation-node/course-competency-relation-node.component.html`
+- `src/main/webapp/app/atlas/manage/competency-graph/competency-graph.component.html` — 1 hit
+  - `h-100`×1 → h-full
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (10 hits): `app/atlas/manage/competency-node/competency-node.component.html`
+- `src/main/webapp/app/atlas/manage/competency-graph-modal/competency-graph-modal.component.html` — 12 hits
+  - `col`×3 → flex-1
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `align-self-center`×2 → self-center
+  - `col-md-auto`×1 → md:flex-1
+  - `h-100`×1 → h-full
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - 11 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (11 hits): `app/atlas/manage/competency-graph/competency-graph.component.html`, `app/atlas/manage/competency-node/competency-node.component.html`
+- `src/main/webapp/app/atlas/manage/learning-paths-analytics/learning-paths-analytics.component.html` — 13 hits
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `col-md-auto`×2 → md:flex-1
+  - `h-100`×1 → h-full
+  - `col-2`×1 → col-span-2
+  - `col`×1 → flex-1
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `align-items-center`×1 → items-center
+  - `src/main/webapp/app/atlas/manage/learning-paths-analytics/learning-paths-analytics.component.scss`: 1 --bs-* variables
+  - 9 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (11 hits): `app/atlas/manage/competency-graph/competency-graph.component.html`, `app/atlas/manage/competency-node/competency-node.component.html`
+- `src/main/webapp/app/atlas/shared/competency-contribution/competency-contribution.component.html` — 2 hits
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `col`×1 → flex-1
+  - PrimeNG: p-carousel
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (12 hits): `app/atlas/shared/competency-contribution/competency-contribution-card/competency-contribution-card.component.html`
+- `src/main/webapp/app/atlas/manage/forms/common-course-competency-form.component.html` — 14 hits
+  - `form-group`×6, `form-control-label`×1 → tum-ui-form-field
+  - `form-control`×2 → tumUiInput
+  - `alert`×2, `alert-danger`×2 → tum-ui-message
+  - `form-check-input`×1 → tum-ui-checkbox / tum-ui-radio-button
+  - imports 5 units with Bootstrap (12 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`
+- `src/main/webapp/app/atlas/manage/generate-competencies/competency-recommendation-detail.component.html` — 20 hits
+  - `form-group`×4 → tum-ui-form-field
+  - `d-flex`×3 → flex
+  - `align-items-center`×2 → items-center
+  - `alert`×2, `alert-danger`×2 → tum-ui-message
+  - `card`×1, `card-header`×1, `card-body`×1 → tum-ui-card / tum-ui-panel
+  - `text-truncate`×1 → truncate
+  - `flex-grow-1`×1 → grow
+  - `justify-content-end`×1 → justify-end
+  - `form-control`×1 → tumUiInput
+  - ng-bootstrap: ngbCollapse
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 6 units with Bootstrap (17 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`, `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/manage/learning-paths-table/learning-paths-table.component.html` — 19 hits
+  - `align-items-center`×2 → items-center
+  - `col-md-auto`×2 → md:flex-1
+  - `d-flex`×2 → flex
+  - `col-1`×2 → col-span-1
+  - `col-4`×2 → col-span-4
+  - `col`×1 → flex-1
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `justify-content-between`×1 → justify-between
+  - `input-group-sm`×1 → tum-ui-input-group
+  - `form-control`×1 → tumUiInput
+  - `table`×1, `table-striped`×1 → tum-ui-table / tumUiTable
+  - `col-2`×1 → col-span-2
+  - `justify-content-end`×1 → justify-end
+  - PrimeNG: p-paginator → tum-ui-paginator
+  - ng-bootstrap: ngb-highlight
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 3 units with Bootstrap (23 hits): `app/atlas/manage/competency-graph-modal/competency-graph-modal.component.html`, `app/atlas/manage/competency-graph/competency-graph.component.html`, `app/atlas/manage/competency-node/competency-node.component.html`
+- `src/main/webapp/app/atlas/manage/forms/competency/competency-form.component.html` — 6 hits
+  - `btn`×2, `btn-primary`×1, `btn-secondary`×1 → tum-ui-button / tumUiButton
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `col-12`×1 → col-span-12
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 6 units with Bootstrap (26 hits): `app/atlas/manage/forms/common-course-competency-form.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`
+- `src/main/webapp/app/atlas/manage/forms/prerequisite/prerequisite-form.component.html` — 6 hits
+  - `btn`×2, `btn-primary`×1, `btn-secondary`×1 → tum-ui-button / tumUiButton
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `col-12`×1 → col-span-12
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 6 units with Bootstrap (26 hits): `app/atlas/manage/forms/common-course-competency-form.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`
+- `src/main/webapp/app/atlas/overview/course-competencies/course-competencies.component.html` — 10 hits · route `/courses/:courseId/:dynamic`
+  - `col-12`×2 → col-span-12
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `col-lg-8`×1 → lg:col-span-8
+  - `col-lg-3`×1 → lg:col-span-3
+  - `badge`×1 → tum-ui-tag
+  - `src/main/webapp/app/course/overview/course-overview/course-overview.scss`: 4 raw colors (shared by 13 units)
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (30 hits): `app/atlas/overview/competency-card/competency-card.component.html`
+- `src/main/webapp/app/atlas/manage/competency-management/competency-management-table.component.html` — 34 hits
+  - `d-none`×7 → hidden
+  - `btn`×6, `btn-primary`×3, `btn-sm`×1 → tum-ui-button / tumUiButton
+  - `d-lg-table-cell`×6 → lg:table-cell
+  - `d-flex`×3 → flex
+  - `align-items-center`×2 → items-center
+  - `d-inline`×1 → inline
+  - `table-responsive`×1, `table`×1, `table-striped`×1 → tum-ui-table / tumUiTable
+  - `justify-content-end`×1 → justify-end
+  - `d-md-inline`×1 → md:inline
+  - PrimeNG: p-iconfield → tum-ui-icon-field, p-inputicon, pInputText
+  - ng-bootstrap: ngbDropdown, ngbDropdownToggle, ngbDropdownMenu, ngbDropdownItem
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 3 units with Bootstrap (31 hits): `app/atlas/manage/competency-management/import-all-competencies.component.html`, `app/shared-ui/components/buttons/button/button.component.html`, `app/shared-ui/delete-dialog/directive/delete-button.directive.ts`
+- `src/main/webapp/app/atlas/manage/edit/edit-competency.component.html` — 4 hits · route `/course-management/:courseId/competency-management/:competencyId/edit`
+  - `d-flex`×1 → flex
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - imports 7 units with Bootstrap (32 hits): `app/atlas/manage/forms/common-course-competency-form.component.html`, `app/atlas/manage/forms/competency/competency-form.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`
+- `src/main/webapp/app/atlas/manage/edit/edit-prerequisite.component.html` — 4 hits · route `/course-management/:courseId/prerequisite-management/:prerequisiteId/edit`
+  - `d-flex`×1 → flex
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - imports 7 units with Bootstrap (32 hits): `app/atlas/manage/forms/common-course-competency-form.component.html`, `app/atlas/manage/forms/prerequisite/prerequisite-form.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`
+- `src/main/webapp/app/atlas/manage/create/create-competency.component.html` — 6 hits · route `/course-management/:courseId/competency-management/create`
+  - `d-flex`×2 → flex
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `align-items-center`×1 → items-center
+  - imports 7 units with Bootstrap (32 hits): `app/atlas/manage/forms/common-course-competency-form.component.html`, `app/atlas/manage/forms/competency/competency-form.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`
+- `src/main/webapp/app/atlas/manage/create/create-prerequisite.component.html` — 6 hits · route `/course-management/:courseId/prerequisite-management/create`
+  - `d-flex`×2 → flex
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `align-items-center`×1 → items-center
+  - imports 7 units with Bootstrap (32 hits): `app/atlas/manage/forms/common-course-competency-form.component.html`, `app/atlas/manage/forms/prerequisite/prerequisite-form.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`
+- `src/main/webapp/app/atlas/manage/import/import-course-competencies.component.html` — 1 hit · route `/course-management/:courseId/competency-management/import`
+  - `d-flex`×1 → flex
+  - 5 Bootstrap spacing classes to convert by size
+  - imports 3 units with Bootstrap (35 hits): `app/atlas/manage/import/competency-search.component.html`, `app/atlas/manage/import/import-competencies-table.component.html`, `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/manage/import/import-course-competencies.component.html` — 1 hit · route `/course-management/:courseId/prerequisite-management/import`
+  - `d-flex`×1 → flex
+  - 5 Bootstrap spacing classes to convert by size
+  - imports 3 units with Bootstrap (35 hits): `app/atlas/manage/import/competency-search.component.html`, `app/atlas/manage/import/import-competencies-table.component.html`, `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/manage/agent-chat-modal/agent-chat-modal.component.html` — 80 hits
+  - `d-flex`×5 → flex
+  - `d-block`×3 → block
+  - `align-items-center`×2 → items-center
+  - `text-success`×2 → text-state-success
+  - `text-secondary`×2, `text-body-secondary`×2, `text-body`×1, `text-muted`×1 → --text-body-secondary
+  - `badge`×2 → tum-ui-tag
+  - `text-danger`×2 → text-state-danger
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1, `modal-footer`×1 → tum-ui-dialog
+  - `modal-close-button`×1 → custom class: rename (banned by prefix only)
+  - `flex-column`×1 → flex-col
+  - `flex-grow-1`×1 → grow
+  - `bg-success`×1 → bg-state-success
+  - `align-self-start`×1 → self-start
+  - `w-100`×1 → w-full
+  - `form-control`×1 → tumUiInput
+  - `justify-content-between`×1 → justify-between
+  - PrimeNG: pButton → tumUiButton, p-checkbox → tum-ui-checkbox, p-select → tum-ui-select
+  - `src/main/webapp/app/atlas/manage/agent-chat-modal/agent-chat-modal.component.scss`: 45 --bs-* variables, 1 raw colors
+  - 23 Bootstrap spacing classes to convert by size
+  - imports 3 units with Bootstrap (41 hits): `app/atlas/manage/course-competencies-relation-graph/course-competencies-relation-graph.component.html`, `app/atlas/manage/course-competency-relation-node/course-competency-relation-node.component.html`, `app/atlas/overview/competency-card/competency-card.component.html`
+- `src/main/webapp/app/atlas/manage/import-all-course-competencies-modal/import-all-course-competencies-modal.component.html` — 3 hits
+  - `col`×1 → flex-1
+  - `d-flex`×1 → flex
+  - `justify-content-between`×1 → justify-between
+  - 5 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (44 hits): `app/atlas/manage/import-course-competencies-settings/import-course-competencies-settings.component.html`, `app/atlas/manage/import-list/import-table.component.html`
+- `src/main/webapp/app/atlas/overview/learning-path-nav-overview/learning-path-nav-overview.component.html` — 23 hits
+  - `col-md-auto`×4 → md:flex-1
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `justify-content-between`×1 → justify-between
+  - `align-items-center`×1 → items-center
+  - `w-100`×1 → w-full
+  - `btn`×1, `btn-outline-secondary`×1 → tum-ui-button / tumUiButton
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `accordion-flush`×1 → tum-ui-panel
+  - `text-success`×1 → text-state-success
+  - ng-bootstrap: ngbAccordion, ngbAccordionItem, ngbAccordionHeader, ngbAccordionButton, ngbAccordionCollapse, ngbAccordionBody
+  - `src/main/webapp/app/atlas/overview/learning-path-nav-overview/learning-path-nav-overview.component.scss`: 6 --bs-* variables
+  - 10 Bootstrap spacing classes to convert by size
+  - imports 4 units with Bootstrap (44 hits): `app/atlas/manage/competency-graph-modal/competency-graph-modal.component.html`, `app/atlas/manage/competency-graph/competency-graph.component.html`, `app/atlas/manage/competency-node/competency-node.component.html`, `app/atlas/overview/learning-path-nav-overview-learning-objects/learning-path-nav-overview-learning-objects.component.html`
+- `src/main/webapp/app/atlas/manage/generate-competencies/generate-competencies.component.html` — 7 hits · route `/course-management/:courseId/competency-management/generate`
+  - `d-flex`×2 → flex
+  - `align-items-center`×2 → items-center
+  - `flex-column`×1 → flex-col
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - 4 Bootstrap spacing classes to convert by size
+  - imports 9 units with Bootstrap (46 hits): `app/atlas/manage/generate-competencies/competency-recommendation-detail.component.html`, `app/atlas/manage/generate-competencies/course-description-form.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo-button/iris-logo-button.component.html`, `app/iris/overview/iris-logo/iris-logo.component.html`, …
+- `src/main/webapp/app/atlas/manage/course-competencies-relation-modal/course-competencies-relation-modal.component.html` — 10 hits
+  - `col`×2 → flex-1
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `align-self-center`×1 → self-center
+  - `btn-close`×1 → tum-ui-button
+  - `h-100`×1 → h-full
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 5 units with Bootstrap (61 hits): `app/atlas/manage/course-competencies-relation-graph/course-competencies-relation-graph.component.html`, `app/atlas/manage/course-competency-relation-form/course-competency-relation-form.component.html`, `app/atlas/manage/course-competency-relation-node/course-competency-relation-node.component.html`, `app/foundation/feature-toggle/feature-toggle-hide.directive.ts`, `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/atlas/overview/learning-path-student-nav/learning-path-student-nav.component.html` — 40 hits
+  - `col-md-auto`×7 → md:flex-1
+  - `row`×4 → grid grid-cols-12 (or flex)
+  - `col-4`×3 → col-span-4
+  - `align-items-center`×3 → items-center
+  - `btn`×3, `btn-primary`×2, `btn-secondary`×1 → tum-ui-button / tumUiButton
+  - `justify-content-center`×3 → justify-center
+  - `col`×3 → flex-1
+  - `d-flex`×2 → flex
+  - `text-truncate`×2 → truncate
+  - `text-secondary`×2 → --text-body-secondary
+  - `justify-content-between`×1 → justify-between
+  - `justify-content-start`×1 → justify-start
+  - `dropdown`×1 → tum-ui-menu
+  - `h-100`×1 → h-full
+  - `justify-content-end`×1 → justify-end
+  - ng-bootstrap: ngbDropdown, ngbDropdownToggle, ngbDropdownMenu
+  - 8 Bootstrap spacing classes to convert by size
+  - imports 5 units with Bootstrap (67 hits): `app/atlas/manage/competency-graph-modal/competency-graph-modal.component.html`, `app/atlas/manage/competency-graph/competency-graph.component.html`, `app/atlas/manage/competency-node/competency-node.component.html`, `app/atlas/overview/learning-path-nav-overview-learning-objects/learning-path-nav-overview-learning-objects.component.html`, `app/atlas/overview/learning-path-nav-overview/learning-path-nav-overview.component.html`
+- `src/main/webapp/app/atlas/manage/learning-path-instructor-page/learning-path-instructor-page.component.html` — 12 hits · route `/course-management/:courseId/learning-path-management`
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `col`×2 → flex-1
+  - `w-100`×2 → w-full
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `col-6`×1 → col-span-6
+  - `g-3`×1 → gap-3 (convert by size)
+  - 8 Bootstrap spacing classes to convert by size
+  - imports 8 units with Bootstrap (96 hits): `app/atlas/manage/competency-graph-modal/competency-graph-modal.component.html`, `app/atlas/manage/competency-graph/competency-graph.component.html`, `app/atlas/manage/competency-node/competency-node.component.html`, `app/atlas/manage/learning-paths-analytics/learning-paths-analytics.component.html`, `app/atlas/manage/learning-paths-state/learning-paths-state.component.html`, `app/atlas/manage/learning-paths-table/learning-paths-table.component.html`, `app/shared-ui/components/buttons/button/button.component.html`, `app/shared-ui/feature-activation/feature-activation.component.html`
+- `src/main/webapp/app/atlas/manage/competency-management/competency-management.component.html` — 28 hits · route `/course-management/:courseId/competency-management`
+  - `btn`×5, `btn-sm`×4, `btn-primary`×4, `btn-warning`×1 → tum-ui-button / tumUiButton
+  - `d-flex`×3 → flex
+  - `justify-content-center`×2 → justify-center
+  - `align-items-center`×1 → items-center
+  - `justify-content-end`×1 → justify-end
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `src/main/webapp/app/atlas/manage/competency-management/competency-management.component.scss`: 5 raw colors
+  - 2 Bootstrap spacing classes to convert by size
+  - imports 15 units with Bootstrap (294 hits): `app/atlas/manage/agent-chat-modal/agent-chat-modal.component.html`, `app/atlas/manage/competency-management/competency-management-table.component.html`, `app/atlas/manage/competency-management/import-all-competencies.component.html`, `app/atlas/manage/course-competencies-relation-graph/course-competencies-relation-graph.component.html`, `app/atlas/manage/course-competencies-relation-modal/course-competencies-relation-modal.component.html`, `app/atlas/manage/course-competency-explanation-modal/course-competency-explanation-modal.component.html`, `app/atlas/manage/course-competency-relation-form/course-competency-relation-form.component.html`, `app/atlas/manage/course-competency-relation-node/course-competency-relation-node.component.html`, …
+- `src/main/webapp/app/atlas/overview/course-competencies/course-competencies-details.component.html` — 40 hits · route `/courses/:courseId/:dynamic/:competencyId`
+  - `row`×5 → grid grid-cols-12 (or flex)
+  - `badge`×3 → tum-ui-tag
+  - `g-0`×2 → gap-0 (convert by size)
+  - `col-7`×2 → col-span-7
+  - `col-5`×2 → col-span-5
+  - `d-flex`×1 → flex
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `align-items-center`×1 → items-center
+  - `col`×1 → flex-1
+  - `bg-warning`×1 → bg-state-warning
+  - `bg-danger`×1 → bg-state-danger
+  - `bg-success`×1 → bg-state-success
+  - `btn`×1, `btn-sm`×1, `btn-warning`×1 → tum-ui-button / tumUiButton
+  - `d-none`×1 → hidden
+  - `d-md-inline`×1 → md:inline
+  - `col-lg-9`×1 → lg:col-span-9
+  - `col-md-8`×1 → md:col-span-8
+  - `col-12`×1 → col-span-12
+  - `col-lg-11`×1 → lg:col-span-11
+  - `col-lg-3`×1 → lg:col-span-3
+  - `col-md-4`×1 → md:col-span-4
+  - `w-50`×1 → w-1/2
+  - `d-block`×1 → block
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/course/overview/course-overview/course-overview.scss`: 4 raw colors (shared by 13 units)
+  - 10 Bootstrap spacing classes to convert by size
+  - imports 35 units with Bootstrap (334 hits): `app/atlas/overview/fireworks/fireworks.component.ts`, `app/atlas/shared/competency-contribution/competency-contribution-card/competency-contribution-card.component.html`, `app/atlas/shared/competency-contribution/competency-contribution.component.html`, `app/course/overview/course-exercises/course-exercise-row/course-exercise-row.component.html`, `app/course/overview/exercise-details/open-code-editor-button/open-code-editor-button.component.html`, `app/course/overview/exercise-details/request-feedback-button/request-feedback-button.component.html`, `app/course/overview/exercise-details/student-actions/exercise-details-student-actions.component.html`, `app/course/overview/submission-result-status/submission-result-status.component.html`, …
+- `src/main/webapp/app/atlas/overview/learning-path-lecture-unit/learning-path-lecture-unit.component.html` — 7 hits
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `justify-content-center`×1 → justify-center
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `col`×1 → flex-1
+  - `col-md-auto`×1 → md:flex-1
+  - 5 Bootstrap spacing classes to convert by size
+  - imports 53 units with Bootstrap (549 hits): `app/atlas/shared/competency-contribution/competency-contribution-card/competency-contribution-card.component.html`, `app/atlas/shared/competency-contribution/competency-contribution.component.html`, `app/communication/answer-post/answer-post.component.html`, `app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html`, `app/communication/forwarded-message/forwarded-message.component.html`, `app/communication/message/message-inline-input/message-inline-input.component.html`, `app/communication/post/post.component.html`, `app/communication/posting-button/posting-button.component.html`, …
+- `src/main/webapp/app/atlas/overview/learning-path-student-page/learning-path-student-page.component.html` — 19 hits · route `/courses/:courseId/:dynamic`
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `justify-content-center`×3 → justify-center
+  - `align-items-center`×3 → items-center
+  - `h-100`×3 → h-full
+  - `w-100`×2 → w-full
+  - `col`×1 → flex-1
+  - `spinner-border`×1 → tum-ui-progress-spinner
+  - `visually-hidden`×1 → sr-only
+  - `btn`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 82 units with Bootstrap (885 hits): `app/assessment/manage/complaint-response/complaint-response.component.html`, `app/assessment/overview/complaint-form/complaints-form.component.html`, `app/assessment/overview/complaint-request/complaint-request.component.html`, `app/assessment/overview/complaints-for-students/complaints-student-view.component.html`, `app/atlas/manage/competency-graph-modal/competency-graph-modal.component.html`, `app/atlas/manage/competency-graph/competency-graph.component.html`, `app/atlas/manage/competency-node/competency-node.component.html`, `app/atlas/overview/learning-path-lecture-unit/learning-path-lecture-unit.component.html`, …
+
+## Data
+
+- History (every commit): https://ls1intum.github.io/Artemis-CodeStats/migrations/index.json
+- This snapshot (units, pages, blockers, inventories): https://ls1intum.github.io/Artemis-CodeStats/migrations/5be30e1d757c739f95291431c048007811ee4b88.json
+- Schema: https://github.com/ls1intum/Artemis-CodeStats/blob/main/src/features/migrations/model.ts

@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { Card, CardContent } from '@/components/ui/card'
 import type { Summary } from './model'
 import { free, hits, number, percent, velocity } from './format'
@@ -43,7 +44,7 @@ export function Headline({
   const overall = velocity(series, snapshot, Infinity)
   return (
     <div className="grid gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
         <Tile title="Bootstrap hits" value={number(hits(t))}>
           <Delta value={hits(t) - hits(c)} /> vs. comparison
           {recent &&
@@ -60,7 +61,7 @@ export function Headline({
           title="Pages ready"
           value={`${number(t.pagesClean)} / ${number(t.pages)}`}
         >
-          routed pages that import no Bootstrap ·{' '}
+          routed pages that import no Bootstrap, shell aside ·{' '}
           <Delta value={t.pagesClean - c.pagesClean} positive="up" /> vs.
           comparison
         </Tile>
@@ -70,11 +71,16 @@ export function Headline({
           {t.lockedResidue > 0 &&
             ` · ${t.lockedResidue} hits outside the templates the lint scans`}
         </Tile>
-        <Tile title="Lockable directories" value={number(t.lockableDirs)}>
-          {number(lockableUnits)} units with nothing left to migrate ·{' '}
-          <a className="underline underline-offset-4" href="#lockable">
+        <Tile title="Lockable now" value={number(lockableUnits)}>
+          units in {number(t.lockableDirs)} directories with nothing left to
+          migrate ·{' '}
+          <Link
+            to="/"
+            search={(previous) => ({ ...previous, view: 'next' })}
+            className="underline underline-offset-4"
+          >
             lock entries
-          </a>
+          </Link>
         </Tile>
       </div>
       <StatusBar counts={t} legend />

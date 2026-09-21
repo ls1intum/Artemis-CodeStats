@@ -127,65 +127,6 @@ export function History({
           </Table>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle asChild>
-            <h2>Data and agent entry points</h2>
-          </CardTitle>
-          <CardDescription>
-            Everything on this page is derived from static JSON that is
-            regenerated hourly. Agents and scripts can read the same files.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid gap-2 text-sm sm:grid-cols-[14rem_1fr]">
-            <dt className="font-medium">
-              <a
-                className="underline underline-offset-4"
-                href={`${base}migrations/brief.md`}
-              >
-                migrations/brief.md
-              </a>
-            </dt>
-            <dd>
-              Current status, directories to lock with the exact entries, shared
-              units to fix first, and per-section unit tasks with
-              class-to-target mappings. Written for coding agents; paste it or
-              point an agent at the URL.
-            </dd>
-            <dt className="font-medium">
-              <a
-                className="underline underline-offset-4"
-                href={`${base}migrations/brief.json`}
-              >
-                migrations/brief.json
-              </a>
-            </dt>
-            <dd>The same brief as structured data.</dd>
-            <dt className="font-medium">
-              <a
-                className="underline underline-offset-4"
-                href={`${base}migrations/index.json`}
-              >
-                migrations/index.json
-              </a>
-            </dt>
-            <dd>
-              Totals and per-section rows for every first-parent commit since
-              package adoption, with commit subjects.
-            </dd>
-            <dt className="font-medium">
-              <a
-                className="underline underline-offset-4"
-                href={`${base}llms.txt`}
-              >
-                llms.txt
-              </a>
-            </dt>
-            <dd>Index of these files for language-model tooling.</dd>
-          </dl>
-        </CardContent>
-      </Card>
     </div>
   )
 }

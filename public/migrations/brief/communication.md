@@ -1,0 +1,502 @@
+# Artemis client migration brief: communication
+
+> Bootstrap → Tailwind / TUM UI. Generated from Artemis `5be30e1d` (Development: Improve input validation for assessment feedback and text block ids (#13917), https://github.com/ls1intum/Artemis/pull/13917). Paths are relative to the Artemis repository. Hits are class tokens matched by Artemis's own `no-bootstrap-classes` rule plus SCSS residue; a unit is done when its directory is in the lock list. Guideline: https://github.com/ls1intum/Artemis/blob/develop/documentation/docs/developer/guidelines/client-development.mdx
+
+## Status
+
+- 9123 Bootstrap hits in 584 of 1004 units; 137 units locked, 283 Bootstrap-free but unlocked
+- 41 of 189 routed pages import no Bootstrap, not counting the global shell
+- 80 directories can be locked now (configuration-only change)
+
+## How to migrate
+
+1. Convert the whole rendering closure of a unit, never half: a migrated element under a Bootstrap ancestor loses the cascade. Leave app-wide shared units (navbar, footer, delete dialog) as they are until they are migrated as their own locked units; do not put a Tailwind utility on their host.
+2. Replace each Bootstrap class with the target listed for it; use the TUM UI kit component where one exists (reference: https://github.com/ls1intum/Artemis/blob/develop/documentation/docs/developer/tum-ui.mdx). Import kit symbols from `@tumaet/ui-angular`.
+3. Convert spacing by size, not by name: Bootstrap `mb-3` is 1rem, Tailwind `mb-4` is 1rem. Replace raw colors and `--bs-*` variables in SCSS with semantic tokens (`text-state-*`, `--text-body-secondary`); delete SCSS that only restyled Bootstrap.
+4. Verify locally with `pnpm migrate:check <path under src/main/webapp/app>` (prints remaining hits, exit 0 when ready to lock) and `pnpm migrate:status`.
+5. When a directory is ready, add its three entries: the `.html` glob to the `files` array of the block that enables `localRules/no-bootstrap-classes` in `eslint.config.mjs`, the `.scss` glob to the `--bs-`/hex override in `.stylelintrc.json`, and the `@source` line (relative to `src/main/webapp/tailwind.css`) to `tailwind.css`. Then run `pnpm run test:rules && pnpm run lint && pnpm run stylelint && pnpm run prettier:check`, restart the dev server and check light and dark mode.
+
+Work order: shared units with few hits and many dependants first, then units that import nothing with hits (they can be locked right after), then the rest.
+
+## Lock now
+
+- `src/main/webapp/app/communication/emoji` (2 units)
+  ```
+  'src/main/webapp/app/communication/emoji/**/*.html',
+  "src/main/webapp/app/communication/emoji/**/*.scss",
+  @source './app/communication/emoji';
+  ```
+- `src/main/webapp/app/communication/course-conversations-components/code-of-conduct` (1 unit)
+  ```
+  'src/main/webapp/app/communication/course-conversations-components/code-of-conduct/**/*.html',
+  "src/main/webapp/app/communication/course-conversations-components/code-of-conduct/**/*.scss",
+  @source './app/communication/course-conversations-components/code-of-conduct';
+  ```
+- `src/main/webapp/app/communication/course-conversations-components/other` (1 unit)
+  ```
+  'src/main/webapp/app/communication/course-conversations-components/other/**/*.html',
+  "src/main/webapp/app/communication/course-conversations-components/other/**/*.scss",
+  @source './app/communication/course-conversations-components/other';
+  ```
+- `src/main/webapp/app/communication/posting-content/enlarge-slide-image` (1 unit)
+  ```
+  'src/main/webapp/app/communication/posting-content/enlarge-slide-image/**/*.html',
+  "src/main/webapp/app/communication/posting-content/enlarge-slide-image/**/*.scss",
+  @source './app/communication/posting-content/enlarge-slide-image';
+  ```
+
+## Shared units to fix first
+
+- `src/main/webapp/app/shared-ui/components/buttons/button/button.component.html` (jhi-button): imported by 44 Bootstrap-free units; 5 hits: w-100, btn, d-none, d-md-inline, d-xl-inline
+- `src/main/webapp/app/shared-ui/directives/resizable.directive.ts` ([jhiResizable]): imported by 16 Bootstrap-free units; 1 hit: card-resizable
+- `src/main/webapp/app/shared-ui/profile-picture/profile-picture.component.html` (jhi-profile-picture): imported by 15 Bootstrap-free units; 3 hits: SCSS only
+- `src/main/webapp/app/editor/monaco-editor/monaco-editor.component.ts` (jhi-monaco-editor): imported by 14 Bootstrap-free units; 1 hit: SCSS only
+- `src/main/webapp/app/iris/overview/iris-logo/iris-logo.component.html` (jhi-iris-logo): imported by 14 Bootstrap-free units; 1 hit: SCSS only
+- `src/main/webapp/app/shared-ui/delete-dialog/directive/delete-button.directive.ts` ([jhiDeleteButton]): imported by 13 Bootstrap-free units; 3 hits: btn, d-none, d-xl-inline
+- `src/main/webapp/app/communication/posting-button/posting-button.component.html` (button[jhi-posting-button]): imported by 10 Bootstrap-free units; 3 hits: btn, btn-outline-primary, btn-sm
+- `src/main/webapp/app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html` (jhi-redirect-to-iris-button): imported by 10 Bootstrap-free units; 3 hits: btn, btn-sm, btn-outline-secondary
+- `src/main/webapp/app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html` (jhi-markdown-editor-monaco): imported by 10 Bootstrap-free units; 4 hits: btn, btn-sm, btn-outline-secondary
+- `src/main/webapp/app/course/shared/course-sidebar-toggle-button/course-sidebar-toggle-button.component.html` (jhi-course-sidebar-toggle-button): imported by 8 Bootstrap-free units; 15 hits: btn-sidebar-collapse, btn-sidebar-collapse-icon, d-flex, justify-content-center, align-items-center, btn-sidebar-collapse-chevron, btn-sidebar-collapse-chevron-start
+
+## communication — 711 hits, 14 of 60 units Bootstrap-free
+
+Units in work order (fewest imported hits first):
+
+- `src/main/webapp/app/communication/posting-button/posting-button.component.html` — 3 hits
+  - `btn`×1, `btn-outline-primary`×1, `btn-sm`×1 → tum-ui-button / tumUiButton
+- `src/main/webapp/app/communication/faq/faq-consistency.component.html` — 6 hits
+  - `alert-heading`×2, `alert`×1, `alert-warning`×1, `alert-dismissible`×1 → tum-ui-message
+  - `btn-close`×1 → tum-ui-button
+  - 1 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/communication/posting-content/posting-content-part/posting-content-part.component.html` — 8 hits
+  - `card`×2, `card-body`×2 → tum-ui-card / tum-ui-panel
+  - `src/main/webapp/app/communication/metis.component.scss`: 1 raw colors, 3 Bootstrap Sass imports (shared by 5 units)
+  - 11 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/communication/course-conversations-components/generic-confirmation-dialog/generic-confirmation-dialog.component.html` — 11 hits
+  - `btn`×2, `btn-outline-secondary`×1, `btn-danger`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1, `modal-footer`×1 → tum-ui-dialog
+  - `btn-close`×1 → tum-ui-button
+  - `text-danger`×1 → text-state-danger
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/channels-overview-dialog/channel-item/channel-item.component.html` — 15 hits
+  - `btn`×3, `btn-primary`×1, `btn-secondary`×1, `btn-danger`×1 → tum-ui-button / tumUiButton
+  - `badge`×2 → tum-ui-tag
+  - `d-flex`×1 → flex
+  - `justify-content-between`×1 → justify-between
+  - `align-items-start`×1 → items-start
+  - `bg-success`×1 → bg-state-success
+  - `d-inline-block`×1 → inline-block
+  - `text-truncate`×1 → truncate
+  - `bg-info`×1 → bg-state-info
+  - 2 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/communication/course-conversations-components/generic-update-text-property-dialog/generic-update-text-property-dialog.component.html` — 16 hits
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `col-12`×2 → col-span-12
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1 → tum-ui-dialog
+  - `btn-close`×1 → tum-ui-button
+  - `form-group`×1, `form-text`×1 → tum-ui-form-field
+  - `form-control`×1 → tumUiInput
+  - `text-body-secondary`×1 → --text-body-secondary
+  - `alert`×1, `alert-danger`×1 → tum-ui-message
+  - `btn`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-info/conversation-info.component.html` — 24 hits
+  - `col-12`×5 → col-span-12
+  - `w-100`×3 → w-full
+  - `d-flex`×3 → flex
+  - `align-items-center`×3 → items-center
+  - `text-muted`×2 → --text-body-secondary
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `alert`×1, `alert-danger`×1 → tum-ui-message
+  - `text-success`×1 → text-state-success
+  - `text-warning`×1 → text-state-warning
+  - PrimeNG: pInputText, pTextarea → tumUiTextarea, p-selectbutton → tum-ui-select-button
+  - `src/main/webapp/app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-info/conversation-info.component.scss`: 3 --bs-* variables
+  - 11 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/channels-create-dialog/channel-form/channel-form.component.html` — 33 hits
+  - `d-block`×6 → block
+  - `form-group`×5, `form-text`×4 → tum-ui-form-field
+  - `text-body-secondary`×4 → --text-body-secondary
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `col-12`×2 → col-span-12
+  - `form-control`×2 → tumUiInput
+  - `alert`×2, `alert-danger`×2 → tum-ui-message
+  - `input-group`×1, `input-group-text`×1 → tum-ui-input-group
+  - `btn`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - PrimeNG: p-selectbutton → tum-ui-select-button
+- `src/main/webapp/app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html` — 3 hits
+  - `btn`×1, `btn-sm`×1, `btn-outline-secondary`×1 → tum-ui-button / tumUiButton
+  - imports 1 unit with Bootstrap (1 hits): `app/iris/overview/iris-logo/iris-logo.component.html`
+- `src/main/webapp/app/communication/course-faq/course-faq.component.html` — 14 hits · route `/courses/:courseId/:dynamic`
+  - `d-flex`×2 → flex
+  - `justify-content-between`×1 → justify-between
+  - `flex-grow-1`×1 → grow
+  - `btn`×1, `btn-secondary`×1, `btn-success`×1 → tum-ui-button / tumUiButton
+  - `d-md-inline`×1 → md:inline
+  - `align-items-center`×1 → items-center
+  - `form-check-input`×1 → tum-ui-checkbox / tum-ui-radio-button
+  - ng-bootstrap: ngbDropdown, ngbDropdownToggle, ngbDropdownMenu
+  - `src/main/webapp/app/course/overview/course-overview/course-overview.scss`: 4 raw colors (shared by 13 units)
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (1 hits): `app/exercise/exercise-categories/custom-exercise-category-badge/custom-exercise-category-badge.component.html`
+- `src/main/webapp/app/communication/posting-header/posting-header.component.html` — 21 hits
+  - `d-inline-flex`×5 → inline-flex
+  - `align-items-start`×3 → items-start
+  - `align-items-center`×3 → items-center
+  - `d-flex`×2 → flex
+  - `justify-content-between`×1 → justify-between
+  - `flex-column`×1 → flex-col
+  - `text-body-secondary`×1 → --text-body-secondary
+  - `badge`×1 → tum-ui-tag
+  - PrimeNG: p-tag → tum-ui-tag
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/communication/metis.component.scss`: 1 raw colors, 3 Bootstrap Sass imports (shared by 5 units)
+  - 9 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (3 hits): `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/course-users-selector/course-users-selector.component.html` — 26 hits
+  - `form-check`×3, `form-check-input`×3, `form-check-label`×3 → tum-ui-checkbox / tum-ui-radio-button
+  - `d-flex`×2 → flex
+  - `align-items-center`×2 → items-center
+  - `form-text`×2, `form-group`×1 → tum-ui-form-field
+  - `text-body-secondary`×2 → --text-body-secondary
+  - `d-inline-block`×2 → inline-block
+  - `form-control`×1 → tumUiInput
+  - `list-group`×1, `list-group-item`×1 → tum-ui-list
+  - `justify-content-between`×1 → justify-between
+  - `btn`×1, `btn-outline-secondary`×1 → tum-ui-button / tumUiButton
+  - ng-bootstrap: ngbTypeahead
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (3 hits): `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/faq/faq.component.html` — 50 hits · route `/course-management/:courseId/faqs`
+  - `btn`×7, `btn-sm`×7, `btn-primary`×4, `btn-success`×2, `btn-secondary`×1, `btn-warning`×1 → tum-ui-button / tumUiButton
+  - `d-flex`×4 → flex
+  - `d-md-inline`×4 → md:inline
+  - `d-none`×3 → hidden
+  - `btn-group`×2, `btn-group-vertical`×2 → tum-ui-button-group
+  - `align-items-center`×2 → items-center
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `justify-content-between`×1 → justify-between
+  - `flex-grow-1`×1 → grow
+  - `align-self-center`×1 → self-center
+  - `d-sm-none`×1 → sm:hidden
+  - `form-check-input`×1 → tum-ui-checkbox / tum-ui-radio-button
+  - `justify-content-end`×1 → justify-end
+  - `table-responsive`×1, `table`×1, `table-striped`×1 → tum-ui-table / tumUiTable
+  - `d-md-table-cell`×1 → md:table-cell
+  - ng-bootstrap: ngbDropdown, ngbDropdownToggle, ngbDropdownMenu
+  - 14 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (4 hits): `app/exercise/exercise-categories/custom-exercise-category-badge/custom-exercise-category-badge.component.html`, `app/shared-ui/delete-dialog/directive/delete-button.directive.ts`
+- `src/main/webapp/app/communication/posting-content/posting-content.component.html` — 6 hits
+  - `d-inline-flex`×1 → inline-flex
+  - `align-items-center`×1 → items-center
+  - `text-secondary`×1 → --text-body-secondary
+  - `btn`×1, `btn-outline-primary`×1, `btn-sm`×1 → tum-ui-button / tumUiButton
+  - 4 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (9 hits): `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/shared-ui/confirm-icon/confirm-icon.component.html`
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-members/conversation-member-row/conversation-member-row.component.html` — 13 hits
+  - `text-danger`×3 → text-state-danger
+  - `d-inline-block`×2 → inline-block
+  - `d-flex`×1 → flex
+  - `justify-content-between`×1 → justify-between
+  - `align-items-center`×1 → items-center
+  - `text-secondary`×1 → --text-body-secondary
+  - `btn`×1, `btn-outline-secondary`×1 → tum-ui-button / tumUiButton
+  - `dropdown-toggle`×1 → tum-ui-menu
+  - ng-bootstrap: ngbTooltip, ngbDropdown, ngbDropdownToggle, ngbDropdownMenu, ngbDropdownItem
+  - `src/main/webapp/app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-members/conversation-member-row/conversation-member-row.component.scss`: 1 --bs-* variables
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (14 hits): `app/communication/course-conversations-components/generic-confirmation-dialog/generic-confirmation-dialog.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-settings/conversation-settings.component.html` — 14 hits
+  - `col-12`×5 → col-span-12
+  - `btn`×4, `btn-danger`×4 → tum-ui-button / tumUiButton
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (14 hits): `app/communication/course-conversations-components/generic-confirmation-dialog/generic-confirmation-dialog.component.html`, `app/shared-ui/delete-dialog/directive/delete-button.directive.ts`
+- `src/main/webapp/app/communication/forwarded-message/forwarded-message.component.html` — 6 hits
+  - `btn`×2, `btn-link`×2 → tum-ui-button / tumUiButton
+  - `d-flex`×1 → flex
+  - `align-items-center`×1 → items-center
+  - ng-bootstrap: ngbTooltip
+  - 2 Bootstrap spacing classes to convert by size
+  - imports 4 units with Bootstrap (18 hits): `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/shared-ui/confirm-icon/confirm-icon.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/course-conversations-components/posting-summary/posting-summary.component.html` — 26 hits
+  - `btn`×4, `btn-outline-secondary`×4 → tum-ui-button / tumUiButton
+  - `text-secondary`×3 → --text-body-secondary
+  - `d-inline-block`×3 → inline-block
+  - `align-items-start`×2 → items-start
+  - `d-flex`×1 → flex
+  - `align-items-center`×1 → items-center
+  - `d-inline-flex`×1 → inline-flex
+  - `flex-column`×1 → flex-col
+  - `btn-group`×1, `btn-group-sm`×1 → tum-ui-button-group
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/communication/course-conversations-components/posting-summary/posting-summary.component.scss`: 1 raw colors, 3 Bootstrap Sass imports
+  - 5 Bootstrap spacing classes to convert by size
+  - imports 4 units with Bootstrap (18 hits): `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/shared-ui/confirm-icon/confirm-icon.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/channels-overview-dialog/channels-overview-dialog.component.html` — 7 hits
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1 → tum-ui-dialog
+  - `btn-close`×1 → tum-ui-button
+  - `form-group`×1 → tum-ui-form-field
+  - `list-group`×1, `list-group-item`×1 → tum-ui-list
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (19 hits): `app/communication/course-conversations-components/dialogs/channels-overview-dialog/channel-item/channel-item.component.html`, `app/shared-ui/loading-indicator-container/loading-indicator-container.component.html`
+- `src/main/webapp/app/communication/shared/conversation-global-search/conversation-global-search.component.html` — 32 hits
+  - `list-group-item`×4, `list-group`×2 → tum-ui-list
+  - `btn-close`×3, `btn-close-white`×2 → tum-ui-button
+  - `text-muted`×3, `text-secondary`×1 → --text-body-secondary
+  - `dropdown-option`×3 → custom class: rename (banned by prefix only)
+  - `align-items-center`×2 → items-center
+  - `badge`×2 → tum-ui-tag
+  - `btn-sm`×2 → tum-ui-button / tumUiButton
+  - `input-group`×1 → tum-ui-input-group
+  - `d-none`×1 → hidden
+  - `d-sm-flex`×1 → sm:flex
+  - `form-control`×1 → tumUiInput
+  - `d-flex`×1 → flex
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/communication/shared/conversation-global-search/conversation-global-search.component.scss`: 3 raw colors
+  - 15 Bootstrap spacing classes to convert by size
+  - imports 3 units with Bootstrap (23 hits): `app/course/shared/course-sidebar-toggle-button/course-sidebar-toggle-button.component.html`, `app/shared-ui/components/buttons/button/button.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/faq/faq-update.component.html` — 25 hits · route `/course-management/:courseId/faqs/new`
+  - `d-flex`×5 → flex
+  - `form-group`×4, `form-control-label`×4 → tum-ui-form-field
+  - `flex-grow-1`×2 → grow
+  - `form-control`×2 → tumUiInput
+  - `btn`×2, `btn-secondary`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `justify-content-center`×1 → justify-center
+  - `col-md-8`×1 → md:col-span-8
+  - `align-items-center`×1 → items-center
+  - imports 7 units with Bootstrap (26 hits): `app/communication/faq/faq-consistency.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/exercise/category-selector-primeng/category-selector-primeng.component.html`, `app/iris/overview/iris-logo/iris-logo.component.html`
+- `src/main/webapp/app/communication/posting-markdown-editor/posting-markdown-editor.component.html` — 3 hits
+  - `col-12`×1 → col-span-12
+  - `w-100`×1 → w-full
+  - `col`×1 → flex-1
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 8 units with Bootstrap (27 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`, `app/shared-ui/confirm-icon/confirm-icon.component.html`
+- `src/main/webapp/app/communication/course-conversations-components/one-to-one-chat-create-dialog/one-to-one-chat-create-dialog.component.html` — 4 hits
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1 → tum-ui-dialog
+  - `btn-close`×1 → tum-ui-button
+  - ng-bootstrap: ngbAutofocus
+  - imports 2 units with Bootstrap (29 hits): `app/communication/course-users-selector/course-users-selector.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/course-conversations-components/group-chat-create-dialog/group-chat-create-dialog.component.html` — 10 hits
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1 → tum-ui-dialog
+  - `btn-close`×1 → tum-ui-button
+  - `alert`×1, `alert-danger`×1 → tum-ui-message
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `col-12`×1 → col-span-12
+  - `btn`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - ng-bootstrap: ngbAutofocus
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (29 hits): `app/communication/course-users-selector/course-users-selector.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/add-users-form/conversation-add-users-form.component.html` — 31 hits
+  - `row`×4 → grid grid-cols-12 (or flex)
+  - `col-12`×4 → col-span-12
+  - `btn`×3, `btn-check`×2, `btn-secondary`×2, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - `form-check`×3, `form-check-input`×3, `form-check-label`×3 → tum-ui-checkbox / tum-ui-radio-button
+  - `alert`×2, `alert-info`×1, `alert-danger`×1 → tum-ui-message
+  - `form-group`×1 → tum-ui-form-field
+  - `btn-group`×1 → tum-ui-button-group
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 2 units with Bootstrap (29 hits): `app/communication/course-users-selector/course-users-selector.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/message/message-inline-input/message-inline-input.component.html` — 7 hits
+  - `btn`×2, `btn-sm`×2, `btn-outline-secondary`×1, `btn-outline-primary`×1 → tum-ui-button / tumUiButton
+  - `col`×1 → flex-1
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 9 units with Bootstrap (30 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/communication/posting-markdown-editor/posting-markdown-editor.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`, …
+- `src/main/webapp/app/communication/message/message-reply-inline-input/message-reply-inline-input.component.html` — 7 hits
+  - `btn`×2, `btn-sm`×2, `btn-outline-secondary`×1, `btn-outline-primary`×1 → tum-ui-button / tumUiButton
+  - `col`×1 → flex-1
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 9 units with Bootstrap (30 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/communication/posting-markdown-editor/posting-markdown-editor.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`, …
+- `src/main/webapp/app/communication/posting-create-edit-modal/post-create-edit-modal/post-create-edit-modal.component.html` — 22 hits
+  - `modal-backdrop`×1, `modal`×1, `modal-dialog`×1, `modal-lg`×1, `modal-content`×1, `modal-header`×1, `modal-title`×1, `modal-body`×1, `modal-footer`×1 → tum-ui-dialog
+  - `d-block`×1 → block
+  - `btn-close`×1 → tum-ui-button
+  - `alert`×1, `alert-warning`×1 → tum-ui-message
+  - `form-control`×1 → tumUiInput
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `btn`×1, `btn-sm`×1, `btn-outline-primary`×1 → tum-ui-button / tumUiButton
+  - `src/main/webapp/app/communication/metis.component.scss`: 1 raw colors, 3 Bootstrap Sass imports (shared by 5 units)
+  - 5 Bootstrap spacing classes to convert by size
+  - imports 9 units with Bootstrap (30 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/communication/posting-markdown-editor/posting-markdown-editor.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`, …
+- `src/main/webapp/app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html` — 27 hits
+  - `btn-close`×3, `btn-close-white`×2 → tum-ui-button
+  - `badge`×2 → tum-ui-tag
+  - `btn-sm`×2, `btn`×2, `btn-link`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1, `modal-footer`×1 → tum-ui-dialog
+  - `form-group`×1 → tum-ui-form-field
+  - `form-control`×1 → tumUiInput
+  - `list-group`×1, `list-group-item`×1, `list-group-item-action`×1 → tum-ui-list
+  - `w-100`×1 → w-full
+  - `col`×1 → flex-1
+  - `src/main/webapp/app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.scss`: 2 --bs-* variables, 1 raw colors
+  - 12 Bootstrap spacing classes to convert by size
+  - imports 9 units with Bootstrap (30 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`, `app/shared-ui/confirm-icon/confirm-icon.component.html`, …
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/channels-create-dialog/channels-create-dialog.component.html` — 4 hits
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1 → tum-ui-dialog
+  - `btn-close`×1 → tum-ui-button
+  - ng-bootstrap: ngbAutofocus
+  - imports 1 unit with Bootstrap (33 hits): `app/communication/course-conversations-components/dialogs/channels-create-dialog/channel-form/channel-form.component.html`
+- `src/main/webapp/app/communication/course-conversations-components/saved-posts/saved-posts.component.html` — 10 hits
+  - `text-secondary`×2 → --text-body-secondary
+  - `d-flex`×1 → flex
+  - `flex-column`×1 → flex-col
+  - `h-100`×1 → h-full
+  - `btn`×1, `btn-sm`×1, `btn-outline-secondary`×1 → tum-ui-button / tumUiButton
+  - `d-inline-block`×1 → inline-block
+  - `d-sm-none`×1 → sm:hidden
+  - 10 Bootstrap spacing classes to convert by size
+  - imports 5 units with Bootstrap (44 hits): `app/communication/course-conversations-components/posting-summary/posting-summary.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/shared-ui/confirm-icon/confirm-icon.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/conversation-add-users-dialog.component.html` — 4 hits
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1 → tum-ui-dialog
+  - `btn-close`×1 → tum-ui-button
+  - imports 3 units with Bootstrap (60 hits): `app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/add-users-form/conversation-add-users-form.component.html`, `app/communication/course-users-selector/course-users-selector.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/posting-reactions-bar/posting-reactions-bar.component.html` — 6 hits
+  - `align-self-center`×3 → self-center
+  - `d-flex`×1 → flex
+  - `align-items-center`×1 → items-center
+  - `badge`×1 → tum-ui-tag
+  - ng-bootstrap: ngbTooltip
+  - 10 Bootstrap spacing classes to convert by size
+  - imports 12 units with Bootstrap (82 hits): `app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/communication/posting-create-edit-modal/post-create-edit-modal/post-create-edit-modal.component.html`, `app/communication/posting-markdown-editor/posting-markdown-editor.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, …
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-members/conversation-members.component.html` — 21 hits
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `d-flex`×2 → flex
+  - `justify-content-center`×2 → justify-center
+  - `btn`×1, `btn-outline-secondary`×1 → tum-ui-button / tumUiButton
+  - `col-8`×1 → col-span-8
+  - `input-group`×1, `input-group-text`×1 → tum-ui-input-group
+  - `form-control`×1 → tumUiInput
+  - `col-4`×1 → col-span-4
+  - `w-100`×1 → w-full
+  - `col-12`×1 → col-span-12
+  - `form-text`×1 → tum-ui-form-field
+  - `text-body-secondary`×1 → --text-body-secondary
+  - `d-inline-block`×1 → inline-block
+  - `list-group`×1, `list-group-item`×1 → tum-ui-list
+  - PrimeNG: p-select → tum-ui-select, p-paginator → tum-ui-paginator
+  - `src/main/webapp/app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-members/conversation-members.component.scss`: 1 --bs-* variables
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 6 units with Bootstrap (88 hits): `app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/add-users-form/conversation-add-users-form.component.html`, `app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/conversation-add-users-dialog.component.html`, `app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-members/conversation-member-row/conversation-member-row.component.html`, `app/communication/course-conversations-components/generic-confirmation-dialog/generic-confirmation-dialog.component.html`, `app/communication/course-users-selector/course-users-selector.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/communication/answer-post/answer-post.component.html` — 18 hits
+  - `dropdown-item`×5, `dropdown-menu`×1 → tum-ui-menu
+  - `d-flex`×5 → flex
+  - `text-secondary`×1 → --text-body-secondary
+  - PrimeNG: pTextarea → tumUiTextarea, p-button → tum-ui-button
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/communication/answer-post/answer-post.component.scss`: 3 raw colors, 3 Bootstrap Sass imports
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 14 units with Bootstrap (109 hits): `app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/communication/posting-create-edit-modal/post-create-edit-modal/post-create-edit-modal.component.html`, `app/communication/posting-header/posting-header.component.html`, `app/communication/posting-markdown-editor/posting-markdown-editor.component.html`, `app/communication/posting-reactions-bar/posting-reactions-bar.component.html`, …
+- `src/main/webapp/app/communication/course-conversations/tutor-suggestion/tutor-suggestion.component.html` — 1 hit
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/communication/course-conversations/tutor-suggestion/tutor-suggestion.component.scss`: 1 raw colors
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 12 units with Bootstrap (112 hits): `app/course/shared/course-sidebar-toggle-button/course-sidebar-toggle-button.component.html`, `app/iris/overview/about-iris-modal/about-iris-modal.component.html`, `app/iris/overview/base-chatbot/chat-history-item/chat-history-item.component.html`, `app/iris/overview/base-chatbot/iris-activity-feed/iris-activity-feed.component.html`, `app/iris/overview/base-chatbot/iris-base-chatbot.component.html`, `app/iris/overview/base-chatbot/memories-indicator/iris-chat-memories-indicator.component.html`, `app/iris/overview/context-selection/context-selection.component.html`, `app/iris/overview/context-selection/iris-context-switch-divider.component.html`, …
+- `src/main/webapp/app/communication/posting-footer/posting-footer.component.html` — 3 hits
+  - `d-flex`×1 → flex
+  - `align-items-center`×1 → items-center
+  - `flex-grow-1`×1 → grow
+  - 4 Bootstrap spacing classes to convert by size
+  - imports 15 units with Bootstrap (127 hits): `app/communication/answer-post/answer-post.component.html`, `app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/communication/posting-create-edit-modal/post-create-edit-modal/post-create-edit-modal.component.html`, `app/communication/posting-header/posting-header.component.html`, `app/communication/posting-markdown-editor/posting-markdown-editor.component.html`, …
+- `src/main/webapp/app/communication/post/post.component.html` — 25 hits
+  - `dropdown-item`×8, `dropdown-menu`×1 → tum-ui-menu
+  - `d-flex`×8 → flex
+  - `text-secondary`×1 → --text-body-secondary
+  - `align-items-center`×1 → items-center
+  - `justify-content-between`×1 → justify-between
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/communication/metis.component.scss`: 1 raw colors, 3 Bootstrap Sass imports (shared by 5 units)
+  - `src/main/webapp/app/communication/post/post.component.scss`: 1 raw colors
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 18 units with Bootstrap (143 hits): `app/communication/answer-post/answer-post.component.html`, `app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html`, `app/communication/forwarded-message/forwarded-message.component.html`, `app/communication/message/message-inline-input/message-inline-input.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, `app/communication/posting-create-edit-modal/post-create-edit-modal/post-create-edit-modal.component.html`, …
+- `src/main/webapp/app/communication/course-conversations-components/dialogs/conversation-detail-dialog/conversation-detail-dialog.component.html` — 15 hits
+  - `nav-item`×3, `nav-link`×3, `nav`×1, `nav-tabs`×1 → tum-ui-tabs
+  - `modal-header`×1, `modal-title`×1, `modal-body`×1 → tum-ui-dialog
+  - `btn`×1, `btn-info`×1, `btn-sm`×1 → tum-ui-button / tumUiButton
+  - `btn-close`×1 → tum-ui-button
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 10 units with Bootstrap (150 hits): `app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/add-users-form/conversation-add-users-form.component.html`, `app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/conversation-add-users-dialog.component.html`, `app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-info/conversation-info.component.html`, `app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-members/conversation-member-row/conversation-member-row.component.html`, `app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-members/conversation-members.component.html`, `app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-settings/conversation-settings.component.html`, `app/communication/course-conversations-components/generic-confirmation-dialog/generic-confirmation-dialog.component.html`, `app/communication/course-users-selector/course-users-selector.component.html`, …
+- `src/main/webapp/app/communication/course-conversations-components/layout/conversation-header/conversation-header.component.html` — 37 hits
+  - `btn`×7, `btn-sm`×7, `btn-outline-secondary`×6, `btn-toolbar`×2, `btn-info`×1 → tum-ui-button / tumUiButton
+  - `d-flex`×4 → flex
+  - `d-inline-block`×3 → inline-block
+  - `justify-content-between`×2 → justify-between
+  - `btn-group`×2 → tum-ui-button-group
+  - `align-items-center`×1 → items-center
+  - `d-sm-none`×1 → sm:hidden
+  - `text-body-secondary`×1 → --text-body-secondary
+  - 11 Bootstrap spacing classes to convert by size
+  - imports 11 units with Bootstrap (165 hits): `app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/add-users-form/conversation-add-users-form.component.html`, `app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/conversation-add-users-dialog.component.html`, `app/communication/course-conversations-components/dialogs/conversation-detail-dialog/conversation-detail-dialog.component.html`, `app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-info/conversation-info.component.html`, `app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-members/conversation-member-row/conversation-member-row.component.html`, `app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-members/conversation-members.component.html`, `app/communication/course-conversations-components/dialogs/conversation-detail-dialog/tabs/conversation-settings/conversation-settings.component.html`, `app/communication/course-conversations-components/generic-confirmation-dialog/generic-confirmation-dialog.component.html`, …
+- `src/main/webapp/app/communication/posting-thread/posting-thread.component.html` — 4 hits
+  - `src/main/webapp/app/communication/metis.component.scss`: 1 raw colors, 3 Bootstrap Sass imports (shared by 5 units)
+  - 2 Bootstrap spacing classes to convert by size
+  - imports 19 units with Bootstrap (168 hits): `app/communication/answer-post/answer-post.component.html`, `app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html`, `app/communication/forwarded-message/forwarded-message.component.html`, `app/communication/message/message-inline-input/message-inline-input.component.html`, `app/communication/post/post.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, …
+- `src/main/webapp/app/communication/course-conversations-components/course-wide-search/course-wide-search.component.html` — 22 hits
+  - `form-check-input`×4 → tum-ui-checkbox / tum-ui-radio-button
+  - `btn`×2, `btn-outline-secondary`×2, `btn-sm`×1 → tum-ui-button / tumUiButton
+  - `d-inline-block`×2 → inline-block
+  - `d-flex`×2 → flex
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `justify-content-center`×2 → justify-center
+  - `d-sm-none`×1 → sm:hidden
+  - `justify-content-between`×1 → justify-between
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/communication/course-conversations-components/course-wide-search/course-wide-search.component.scss`: 3 Bootstrap Sass imports
+  - 26 Bootstrap spacing classes to convert by size
+  - imports 20 units with Bootstrap (172 hits): `app/communication/answer-post/answer-post.component.html`, `app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html`, `app/communication/forwarded-message/forwarded-message.component.html`, `app/communication/message/message-inline-input/message-inline-input.component.html`, `app/communication/post/post.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, …
+- `src/main/webapp/app/communication/shared/discussion-section/discussion-section.component.html` — 50 hits
+  - `row`×9 → grid grid-cols-12 (or flex)
+  - `d-flex`×5 → flex
+  - `flex-grow-1`×5 → grow
+  - `flex-column`×4 → flex-col
+  - `form-group`×3 → tum-ui-form-field
+  - `form-check-input`×3 → tum-ui-checkbox / tum-ui-radio-button
+  - `col-12`×3 → col-span-12
+  - `h-100`×2 → h-full
+  - `card-body`×2, `card`×1, `card-header`×1 → tum-ui-card / tum-ui-panel
+  - `d-none`×2 → hidden
+  - `d-md-inline`×2 → md:inline
+  - `col`×1 → flex-1
+  - `justify-content-between`×1 → justify-between
+  - `align-items-baseline`×1 → items-baseline
+  - `btn`×1, `btn-sm`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/communication/shared/discussion-section/discussion-section.component.scss`: 2 --bs-* variables
+  - 23 Bootstrap spacing classes to convert by size
+  - imports 21 units with Bootstrap (173 hits): `app/communication/answer-post/answer-post.component.html`, `app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html`, `app/communication/forwarded-message/forwarded-message.component.html`, `app/communication/message/message-inline-input/message-inline-input.component.html`, `app/communication/post/post.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, …
+- `src/main/webapp/app/communication/course-conversations-components/layout/conversation-messages/conversation-messages.component.html` — 12 hits
+  - `btn`×2, `btn-primary`×2 → tum-ui-button / tumUiButton
+  - `btn-md`×2 → custom class: rename (banned by prefix only)
+  - `justify-content-center`×1 → justify-center
+  - `d-none`×1 → hidden
+  - `d-sm-block`×1 → sm:block
+  - `src/main/webapp/app/communication/course-conversations-components/layout/conversation-messages/conversation-messages.component.scss`: 3 Bootstrap Sass imports
+  - 4 Bootstrap spacing classes to convert by size
+  - imports 21 units with Bootstrap (177 hits): `app/communication/answer-post/answer-post.component.html`, `app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html`, `app/communication/forwarded-message/forwarded-message.component.html`, `app/communication/message/message-inline-input/message-inline-input.component.html`, `app/communication/post/post.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/posting-content/posting-content-part/posting-content-part.component.html`, `app/communication/posting-content/posting-content.component.html`, …
+- `src/main/webapp/app/communication/course-conversations-components/layout/conversation-thread-sidebar/conversation-thread-sidebar.component.html` — 13 hits
+  - `d-flex`×2 → flex
+  - `h-100`×1 → h-full
+  - `card`×1, `card-header`×1, `card-body`×1 → tum-ui-card / tum-ui-panel
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `flex-grow-1`×1 → grow
+  - `col`×1 → flex-1
+  - `align-items-center`×1 → items-center
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/communication/course-conversations-components/layout/conversation-thread-sidebar/conversation-thread-sidebar.component.scss`: 3 Bootstrap Sass imports
+  - 9 Bootstrap spacing classes to convert by size
+  - imports 33 units with Bootstrap (288 hits): `app/communication/answer-post/answer-post.component.html`, `app/communication/course-conversations-components/forward-message-dialog/forward-message-dialog.component.html`, `app/communication/course-conversations/tutor-suggestion/tutor-suggestion.component.html`, `app/communication/forwarded-message/forwarded-message.component.html`, `app/communication/message/message-inline-input/message-inline-input.component.html`, `app/communication/message/message-reply-inline-input/message-reply-inline-input.component.html`, `app/communication/post/post.component.html`, `app/communication/posting-button/posting-button.component.html`, …
+- `src/main/webapp/app/communication/shared/course-conversations/course-conversations.component.html` — 20 hits · route `/course-management/:courseId/communication`
+  - `d-flex`×2 → flex
+  - `justify-content-between`×2 → justify-between
+  - `col`×2 → flex-1
+  - `flex-grow-1`×2 → grow
+  - `btn`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - `src/main/webapp/app/communication/shared/course-conversations/course-conversations.component.scss`: 1 --bs-* variables, 2 raw colors, 3 Bootstrap Sass imports
+  - `src/main/webapp/app/course/overview/course-overview/course-overview.scss`: 4 raw colors (shared by 13 units)
+  - 4 Bootstrap spacing classes to convert by size
+  - imports 69 units with Bootstrap (828 hits): `app/communication/answer-post/answer-post.component.html`, `app/communication/course-conversations-components/course-wide-search/course-wide-search.component.html`, `app/communication/course-conversations-components/dialogs/channels-create-dialog/channel-form/channel-form.component.html`, `app/communication/course-conversations-components/dialogs/channels-create-dialog/channels-create-dialog.component.html`, `app/communication/course-conversations-components/dialogs/channels-overview-dialog/channel-item/channel-item.component.html`, `app/communication/course-conversations-components/dialogs/channels-overview-dialog/channels-overview-dialog.component.html`, `app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/add-users-form/conversation-add-users-form.component.html`, `app/communication/course-conversations-components/dialogs/conversation-add-users-dialog/conversation-add-users-dialog.component.html`, …
+
+## Data
+
+- History (every commit): https://ls1intum.github.io/Artemis-CodeStats/migrations/index.json
+- This snapshot (units, pages, blockers, inventories): https://ls1intum.github.io/Artemis-CodeStats/migrations/5be30e1d757c739f95291431c048007811ee4b88.json
+- Schema: https://github.com/ls1intum/Artemis-CodeStats/blob/main/src/features/migrations/model.ts

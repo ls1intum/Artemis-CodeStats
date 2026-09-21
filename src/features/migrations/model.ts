@@ -99,7 +99,10 @@ export const unitSchema = z.object({
   status: z.enum(statuses),
   scanned: z.boolean(),
   tailwind: z.boolean(),
+  // Full route path from app.routes.ts; `:dynamic` marks a non-literal segment.
   route: z.string().optional(),
+  routeParents: z.array(z.string()).optional(),
+  routeHits: count,
   spacing: count,
   classHits: count,
   styleHits: count,

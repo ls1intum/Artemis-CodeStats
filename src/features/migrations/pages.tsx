@@ -15,17 +15,26 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { sourceUrl, type Detail, type Unit } from './model'
+import { appRoot, sourceUrl, type Detail, type Unit } from './model'
 import { hits, number, short, unitFile } from './format'
 import { SegmentBar } from './status'
 
 type PageState = 'ready' | 'blocked' | 'bootstrap'
 const state = (u: Unit): PageState =>
-  hits(u) > 0 ? 'bootstrap' : u.closureHits > 0 ? 'blocked' : 'ready'
+  hits(u) > 0
+    ? 'bootstrap'
+    : u.closureHits + u.routeHits > 0
+      ? 'blocked'
+      : 'ready'
 const stateLabel: Record<PageState, string> = {
   ready: 'Imports no Bootstrap',
-  blocked: 'Blocked by imported units',
+  blocked: 'Blocked by imported or parent units',
   bootstrap: 'Bootstrap in the page itself',
+}
+const shortLabel: Record<PageState, string> = {
+  ready: 'Ready',
+  blocked: 'Blocked',
+  bootstrap: 'Bootstrap',
 }
 const stateFill: Record<PageState, string> = {
   ready: 'bg-status-locked',
@@ -47,14 +56,16 @@ export function Pages({ detail }: { detail: Detail }) {
   const sections = [...new Set(pages.map((u) => u.section))]
     .map((name) => ({ name, pages: pages.filter((u) => u.section === name) }))
     .sort((a, b) => b.pages.length - a.pages.length)
+  const remaining = (u: Unit) => hits(u) + u.closureHits + u.routeHits
   const rows = pages
     .filter((u) => filter === 'all' || state(u) === filter)
     .sort(
       (a, b) =>
         states.indexOf(state(a)) - states.indexOf(state(b)) ||
-        a.closureHits + hits(a) - (b.closureHits + hits(b)) ||
+        remaining(a) - remaining(b) ||
         a.route!.localeCompare(b.route!),
     )
+  const shell = detail.units.find((u) => u.id === `${appRoot}/app.component.ts`)
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
       <Card>
@@ -63,10 +74,20 @@ export function Pages({ detail }: { detail: Detail }) {
             <h2>Routed pages</h2>
           </CardTitle>
           <CardDescription>
-            Components referenced by <code>component</code> or{' '}
-            <code>loadComponent</code> in route files. A page is ready when
-            neither it nor anything it imports carries Bootstrap; blocked pages
-            only need their imported units fixed.
+            Components reached from <code>app.routes.ts</code> through{' '}
+            <code>component</code>, <code>loadComponent</code>,{' '}
+            <code>children</code> and <code>loadChildren</code>. A page is ready
+            when it, what it imports and the route components it renders inside
+            carry no Bootstrap.
+            {shell && hits(shell) + shell.closureHits > 0 && (
+              <>
+                {' '}
+                The global shell (<code>{short(unitFile(shell))}</code> with
+                navbar, footer and overlays) carries{' '}
+                {number(hits(shell) + shell.closureHits)} hits and renders on
+                every page; it is not counted here.
+              </>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5">
@@ -113,8 +134,8 @@ export function Pages({ detail }: { detail: Detail }) {
                 <h2>Pages by remaining work</h2>
               </CardTitle>
               <CardDescription>
-                Cheapest first within each state: fewest hits in the page and
-                its imports.
+                Cheapest first within each state: fewest hits in the page, its
+                imports and its parent routes.
               </CardDescription>
             </div>
             <ToggleGroup
@@ -130,11 +151,7 @@ export function Pages({ detail }: { detail: Detail }) {
               </ToggleGroupItem>
               {states.map((s) => (
                 <ToggleGroupItem key={s} value={s} className="flex-none px-3">
-                  {s === 'ready'
-                    ? 'Ready'
-                    : s === 'blocked'
-                      ? 'Blocked'
-                      : 'Bootstrap'}
+                  {shortLabel[s]}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
@@ -149,6 +166,7 @@ export function Pages({ detail }: { detail: Detail }) {
                 <TableHead>Section</TableHead>
                 <TableHead className="text-right">Own hits</TableHead>
                 <TableHead className="text-right">Imported hits</TableHead>
+                <TableHead className="text-right">Parent route hits</TableHead>
                 <TableHead className="text-right">Units to fix</TableHead>
               </TableRow>
             </TableHeader>
@@ -160,7 +178,7 @@ export function Pages({ detail }: { detail: Detail }) {
                   </TableCell>
                   <TableCell className="whitespace-normal">
                     <a
-                      className="break-all underline underline-offset-4"
+                      className="underline underline-offset-4"
                       href={sourceUrl(detail.commit, unitFile(u))}
                     >
                       {u.selector ?? short(unitFile(u))}
@@ -172,6 +190,9 @@ export function Pages({ detail }: { detail: Detail }) {
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {u.closureHits ? number(u.closureHits) : ''}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {u.routeHits ? number(u.routeHits) : ''}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {u.blocked + (hits(u) > 0 ? 1 : 0) || ''}

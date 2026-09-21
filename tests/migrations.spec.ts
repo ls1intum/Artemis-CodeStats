@@ -64,7 +64,8 @@ test('lock entries are copied for pasting into the three Artemis lists', async (
   const brief = await page.evaluate(() => navigator.clipboard.readText())
   expect(brief).toMatch(/^# Artemis client migration brief/)
   expect(brief).toMatch(/## Lock now/)
-  expect(brief).toMatch(/→ tum-ui-button/)
+  expect(brief).toMatch(/## How to migrate/)
+  expect(brief).toMatch(/migrations\/brief\/course\.md/)
   await page
     .getByRole('button', { name: /^Copy lock entries for / })
     .first()
@@ -137,19 +138,22 @@ test('pages and history views render from the same data', async ({ page }) => {
     'aria-label',
     new RegExp(`Imports no Bootstrap ${t.pagesClean},`),
   )
+  await expect(page.getByText(/The global shell/)).toBeVisible()
   await page.getByRole('radio', { name: 'Ready', exact: true }).click()
   await expect(page.getByRole('table').last().locator('tbody tr')).toHaveCount(
     t.pagesClean,
   )
   await page.getByRole('tab', { name: 'History' }).click()
   await expect(
-    page.getByRole('link', { name: 'migrations/brief.md' }),
-  ).toHaveAttribute('href', /migrations\/brief\.md$/)
+    page.getByRole('link', { name: 'JSON', exact: true }).first(),
+  ).toHaveAttribute('href', /migrations\/[a-f0-9]{40}\.json$/)
   const brief = await page.request.get('./migrations/brief.md')
   expect(brief.ok()).toBe(true)
   expect(await brief.text()).toMatch(/^# Artemis client migration brief/)
+  const section = await page.request.get('./migrations/brief/course.md')
+  expect(await section.text()).toMatch(/×\d+ → /)
   const llms = await page.request.get('./llms.txt')
-  expect(await llms.text()).toMatch(/^# Artemis CodeStats/)
+  expect(await llms.text()).toMatch(/^# Artemis CodeStats\n\n> /)
 })
 
 test('snapshot and comparison selection change the deltas and mark the chart', async ({

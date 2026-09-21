@@ -1,0 +1,404 @@
+# Artemis client migration brief: quiz
+
+> Bootstrap → Tailwind / TUM UI. Generated from Artemis `5be30e1d` (Development: Improve input validation for assessment feedback and text block ids (#13917), https://github.com/ls1intum/Artemis/pull/13917). Paths are relative to the Artemis repository. Hits are class tokens matched by Artemis's own `no-bootstrap-classes` rule plus SCSS residue; a unit is done when its directory is in the lock list. Guideline: https://github.com/ls1intum/Artemis/blob/develop/documentation/docs/developer/guidelines/client-development.mdx
+
+## Status
+
+- 9123 Bootstrap hits in 584 of 1004 units; 137 units locked, 283 Bootstrap-free but unlocked
+- 41 of 189 routed pages import no Bootstrap, not counting the global shell
+- 80 directories can be locked now (configuration-only change)
+
+## How to migrate
+
+1. Convert the whole rendering closure of a unit, never half: a migrated element under a Bootstrap ancestor loses the cascade. Leave app-wide shared units (navbar, footer, delete dialog) as they are until they are migrated as their own locked units; do not put a Tailwind utility on their host.
+2. Replace each Bootstrap class with the target listed for it; use the TUM UI kit component where one exists (reference: https://github.com/ls1intum/Artemis/blob/develop/documentation/docs/developer/tum-ui.mdx). Import kit symbols from `@tumaet/ui-angular`.
+3. Convert spacing by size, not by name: Bootstrap `mb-3` is 1rem, Tailwind `mb-4` is 1rem. Replace raw colors and `--bs-*` variables in SCSS with semantic tokens (`text-state-*`, `--text-body-secondary`); delete SCSS that only restyled Bootstrap.
+4. Verify locally with `pnpm migrate:check <path under src/main/webapp/app>` (prints remaining hits, exit 0 when ready to lock) and `pnpm migrate:status`.
+5. When a directory is ready, add its three entries: the `.html` glob to the `files` array of the block that enables `localRules/no-bootstrap-classes` in `eslint.config.mjs`, the `.scss` glob to the `--bs-`/hex override in `.stylelintrc.json`, and the `@source` line (relative to `src/main/webapp/tailwind.css`) to `tailwind.css`. Then run `pnpm run test:rules && pnpm run lint && pnpm run stylelint && pnpm run prettier:check`, restart the dev server and check light and dark mode.
+
+Work order: shared units with few hits and many dependants first, then units that import nothing with hits (they can be locked right after), then the rest.
+
+## Lock now
+
+- `src/main/webapp/app/quiz/overview/course-training/course-training-quiz/leaderboard/league` (1 unit)
+  ```
+  'src/main/webapp/app/quiz/overview/course-training/course-training-quiz/leaderboard/league/**/*.html',
+  "src/main/webapp/app/quiz/overview/course-training/course-training-quiz/leaderboard/league/**/*.scss",
+  @source './app/quiz/overview/course-training/course-training-quiz/leaderboard/league';
+  ```
+- `src/main/webapp/app/quiz/overview/course-training/league-badge` (1 unit)
+  ```
+  'src/main/webapp/app/quiz/overview/course-training/league-badge/**/*.html',
+  "src/main/webapp/app/quiz/overview/course-training/league-badge/**/*.scss",
+  @source './app/quiz/overview/course-training/league-badge';
+  ```
+
+## Shared units to fix first
+
+- `src/main/webapp/app/shared-ui/components/buttons/button/button.component.html` (jhi-button): imported by 44 Bootstrap-free units; 5 hits: w-100, btn, d-none, d-md-inline, d-xl-inline
+- `src/main/webapp/app/shared-ui/directives/resizable.directive.ts` ([jhiResizable]): imported by 16 Bootstrap-free units; 1 hit: card-resizable
+- `src/main/webapp/app/shared-ui/profile-picture/profile-picture.component.html` (jhi-profile-picture): imported by 15 Bootstrap-free units; 3 hits: SCSS only
+- `src/main/webapp/app/editor/monaco-editor/monaco-editor.component.ts` (jhi-monaco-editor): imported by 14 Bootstrap-free units; 1 hit: SCSS only
+- `src/main/webapp/app/iris/overview/iris-logo/iris-logo.component.html` (jhi-iris-logo): imported by 14 Bootstrap-free units; 1 hit: SCSS only
+- `src/main/webapp/app/shared-ui/delete-dialog/directive/delete-button.directive.ts` ([jhiDeleteButton]): imported by 13 Bootstrap-free units; 3 hits: btn, d-none, d-xl-inline
+- `src/main/webapp/app/communication/posting-button/posting-button.component.html` (button[jhi-posting-button]): imported by 10 Bootstrap-free units; 3 hits: btn, btn-outline-primary, btn-sm
+- `src/main/webapp/app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html` (jhi-redirect-to-iris-button): imported by 10 Bootstrap-free units; 3 hits: btn, btn-sm, btn-outline-secondary
+- `src/main/webapp/app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html` (jhi-markdown-editor-monaco): imported by 10 Bootstrap-free units; 4 hits: btn, btn-sm, btn-outline-secondary
+- `src/main/webapp/app/foundation/feature-toggle/feature-toggle-hide.directive.ts` ([jhiFeatureToggleHide]): imported by 8 Bootstrap-free units; 1 hit: d-none
+
+## quiz — 750 hits, 15 of 48 units Bootstrap-free
+
+Units in work order (fewest imported hits first):
+
+- `src/main/webapp/app/quiz/manage/confirm-import-invalid-questions-modal/quiz-confirm-import-invalid-questions-modal.component.html` — 1 hit
+  - `src/main/webapp/app/quiz/manage/confirm-import-invalid-questions-modal/quiz-confirm-import-invalid-questions-modal.scss`: 1 Bootstrap Sass imports
+- `src/main/webapp/app/quiz/shared/questions/drag-and-drop-question/drag-item/drag-item.component.html` — 1 hit
+  - `src/main/webapp/app/quiz/shared/questions/drag-and-drop-question/drag-item/drag-item.component.scss`: 1 raw colors
+- `src/main/webapp/app/quiz/manage/match-percentage-info-modal/match-percentage-info-modal.component.html` — 4 hits
+  - `btn`×2 → tum-ui-button / tumUiButton
+  - `table`×1 → tum-ui-table / tumUiTable
+  - `btn-outline`×1 → custom class: rename (banned by prefix only)
+  - PrimeNG: p-dialog → tum-ui-dialog
+- `src/main/webapp/app/quiz/manage/quiz-scoring-info-modal/quiz-scoring-info-modal.component.html` — 4 hits
+  - `btn`×2 → tum-ui-button / tumUiButton
+  - `table`×1 → tum-ui-table / tumUiTable
+  - `btn-outline`×1 → custom class: rename (banned by prefix only)
+  - PrimeNG: p-dialog → tum-ui-dialog
+- `src/main/webapp/app/quiz/shared/questions/quiz-scoring-infostudent-modal/quiz-scoring-info-student-modal.component.html` — 8 hits
+  - `modal-body`×4, `modal-title`×1 → tum-ui-dialog
+  - `btn`×2 → tum-ui-button / tumUiButton
+  - `btn-outline`×1 → custom class: rename (banned by prefix only)
+  - PrimeNG: p-dialog → tum-ui-dialog
+- `src/main/webapp/app/quiz/manage/quiz-ai-question-refinement-panel/quiz-ai-question-refinement-panel.component.html` — 9 hits
+  - PrimeNG: pTooltip → tumUiTooltip, pTextarea → tumUiTextarea, pButton → tumUiButton
+  - `src/main/webapp/app/quiz/manage/quiz-ai-question-refinement-panel/quiz-ai-question-refinement-panel.component.scss`: 8 --bs-* variables, 1 raw colors
+- `src/main/webapp/app/quiz/manage/re-evaluate/warning/quiz-re-evaluate-warning.component.html` — 9 hits
+  - `btn`×3, `btn-primary`×2, `btn-secondary`×1 → tum-ui-button / tumUiButton
+  - `form-group`×1 → tum-ui-form-field
+  - `src/main/webapp/app/quiz/shared/quiz.scss`: 2 --bs-* variables (shared by 12 units)
+- `src/main/webapp/app/quiz/manage/update/quiz-ai-generation-modal/quiz-ai-generated-question-card/quiz-ai-generated-question-card.component.html` — 17 hits
+  - `src/main/webapp/app/quiz/manage/update/quiz-ai-generation-modal/quiz-ai-generated-question-card/quiz-ai-generated-question-card.component.scss`: 15 --bs-* variables, 2 raw colors
+- `src/main/webapp/app/quiz/manage/export/quiz-exercise-export.component.html` — 18 hits
+  - `d-flex`×2 → flex
+  - `flex-grow-1`×2 → grow
+  - `flex-column`×1 → flex-col
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `align-items-center`×1 → items-center
+  - `text-muted`×1 → --text-body-secondary
+  - `spinner-border`×1, `spinner-border-sm`×1 → tum-ui-progress-spinner
+  - `table-responsive`×1, `table`×1, `table-striped`×1 → tum-ui-table / tumUiTable
+  - `form-check-input`×1 → tum-ui-checkbox / tum-ui-radio-button
+  - `btn`×1, `btn-success`×1 → tum-ui-button / tumUiButton
+  - PrimeNG: p-button → tum-ui-button
+  - `src/main/webapp/app/quiz/shared/quiz.scss`: 2 --bs-* variables (shared by 12 units)
+  - 3 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/quiz/shared/questions/multiple-choice-question/visual-question/multiple-choice-visual-question.component.html` — 18 hits
+  - `form-control`×6 → tumUiInput
+  - `text-secondary`×4 → --text-body-secondary
+  - `btn`×3, `btn-outline-secondary`×2, `btn-success`×1 → tum-ui-button / tumUiButton
+  - `form-group`×1 → tum-ui-form-field
+  - `btn-block`×1 → custom class: rename (banned by prefix only)
+  - ng-bootstrap: ngbTooltip
+  - 5 Bootstrap spacing classes to convert by size
+- `src/main/webapp/app/quiz/manage/list-edit-existing/quiz-question-list-edit-existing.component.html` — 52 hits
+  - `btn`×4, `btn-outline-primary`×2, `btn-primary`×1, `btn-outline-secondary`×1 → tum-ui-button / tumUiButton
+  - `form-check`×4, `form-check-input`×4, `form-check-label`×4 → tum-ui-checkbox / tum-ui-radio-button
+  - `w-100`×3 → w-full
+  - `badge`×3 → tum-ui-tag
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `form-select`×2 → tum-ui-select
+  - `col`×2 → flex-1
+  - `form-control`×2 → tumUiInput
+  - `justify-content-center`×1 → justify-center
+  - `card-header`×1 → tum-ui-card / tum-ui-panel
+  - `btn-group`×1 → tum-ui-button-group
+  - `btn-default`×1 → custom class: rename (banned by prefix only)
+  - `form-group`×1 → tum-ui-form-field
+  - `d-flex`×1 → flex
+  - `justify-content-start`×1 → justify-start
+  - `flex-grow-0`×1 → grow-0
+  - `input-group`×1 → tum-ui-input-group
+  - `flex-grow-1`×1 → grow
+  - `table-responsive`×1, `table`×1, `table-striped`×1 → tum-ui-table / tumUiTable
+  - `bg-info`×1 → bg-state-info
+  - `bg-warning`×1 → bg-state-warning
+  - `bg-success`×1 → bg-state-success
+  - `src/main/webapp/app/quiz/shared/quiz.scss`: 2 --bs-* variables (shared by 12 units)
+  - 5 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (1 hits): `app/quiz/manage/confirm-import-invalid-questions-modal/quiz-confirm-import-invalid-questions-modal.component.html`
+- `src/main/webapp/app/quiz/overview/course-training/course-training-quiz/leaderboard/leaderboard.component.html` — 2 hits
+  - `src/main/webapp/app/quiz/overview/course-training/course-training-quiz/leaderboard/leaderboard.component.scss`: 2 --bs-* variables
+  - imports 1 unit with Bootstrap (3 hits): `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/quiz/manage/lifecyle-buttons/quiz-exercise-lifecycle-buttons.component.html` — 9 hits
+  - `d-flex`×4 → flex
+  - `align-items-center`×2 → items-center
+  - `flex-column`×2 → flex-col
+  - `text-muted`×1 → --text-body-secondary
+  - 12 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (3 hits): `app/shared-ui/delete-dialog/directive/delete-button.directive.ts`
+- `src/main/webapp/app/quiz/manage/statistics/quiz-statistics-footer/quiz-statistics-footer.component.html` — 28 hits
+  - `dropdown-item`×10 → tum-ui-menu
+  - `form-group`×3 → tum-ui-form-field
+  - `col-sm`×3 → sm:flex-1
+  - `btn`×3, `btn-primary`×1, `btn-sm`×1 → tum-ui-button / tumUiButton
+  - `btn-default`×2 → custom class: rename (banned by prefix only)
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `d-inline-block`×1 → inline-block
+  - `btn-group`×1 → tum-ui-button-group
+  - ng-bootstrap: ngbDropdown, ngbDropdownToggle, ngbDropdownMenu
+  - `src/main/webapp/app/quiz/shared/quiz.scss`: 2 --bs-* variables (shared by 12 units)
+  - imports 1 unit with Bootstrap (4 hits): `app/shared-ui/connection-status/connection-status.component.html`
+- `src/main/webapp/app/quiz/overview/course-training/quiz-training-dialog.component.html` — 2 hits
+  - `d-flex`×1 → flex
+  - `align-items-center`×1 → items-center
+  - PrimeNG: p-dialog → tum-ui-dialog, p-toggleswitch → tum-ui-toggle-switch, pTooltip → tumUiTooltip
+  - 8 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (5 hits): `app/shared-ui/components/buttons/button/button.component.html`
+- `src/main/webapp/app/quiz/shared/questions/short-answer-question/short-answer-question.component.html` — 5 hits
+  - `btn`×2, `btn-outline-primary`×2 → tum-ui-button / tumUiButton
+  - ng-bootstrap: ngbTooltip, ngbPopover
+  - `src/main/webapp/app/quiz/shared/questions/short-answer-question/short-answer-question.component.scss`: 1 --bs-* variables
+  - imports 1 unit with Bootstrap (8 hits): `app/quiz/shared/questions/quiz-scoring-infostudent-modal/quiz-scoring-info-student-modal.component.html`
+- `src/main/webapp/app/quiz/shared/questions/drag-and-drop-question/drag-and-drop-question.component.html` — 6 hits
+  - `btn`×3, `btn-outline-primary`×2 → tum-ui-button / tumUiButton
+  - `btn-default`×1 → custom class: rename (banned by prefix only)
+  - ng-bootstrap: ngbPopover, ngbTooltip
+  - imports 2 units with Bootstrap (9 hits): `app/quiz/shared/questions/drag-and-drop-question/drag-item/drag-item.component.html`, `app/quiz/shared/questions/quiz-scoring-infostudent-modal/quiz-scoring-info-student-modal.component.html`
+- `src/main/webapp/app/quiz/manage/manage-buttons/quiz-exercise-manage-buttons.component.html` — 42 hits
+  - `btn`×8, `btn-sm`×8, `btn-warning`×3, `btn-info`×2, `btn-success`×2, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - `d-none`×8 → hidden
+  - `d-md-inline`×8 → md:inline
+  - `btn-group`×1 → tum-ui-button-group
+  - `d-flex`×1 → flex
+  - ng-bootstrap: ngbTooltip
+  - 22 Bootstrap spacing classes to convert by size
+  - imports 3 units with Bootstrap (11 hits): `app/course/manage/exercises/create-variant-modal/create-variant-with-ai-button.component.ts`, `app/shared-ui/components/buttons/button/button.component.html`, `app/shared-ui/delete-dialog/directive/delete-button.directive.ts`
+- `src/main/webapp/app/quiz/overview/course-training/course-training.component.html` — 2 hits · route `/courses/:courseId/:dynamic`
+  - `d-flex`×1 → flex
+  - `align-items-center`×1 → items-center
+  - PrimeNG: p-button → tum-ui-button
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 4 units with Bootstrap (12 hits): `app/quiz/overview/course-training/course-training-quiz/leaderboard/leaderboard.component.html`, `app/quiz/overview/course-training/quiz-training-dialog.component.html`, `app/shared-ui/components/buttons/button/button.component.html`, `app/shared-ui/profile-picture/profile-picture.component.html`
+- `src/main/webapp/app/quiz/manage/update/quiz-ai-generation-modal/quiz-ai-generation-modal.component.html` — 19 hits
+  - `w-100`×5 → w-full
+  - PrimeNG: p-dialog → tum-ui-dialog, pButton → tumUiButton, pInputText, pTooltip → tumUiTooltip, p-multiselect, pTextarea → tumUiTextarea, p-inputnumber → tum-ui-input-number, p-slider
+  - `src/main/webapp/app/quiz/manage/update/quiz-ai-generation-modal/quiz-ai-generation-modal.component.scss`: 13 --bs-* variables, 1 raw colors
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 1 unit with Bootstrap (17 hits): `app/quiz/manage/update/quiz-ai-generation-modal/quiz-ai-generated-question-card/quiz-ai-generated-question-card.component.html`
+- `src/main/webapp/app/quiz/manage/short-answer-question/short-answer-question-edit.component.html` — 97 hits
+  - `btn`×15, `btn-outline-secondary`×13 → tum-ui-button / tumUiButton
+  - `form-group`×7, `form-text`×2 → tum-ui-form-field
+  - `col-12`×7 → col-span-12
+  - `row`×4 → grid grid-cols-12 (or flex)
+  - `d-flex`×4 → flex
+  - `align-items-center`×4 → items-center
+  - `form-check-input`×3 → tum-ui-checkbox / tum-ui-radio-button
+  - `text-danger`×2 → text-state-danger
+  - `col-md-4`×2 → md:col-span-4
+  - `col-md-6`×2 → md:col-span-6
+  - `col`×2 → flex-1
+  - `col-md-3`×2 → md:col-span-3
+  - `btn-group`×2 → tum-ui-button-group
+  - `badge`×1 → tum-ui-tag
+  - `bg-success`×1 → bg-state-success
+  - `align-items-start`×1 → items-start
+  - `form-select`×1 → tum-ui-select
+  - `col-md-2`×1 → md:col-span-2
+  - `form-control`×1 → tumUiInput
+  - `flex-shrink-0`×1 → shrink-0
+  - `justify-content-center`×1 → justify-center
+  - `justify-content-md-start`×1 → md:justify-start
+  - `col-md-7`×1 → md:col-span-7
+  - `input-group-btn`×1 → custom class: rename (banned by prefix only)
+  - `justify-content-start`×1 → justify-start
+  - PrimeNG: pInputText, p-inputnumber → tum-ui-input-number, p-select → tum-ui-select, p-checkbox → tum-ui-checkbox
+  - ng-bootstrap: ngbTooltip, ngbCollapse
+  - `src/main/webapp/app/quiz/manage/exercise/quiz-exercise.scss`: 12 raw colors (shared by 3 units)
+  - `src/main/webapp/app/quiz/shared/quiz.scss`: 2 --bs-* variables (shared by 12 units)
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 7 units with Bootstrap (20 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`, `app/quiz/manage/match-percentage-info-modal/match-percentage-info-modal.component.html`, `app/quiz/manage/quiz-scoring-info-modal/quiz-scoring-info-modal.component.html`
+- `src/main/webapp/app/quiz/overview/participation/quiz-participation.component.html` — 44 hits · route `/course-management/:courseId/exams/:examId/exercise-groups/:exerciseGroupId/quiz-exercises/:exerciseId/preview`
+  - `d-flex`×7 → flex
+  - `align-items-center`×5 → items-center
+  - `align-content-center`×4 → content-center
+  - `alert`×4, `alert-info`×3, `alert-success`×1 → tum-ui-message
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `justify-content-between`×2 → justify-between
+  - `badge`×2 → tum-ui-tag
+  - `col-md-auto`×2 → md:flex-1
+  - `flex-column`×1 → flex-col
+  - `justify-content-center`×1 → justify-center
+  - `btn`×1, `btn-light`×1 → tum-ui-button / tumUiButton
+  - `btn-circle`×1 → custom class: rename (banned by prefix only)
+  - `col`×1 → flex-1
+  - `justify-content-end`×1 → justify-end
+  - `flex-grow-1`×1 → grow
+  - `bg-warning`×1 → bg-state-warning
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/quiz/overview/participation/quiz-participation.component.scss`: 2 raw colors (shared by 2 units)
+  - 19 Bootstrap spacing classes to convert by size
+  - imports 6 units with Bootstrap (29 hits): `app/quiz/shared/questions/drag-and-drop-question/drag-and-drop-question.component.html`, `app/quiz/shared/questions/drag-and-drop-question/drag-item/drag-item.component.html`, `app/quiz/shared/questions/quiz-scoring-infostudent-modal/quiz-scoring-info-student-modal.component.html`, `app/quiz/shared/questions/short-answer-question/short-answer-question.component.html`, `app/shared-ui/components/buttons/button/button.component.html`, `app/shared-ui/connection-status/connection-status.component.html`
+- `src/main/webapp/app/quiz/manage/drag-and-drop-question/drag-and-drop-question-edit.component.html` — 93 hits
+  - `btn`×16, `btn-outline-secondary`×14, `btn-lg`×1 → tum-ui-button / tumUiButton
+  - `form-group`×5 → tum-ui-form-field
+  - `row`×5 → grid grid-cols-12 (or flex)
+  - `d-flex`×4 → flex
+  - `col-12`×4 → col-span-12
+  - `align-items-center`×3 → items-center
+  - `col-md-3`×2 → md:col-span-3
+  - `justify-content-start`×2 → justify-start
+  - `col-lg-7`×2 → lg:col-span-7
+  - `col-md-8`×2 → md:col-span-8
+  - `col-sm-8`×2 → sm:col-span-8
+  - `badge`×1 → tum-ui-tag
+  - `bg-warning`×1 → bg-state-warning
+  - `col-md-4`×1 → md:col-span-4
+  - `form-select`×1 → tum-ui-select
+  - `col-md-2`×1 → md:col-span-2
+  - `form-control`×1 → tumUiInput
+  - `form-check`×1, `form-check-input`×1, `form-check-label`×1 → tum-ui-checkbox / tum-ui-radio-button
+  - `flex-shrink-0`×1 → shrink-0
+  - `col-10`×1 → col-span-10
+  - `col-lg-11`×1 → lg:col-span-11
+  - `col-2`×1 → col-span-2
+  - `col-lg-1`×1 → lg:col-span-1
+  - `input-group-btn`×1, `input-group-prepend`×1 → custom class: rename (banned by prefix only)
+  - `input-group`×1 → tum-ui-input-group
+  - PrimeNG: pInputText, p-inputnumber → tum-ui-input-number, p-select → tum-ui-select, p-checkbox → tum-ui-checkbox
+  - ng-bootstrap: ngbTooltip, ngbCollapse
+  - `src/main/webapp/app/quiz/manage/exercise/quiz-exercise.scss`: 12 raw colors (shared by 3 units)
+  - `src/main/webapp/app/quiz/shared/quiz.scss`: 2 --bs-* variables (shared by 12 units)
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 9 units with Bootstrap (31 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`, `app/quiz/manage/quiz-scoring-info-modal/quiz-scoring-info-modal.component.html`, `app/quiz/shared/questions/drag-and-drop-question/drag-and-drop-question.component.html`, `app/quiz/shared/questions/drag-and-drop-question/drag-item/drag-item.component.html`, …
+- `src/main/webapp/app/quiz/manage/statistics/quiz-point-statistic/quiz-point-statistic.component.html` — 7 hits · route `/course-management/:courseId/exams/:examId/exercise-groups/:exerciseGroupId/quiz-exercises/:exerciseId/quiz-point-statistic`
+  - `row`×2 → grid grid-cols-12 (or flex)
+  - `col-md-8`×1 → md:col-span-8
+  - `col-md-7`×1 → md:col-span-7
+  - `col-md-5`×1 → md:col-span-5
+  - `btn`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - imports 2 units with Bootstrap (32 hits): `app/quiz/manage/statistics/quiz-statistics-footer/quiz-statistics-footer.component.html`, `app/shared-ui/connection-status/connection-status.component.html`
+- `src/main/webapp/app/quiz/manage/statistics/quiz-statistic/quiz-statistic.component.html` — 11 hits · route `/course-management/:courseId/exams/:examId/exercise-groups/:exerciseGroupId/quiz-exercises/:exerciseId/quiz-statistic`
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `col-md-8`×2 → md:col-span-8
+  - `col-md-4`×1 → md:col-span-4
+  - `col-md-7`×1 → md:col-span-7
+  - `col-md-5`×1 → md:col-span-5
+  - `col-md-12`×1 → md:col-span-12
+  - `btn`×1, `btn-primary`×1 → tum-ui-button / tumUiButton
+  - imports 2 units with Bootstrap (32 hits): `app/quiz/manage/statistics/quiz-statistics-footer/quiz-statistics-footer.component.html`, `app/shared-ui/connection-status/connection-status.component.html`
+- `src/main/webapp/app/quiz/manage/statistics/multiple-choice-question-statistic/multiple-choice-question-statistic.component.html` — 14 hits · route `/course-management/:courseId/exams/:examId/exercise-groups/:exerciseGroupId/quiz-exercises/:exerciseId/mc-question-statistic/:questionId`
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `col-md-8`×2 → md:col-span-8
+  - `btn`×2, `btn-primary`×2 → tum-ui-button / tumUiButton
+  - `col-md-4`×1 → md:col-span-4
+  - `d-flex`×1 → flex
+  - `col-md-7`×1 → md:col-span-7
+  - `col-md-5`×1 → md:col-span-5
+  - `col-md-12`×1 → md:col-span-12
+  - imports 2 units with Bootstrap (32 hits): `app/quiz/manage/statistics/quiz-statistics-footer/quiz-statistics-footer.component.html`, `app/shared-ui/connection-status/connection-status.component.html`
+- `src/main/webapp/app/quiz/manage/statistics/short-answer-question-statistic/short-answer-question-statistic.component.html` — 15 hits · route `/course-management/:courseId/exams/:examId/exercise-groups/:exerciseGroupId/quiz-exercises/:exerciseId/sa-question-statistic/:questionId`
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `btn`×2, `btn-primary`×2 → tum-ui-button / tumUiButton
+  - `col-md-8`×1 → md:col-span-8
+  - `col`×1 → flex-1
+  - `col-md-7`×1 → md:col-span-7
+  - `col-md-5`×1 → md:col-span-5
+  - `col-md-12`×1 → md:col-span-12
+  - `src/main/webapp/app/quiz/manage/statistics/short-answer-question-statistic/short-answer-question-statistic.component.scss`: 3 raw colors
+  - imports 2 units with Bootstrap (32 hits): `app/quiz/manage/statistics/quiz-statistics-footer/quiz-statistics-footer.component.html`, `app/shared-ui/connection-status/connection-status.component.html`
+- `src/main/webapp/app/quiz/manage/statistics/drag-and-drop-question-statistic/drag-and-drop-question-statistic.component.html` — 18 hits · route `/course-management/:courseId/exams/:examId/exercise-groups/:exerciseGroupId/quiz-exercises/:exerciseId/dnd-question-statistic/:questionId`
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `col-md-8`×2 → md:col-span-8
+  - `btn`×2, `btn-primary`×2 → tum-ui-button / tumUiButton
+  - `col`×1 → flex-1
+  - `col-md-7`×1 → md:col-span-7
+  - `col-md-5`×1 → md:col-span-5
+  - `col-md-12`×1 → md:col-span-12
+  - `src/main/webapp/app/quiz/manage/statistics/drag-and-drop-question-statistic/drag-and-drop-question-statistic.component.scss`: 5 raw colors
+  - imports 3 units with Bootstrap (33 hits): `app/quiz/manage/statistics/quiz-statistics-footer/quiz-statistics-footer.component.html`, `app/quiz/shared/questions/drag-and-drop-question/drag-item/drag-item.component.html`, `app/shared-ui/connection-status/connection-status.component.html`
+- `src/main/webapp/app/quiz/manage/multiple-choice-question/multiple-choice-question-edit.component.html` — 52 hits
+  - `btn`×8, `btn-outline-secondary`×6 → tum-ui-button / tumUiButton
+  - `align-items-center`×4 → items-center
+  - `col-12`×4 → col-span-12
+  - `form-group`×4 → tum-ui-form-field
+  - `d-flex`×3 → flex
+  - `col-md-3`×2 → md:col-span-3
+  - `badge`×1 → tum-ui-tag
+  - `bg-info`×1 → bg-state-info
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `col-md-4`×1 → md:col-span-4
+  - `col-md-2`×1 → md:col-span-2
+  - `form-control`×1 → tumUiInput
+  - `flex-shrink-0`×1 → shrink-0
+  - PrimeNG: pInputText, p-inputnumber → tum-ui-input-number, p-select → tum-ui-select, p-checkbox → tum-ui-checkbox
+  - ng-bootstrap: ngbTooltip, ngbCollapse
+  - `src/main/webapp/app/quiz/manage/exercise/quiz-exercise.scss`: 12 raw colors (shared by 3 units)
+  - `src/main/webapp/app/quiz/shared/quiz.scss`: 2 --bs-* variables (shared by 12 units)
+  - 6 Bootstrap spacing classes to convert by size
+  - imports 8 units with Bootstrap (42 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`, `app/quiz/manage/quiz-scoring-info-modal/quiz-scoring-info-modal.component.html`, `app/quiz/shared/questions/multiple-choice-question/visual-question/multiple-choice-visual-question.component.html`, `app/quiz/shared/questions/quiz-scoring-infostudent-modal/quiz-scoring-info-student-modal.component.html`
+- `src/main/webapp/app/quiz/manage/detail/quiz-exercise-detail.component.html` — 7 hits · route `/course-management/:courseId/exams/:examId/exercise-groups/:exerciseGroupId/quiz-exercises/:exerciseId`
+  - `d-flex`×2 → flex
+  - `row`×1 → grid grid-cols-12 (or flex)
+  - `justify-content-center`×1 → justify-center
+  - `col-md-8`×1 → md:col-span-8
+  - `align-items-center`×1 → items-center
+  - `justify-content-around`×1 → justify-around
+  - 1 Bootstrap spacing classes to convert by size
+  - imports 32 units with Bootstrap (241 hits): `app/assessment/manage/structured-grading-instructions-assessment-layout/structured-grading-instructions-assessment-layout.component.html`, `app/course/manage/exercises/create-variant-modal/create-variant-with-ai-button.component.ts`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/exam/overview/exercises/exam-exercise-update-highlighter/exam-exercise-update-highlighter.component.html`, `app/exercise/statistics/doughnut-chart/doughnut-chart.component.html`, `app/exercise/statistics/exercise-detail-statistic/exercise-detail-statistics.component.html`, `app/foundation/feature-toggle/feature-toggle-hide.directive.ts`, `app/programming/manage/build-plan-editor/build-phases-editor/build-phase/build-phase-editor.component.html`, …
+- `src/main/webapp/app/quiz/manage/re-evaluate/quiz-re-evaluate.component.html` — 50 hits · route `/course-management/:courseId/exams/:examId/exercise-groups/:exerciseGroupId/quiz-exercises/:exerciseId/re-evaluate`
+  - `row`×8 → grid grid-cols-12 (or flex)
+  - `form-group`×6, `form-control-label`×1 → tum-ui-form-field
+  - `form-control`×4 → tumUiInput
+  - `badge`×4 → tum-ui-tag
+  - `btn`×3, `btn-outline-secondary`×1, `btn-warning`×1, `btn-secondary`×1 → tum-ui-button / tumUiButton
+  - `visually-hidden`×3 → sr-only
+  - `col-12`×2 → col-span-12
+  - `text-warning`×1 → text-state-warning
+  - `col-11`×1 → col-span-11
+  - `col-1`×1 → col-span-1
+  - `input-group-btn`×1 → custom class: rename (banned by prefix only)
+  - `col-lg-7`×1 → lg:col-span-7
+  - `d-flex`×1 → flex
+  - `align-items-center`×1 → items-center
+  - `col-lg-5`×1 → lg:col-span-5
+  - `form-check-input`×1, `form-check-label`×1 → tum-ui-checkbox / tum-ui-radio-button
+  - `card`×1 → tum-ui-card / tum-ui-panel
+  - `bg-success`×1 → bg-state-success
+  - `bg-warning`×1 → bg-state-warning
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/quiz/shared/quiz.scss`: 2 --bs-* variables (shared by 12 units)
+  - `src/main/webapp/app/quiz/manage/re-evaluate/quiz-re-evaluate.component.scss`: 1 --bs-* variables
+  - 7 Bootstrap spacing classes to convert by size
+  - imports 16 units with Bootstrap (316 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/exercise/included-in-overall-score-picker/included-in-overall-score-picker.component.html`, `app/iris/overview/iris-logo/iris-logo.component.html`, `app/quiz/manage/drag-and-drop-question/drag-and-drop-question-edit.component.html`, `app/quiz/manage/match-percentage-info-modal/match-percentage-info-modal.component.html`, …
+- `src/main/webapp/app/quiz/manage/list-edit/quiz-question-list-edit.component.html` — 37 hits
+  - `src/main/webapp/app/quiz/manage/list-edit/quiz-question-list-edit.component.scss`: 29 --bs-* variables, 6 raw colors
+  - `src/main/webapp/app/quiz/shared/quiz.scss`: 2 --bs-* variables (shared by 12 units)
+  - 3 Bootstrap spacing classes to convert by size
+  - imports 18 units with Bootstrap (360 hits): `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/iris/overview/iris-logo/iris-logo.component.html`, `app/quiz/manage/confirm-import-invalid-questions-modal/quiz-confirm-import-invalid-questions-modal.component.html`, `app/quiz/manage/drag-and-drop-question/drag-and-drop-question-edit.component.html`, `app/quiz/manage/list-edit-existing/quiz-question-list-edit-existing.component.html`, …
+- `src/main/webapp/app/quiz/manage/update/quiz-exercise-update.component.html` — 91 hits · route `/course-management/:courseId/exams/:examId/exercise-groups/:exerciseGroupId/quiz-exercises/new`
+  - `form-group`×8, `form-control-label`×6, `invalid-feedback`×2 → tum-ui-form-field
+  - `col-lg-4`×5 → lg:col-span-4
+  - `col-sm-12`×5 → sm:col-span-12
+  - `visually-hidden`×4 → sr-only
+  - `row`×3 → grid grid-cols-12 (or flex)
+  - `d-flex`×3 → flex
+  - `btn`×2, `btn-secondary`×1, `btn-warning`×1 → tum-ui-button / tumUiButton
+  - `badge`×2 → tum-ui-tag
+  - `align-items-center`×2 → items-center
+  - `col-lg-12`×1 → lg:col-span-12
+  - `alert`×1, `alert-warning`×1 → tum-ui-message
+  - `bg-info`×1 → bg-state-info
+  - `w-100`×1 → w-full
+  - `form-check`×1 → tum-ui-checkbox / tum-ui-radio-button
+  - PrimeNG: p-inputnumber → tum-ui-input-number, p-select → tum-ui-select, p-checkbox → tum-ui-checkbox, pInputText, pButton → tumUiButton, pTextarea → tumUiTextarea
+  - ng-bootstrap: ngbTooltip
+  - `src/main/webapp/app/quiz/manage/update/quiz-exercise-update.component.scss`: 32 --bs-* variables, 7 raw colors
+  - `src/main/webapp/app/quiz/shared/quiz.scss`: 2 --bs-* variables (shared by 12 units)
+  - 14 Bootstrap spacing classes to convert by size
+  - imports 29 units with Bootstrap (494 hits): `app/atlas/shared/competency-selection-primeng/competency-selection-primeng.component.html`, `app/communication/course-conversations-components/generic-confirmation-dialog/generic-confirmation-dialog.component.html`, `app/communication/posting-button/posting-button.component.html`, `app/communication/shared/redirect-to-iris-button/redirect-to-iris-button.component.html`, `app/course/manage/exercises/group-edit-modal/exercise-group-edit-modal.component.html`, `app/editor/markdown-editor/monaco/markdown-editor-monaco.component.html`, `app/editor/monaco-editor/monaco-editor.component.ts`, `app/exercise/category-selector-primeng/category-selector-primeng.component.html`, …
+
+## Data
+
+- History (every commit): https://ls1intum.github.io/Artemis-CodeStats/migrations/index.json
+- This snapshot (units, pages, blockers, inventories): https://ls1intum.github.io/Artemis-CodeStats/migrations/5be30e1d757c739f95291431c048007811ee4b88.json
+- Schema: https://github.com/ls1intum/Artemis-CodeStats/blob/main/src/features/migrations/model.ts

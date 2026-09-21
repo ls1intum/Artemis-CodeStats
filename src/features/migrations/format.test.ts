@@ -66,8 +66,16 @@ test('formatting', () => {
 test('targets come from the guideline table, not from prefixes', () => {
   assert.equal(bootstrapTarget('btn-primary'), 'tum-ui-button / tumUiButton')
   assert.equal(bootstrapTarget('nav-tabs'), 'tum-ui-tabs')
-  assert.equal(bootstrapTarget('navbar-course-image'), '')
-  assert.equal(bootstrapTarget('card-resizable'), 'tum-ui-card / tum-ui-panel')
+  assert.equal(bootstrapTarget('d-md-inline'), 'md:inline')
+  assert.equal(bootstrapTarget('col-lg-9'), 'lg:col-span-9')
+  assert.equal(bootstrapTarget('justify-content-between'), 'justify-between')
+  assert.equal(bootstrapTarget('text-danger'), 'text-state-danger')
+  assert.equal(bootstrapTarget('form-control-label'), 'tum-ui-form-field')
+  assert.equal(
+    bootstrapTarget('card-resizable'),
+    'custom class: rename (banned by prefix only)',
+  )
+  assert.equal(bootstrapTarget('card-body'), 'tum-ui-card / tum-ui-panel')
   const kit = new Set(['tum-ui-dialog', 'tum-ui-progress-bar', 'tumUiTooltip'])
   assert.equal(kitTarget('p-dialog', kit), 'tum-ui-dialog')
   assert.equal(kitTarget('p-progressbar', kit), 'tum-ui-progress-bar')

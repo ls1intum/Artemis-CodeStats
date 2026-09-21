@@ -15,6 +15,7 @@
     "report/ui",
     "src/features/migrations/model.ts",
     "src/features/migrations/brief.ts",
+    "src/features/migrations/format.ts",
     "src/features/migrations/targets.ts",
     "report/prepare-dto-archive.ts"
   ]

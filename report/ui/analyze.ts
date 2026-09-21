@@ -55,12 +55,23 @@ type ScriptResult = {
   declarations: Declaration[]
   // Value imports of app files with the imported names; dynamic imports carry no names.
   dependencies: { base: string; names?: string[] }[]
-  // `component` / `loadComponent` targets of route definitions with their `path`.
-  routes: { base: string; name?: string; path: string }[]
+  // Route definitions found in this file, keyed by the array that holds them.
+  routes: Map<string, RouteNode[]>
   services: Record<'primeng' | 'ngBootstrap', Usage>
   tokens: Usage
 }
 export type StyleResult = { variables: number; colors: number; imports: number }
+type Reference = { base: string; name?: string }
+export type RouteNode = {
+  // `undefined` when the path is not a string literal.
+  path?: string
+  outlet: boolean
+  component?: Reference
+  children: RouteNode[]
+  // `children: someArray` in the same file, or `loadChildren` into another file.
+  childrenRef?: string
+  loadChildren?: Reference
+}
 
 const kitSourceDirs = ['packages/tum-ui/src/lib', `${appRoot}/shared-ui/tum-ui`]
 // Bootstrap's spacing scale keeps its class names under Tailwind but changes value; it is not banned.
@@ -237,7 +248,7 @@ export function analyzeScript(path: string, source: string): ScriptResult {
   const result: ScriptResult = {
     declarations: [],
     dependencies: [],
-    routes: [],
+    routes: new Map(),
     services: { primeng: {}, ngBootstrap: {} },
     tokens: {},
   }
@@ -351,49 +362,93 @@ export function analyzeScript(path: string, source: string): ScriptResult {
       }
     }
   }
-  // `{ path: 'x', loadComponent: () => import('./y').then((m) => m.Y) }` or `component: Y`.
-  const route = (property: ts.PropertyAssignment) => {
-    let owner: ts.Node = property
-    while (owner.parent && !ts.isObjectLiteralExpression(owner.parent))
-      owner = owner.parent
-    const literal = owner.parent
-    const pathProperty =
-      literal &&
-      ts.isObjectLiteralExpression(literal) &&
-      literal.properties.find(
-        (p): p is ts.PropertyAssignment =>
-          ts.isPropertyAssignment(p) && propertyName(p.name) === 'path',
-      )
-    const routePath = pathProperty
-      ? (stringText(pathProperty.initializer) ?? '')
-      : ''
-    if (propertyName(property.name) === 'component') {
-      if (!ts.isIdentifier(property.initializer)) return
-      const target = localImports.get(property.initializer.text)
-      const base = target && resolveBase(target.specifier)
-      if (base) result.routes.push({ base, name: target.name, path: routePath })
-      return
-    }
+  // `() => import('./x').then((m) => m.X)` → { base, name }; `() => import('./x')` → { base }.
+  const lazy = (node: ts.Node): Reference | undefined => {
     let specifier: string | undefined
     let name: string | undefined
-    const find = (node: ts.Node) => {
+    const find = (n: ts.Node) => {
       if (
-        ts.isCallExpression(node) &&
-        node.expression.kind === ts.SyntaxKind.ImportKeyword
+        ts.isCallExpression(n) &&
+        n.expression.kind === ts.SyntaxKind.ImportKeyword
       )
-        specifier = node.arguments[0] && stringText(node.arguments[0])
+        specifier = n.arguments[0] && stringText(n.arguments[0])
       if (
-        ts.isPropertyAccessExpression(node) &&
-        ts.isIdentifier(node.expression) &&
-        node.expression.text === 'm'
-      )
-        name = node.name.text
-      ts.forEachChild(node, find)
+        ts.isArrowFunction(n) &&
+        n.parameters[0] &&
+        ts.isIdentifier(n.parameters[0].name)
+      ) {
+        const parameter = n.parameters[0].name.text
+        const pick = (b: ts.Node) => {
+          if (
+            ts.isPropertyAccessExpression(b) &&
+            ts.isIdentifier(b.expression) &&
+            b.expression.text === parameter
+          )
+            name = b.name.text
+          ts.forEachChild(b, pick)
+        }
+        pick(n.body)
+      }
+      ts.forEachChild(n, find)
     }
-    find(property.initializer)
+    find(node)
     const base = specifier && resolveBase(specifier)
-    if (base) result.routes.push({ base, name, path: routePath })
+    return base ? { base, name } : undefined
   }
+  const routeNode = (literal: ts.ObjectLiteralExpression): RouteNode => {
+    const node: RouteNode = { outlet: false, children: [] }
+    for (const property of literal.properties) {
+      if (!ts.isPropertyAssignment(property)) continue
+      const value = property.initializer
+      switch (propertyName(property.name)) {
+        case 'path':
+          node.path = stringText(value)
+          break
+        case 'outlet':
+          node.outlet = true
+          break
+        case 'component':
+          if (ts.isIdentifier(value)) {
+            const target = localImports.get(value.text)
+            const base = target && resolveBase(target.specifier)
+            if (base) node.component = { base, name: target.name }
+          }
+          break
+        case 'loadComponent':
+          node.component = lazy(value)
+          break
+        case 'children':
+          if (ts.isArrayLiteralExpression(value))
+            node.children = routeNodes(value)
+          else if (ts.isIdentifier(value)) node.childrenRef = value.text
+          break
+        case 'loadChildren':
+          node.loadChildren = lazy(value)
+      }
+    }
+    return node
+  }
+  const routeNodes = (array: ts.ArrayLiteralExpression): RouteNode[] =>
+    array.elements
+      .filter(ts.isObjectLiteralExpression)
+      .filter((literal) =>
+        literal.properties.some(
+          (p) => ts.isPropertyAssignment(p) && propertyName(p.name) === 'path',
+        ),
+      )
+      .map(routeNode)
+  // Every array of route objects declared at the top level, by variable name.
+  for (const statement of file.statements)
+    if (ts.isVariableStatement(statement))
+      for (const declaration of statement.declarationList.declarations)
+        if (
+          ts.isIdentifier(declaration.name) &&
+          declaration.initializer &&
+          ts.isArrayLiteralExpression(declaration.initializer)
+        ) {
+          const nodes = routeNodes(declaration.initializer)
+          if (nodes.length) result.routes.set(declaration.name.text, nodes)
+        }
   const visit = (node: ts.Node) => {
     if (
       ts.isCallExpression(node) &&
@@ -402,11 +457,6 @@ export function analyzeScript(path: string, source: string): ScriptResult {
       const specifier = node.arguments[0] && stringText(node.arguments[0])
       if (specifier) dependency(specifier)
     }
-    if (
-      ts.isPropertyAssignment(node) &&
-      ['component', 'loadComponent'].includes(propertyName(node.name) ?? '')
-    )
-      route(node)
     if (ts.isDecorator(node)) {
       const name = decoratorName(node)
       if (name === 'Component' || name === 'Directive') {
@@ -613,6 +663,7 @@ export async function analyzeTree(
           0,
         ),
         closureHits: 0,
+        routeHits: 0,
         blocked: 0,
         blocks: 0,
         blockers: [],
@@ -662,27 +713,73 @@ export async function analyzeTree(
     unit.closureHits = closure.reduce((n, other) => n + ownHits(other), 0)
     const dirty = closure.filter((other) => ownHits(other) > 0)
     unit.blocked = dirty.length
-    if (ownHits(unit) > 0) continue
     unit.blockers = dirty.map((other) => other.id).sort()
-    if (unit.status === 'clean')
+    if (unit.status === 'clean' && ownHits(unit) === 0)
       for (const id of unit.blockers) units.get(id)!.blocks++
   }
-  // Routed pages: units referenced by `component` / `loadComponent` in route files.
-  for (const [path, script] of scripts) {
-    if (!/\.routes?\.ts$/.test(path)) continue
-    for (const { base, name, path: routePath } of script.routes) {
-      const target = [`${base}.ts`, `${base}/index.ts`, base].find((c) =>
-        classNames.has(c),
-      )
-      if (!target) continue
-      for (const [className, id] of classNames.get(target)!) {
-        if (name && className !== name) continue
-        const unit = units.get(id)!
-        if (unit.route === undefined || routePath.length < unit.route.length)
-          unit.route = routePath
+  // Routed pages: walk the route tree from app.routes.ts through children and loadChildren,
+  // joining paths and remembering the route components a page renders inside.
+  const resolveFile = (base: string) =>
+    [`${base}.ts`, `${base}/index.ts`, base].find((c) => scripts.has(c))
+  const unitFor = ({ base, name }: Reference) => {
+    const target = resolveFile(base)
+    const classes = target && classNames.get(target)
+    if (!classes) return undefined
+    return name ? classes.get(name) : classes.values().next().value
+  }
+  const visitedRoutes = new Set<string>()
+  const walkRoutes = (
+    file: string,
+    nodes: RouteNode[],
+    prefix: string,
+    ancestors: string[],
+  ) => {
+    for (const node of nodes) {
+      if (node.outlet) continue
+      const segment =
+        node.path === undefined ? ':dynamic' : node.path.replace(/^\/+/, '')
+      const path = [prefix, segment].filter(Boolean).join('/')
+      const unitId = node.component && unitFor(node.component)
+      const unit = unitId ? units.get(unitId) : undefined
+      if (unit && unit.route === undefined) {
+        unit.route = `/${path}`
+        unit.routeParents = ancestors
+      }
+      const parents = unitId ? [...ancestors, unitId] : ancestors
+      const children = node.childrenRef
+        ? (scripts.get(file)!.routes.get(node.childrenRef) ?? [])
+        : node.children
+      walkRoutes(file, children, path, parents)
+      if (node.loadChildren) {
+        const target = resolveFile(node.loadChildren.base)
+        const routes = target && scripts.get(target)!.routes
+        const key = `${target}#${node.loadChildren.name ?? ''}`
+        if (!routes || visitedRoutes.has(key)) continue
+        visitedRoutes.add(key)
+        const array =
+          (node.loadChildren.name
+            ? routes.get(node.loadChildren.name)
+            : undefined) ??
+          routes.get('routes') ??
+          [...routes.values()][0] ??
+          []
+        walkRoutes(target!, array, path, parents)
       }
     }
   }
+  const appRoutes = scripts.get(`${appRoot}/app.routes.ts`)?.routes
+  if (appRoutes)
+    walkRoutes(
+      `${appRoot}/app.routes.ts`,
+      appRoutes.get('routes') ?? [...appRoutes.values()][0] ?? [],
+      '',
+      [],
+    )
+  for (const unit of units.values())
+    unit.routeHits = (unit.routeParents ?? []).reduce(
+      (n, id) => n + ownHits(units.get(id)!) + units.get(id)!.closureHits,
+      0,
+    )
   const orphanFiles: Detail['files'] = []
   for (const [path, tokens] of fileTokens)
     if (!owned.has(path) && !units.has(path) && sum(tokens) > 0)
@@ -814,7 +911,11 @@ export async function analyzeTree(
     kit: kit.components,
     pages: all.filter((u) => u.route !== undefined).length,
     pagesClean: all.filter(
-      (u) => u.route !== undefined && ownHits(u) === 0 && u.closureHits === 0,
+      (u) =>
+        u.route !== undefined &&
+        ownHits(u) === 0 &&
+        u.closureHits === 0 &&
+        u.routeHits === 0,
     ).length,
   }
   return {

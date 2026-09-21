@@ -1,5 +1,4 @@
 import { Copy } from 'lucide-react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -11,6 +10,7 @@ import {
 } from '@/components/ui/table'
 import { lockEntries, sourceUrl, type Detail } from './model'
 import { short } from './format'
+import { copyText } from './clipboard'
 
 function copyEntries(dirs: string[]) {
   const entries = dirs.map(lockEntries)
@@ -22,14 +22,10 @@ function copyEntries(dirs: string[]) {
     '// src/main/webapp/tailwind.css',
     ...entries.map((e) => e.tailwind),
   ].join('\n')
-  void navigator.clipboard
-    .writeText(text)
-    .then(() =>
-      toast(
-        `Copied lock entries for ${dirs.length} director${dirs.length === 1 ? 'y' : 'ies'}`,
-      ),
-    )
-    .catch(() => toast.error('Clipboard unavailable'))
+  copyText(
+    text,
+    `Copied lock entries for ${dirs.length} director${dirs.length === 1 ? 'y' : 'ies'}`,
+  )
 }
 
 export function LockableTable({

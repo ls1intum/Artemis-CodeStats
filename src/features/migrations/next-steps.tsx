@@ -1,5 +1,4 @@
 import { ClipboardCopy, Download } from 'lucide-react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -10,14 +9,9 @@ import {
 } from '@/components/ui/card'
 import type { Detail, Summary } from './model'
 import { renderBrief } from './brief'
+import { copyText } from './clipboard'
 import { Blockers } from './blockers'
 import { LockableTable } from './lockable'
-
-const copyText = (text: string, done: string) =>
-  void navigator.clipboard
-    .writeText(text)
-    .then(() => toast(done))
-    .catch(() => toast.error('Clipboard unavailable'))
 
 export function BriefActions({
   snapshot,

@@ -20,7 +20,7 @@ export function Blockers({ detail }: { detail: Detail }) {
   const rows = detail.units
     .filter((u) => u.blocks > 0)
     .sort((a, b) => b.blocks - a.blocks || hits(a) - hits(b))
-    .slice(0, 12)
+    .slice(0, 10)
   if (!rows.length) return null
   return (
     <Card>

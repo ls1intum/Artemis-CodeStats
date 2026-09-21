@@ -1,4 +1,3 @@
-import { Line, LineChart } from 'recharts'
 import {
   Card,
   CardContent,
@@ -6,7 +5,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
 import {
   Table,
   TableBody,
@@ -20,32 +18,6 @@ import { free, hits, number, percent } from './format'
 import { Delta, StatusBar } from './status'
 import { families, family, type Family } from './targets'
 
-const sparkConfig = {
-  hits: { color: 'var(--color-status-locked)' },
-} satisfies ChartConfig
-
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 2) return null
-  return (
-    <ChartContainer
-      config={sparkConfig}
-      className="h-6 w-24 aspect-auto"
-      aria-hidden="true"
-    >
-      <LineChart data={values.map((hits) => ({ hits }))}>
-        <Line
-          dataKey="hits"
-          type="stepAfter"
-          stroke="var(--color-hits)"
-          strokeWidth={1.5}
-          dot={false}
-          isAnimationActive={false}
-        />
-      </LineChart>
-    </ChartContainer>
-  )
-}
-
 // Hits per section and class family: what kind of work remains where.
 export function FamilyHeatmap({ detail }: { detail: Detail }) {
   const cells = new Map<string, Record<Family, number>>()
@@ -58,15 +30,19 @@ export function FamilyHeatmap({ detail }: { detail: Detail }) {
   }
   for (const u of detail.units) add(u.section, u.tokens)
   for (const f of detail.files) add(f.section, f.tokens)
+  const columns = [...families, 'SCSS'] as const
   const rows = detail.sections
-    .filter((s) => s.classHits > 0)
-    .map((s) => ({ name: s.name, cells: cells.get(s.name) ?? empty() }))
-  const max = Math.max(
-    1,
-    ...rows.flatMap((r) => families.map((f) => r.cells[f])),
-  )
-  const totals = empty()
-  for (const r of rows) for (const f of families) totals[f] += r.cells[f]
+    .filter((s) => hits(s) > 0)
+    .map((s) => ({
+      name: s.name,
+      cells: { ...(cells.get(s.name) ?? empty()), SCSS: s.styleHits },
+      total: hits(s),
+    }))
+  const totals = Object.fromEntries(columns.map((c) => [c, 0])) as Record<
+    (typeof columns)[number],
+    number
+  >
+  for (const r of rows) for (const c of columns) totals[c] += r.cells[c]
   return (
     <Card>
       <CardHeader>
@@ -74,9 +50,10 @@ export function FamilyHeatmap({ detail }: { detail: Detail }) {
           <h2>What kind of work remains where</h2>
         </CardTitle>
         <CardDescription>
-          Bootstrap class hits per section and family. Grid and layout classes
-          convert mechanically to Tailwind; buttons, forms and components need
-          the TUM UI kit.
+          Hits per section by the kind of work they need; shading is the share
+          within the section. Layout and grid classes convert mechanically to
+          Tailwind utilities; buttons, forms, tables and components need the TUM
+          UI kit; SCSS residue needs semantic tokens.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -84,37 +61,44 @@ export function FamilyHeatmap({ detail }: { detail: Detail }) {
           <TableHeader>
             <TableRow>
               <TableHead>Section</TableHead>
-              {families.map((f) => (
-                <TableHead key={f} className="text-right">
-                  {f}
+              {columns.map((c) => (
+                <TableHead key={c} className="text-right">
+                  {c}
                 </TableHead>
               ))}
+              <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((r) => (
               <TableRow key={r.name}>
                 <TableCell className="font-medium">{r.name}</TableCell>
-                {families.map((f) => (
+                {columns.map((c) => (
                   <TableCell
-                    key={f}
+                    key={c}
                     className="text-right tabular-nums"
                     style={{
-                      backgroundColor: `color-mix(in oklab, var(--color-status-locked) ${Math.round((r.cells[f] / max) * 70)}%, transparent)`,
+                      backgroundColor: `color-mix(in oklab, var(--color-remaining) ${Math.round((r.cells[c] / r.total) * 80)}%, transparent)`,
                     }}
                   >
-                    {r.cells[f] || ''}
+                    {r.cells[c] || ''}
                   </TableCell>
                 ))}
+                <TableCell className="text-right tabular-nums">
+                  {number(r.total)}
+                </TableCell>
               </TableRow>
             ))}
             <TableRow className="font-medium">
               <TableCell>All sections</TableCell>
-              {families.map((f) => (
-                <TableCell key={f} className="text-right tabular-nums">
-                  {number(totals[f])}
+              {columns.map((c) => (
+                <TableCell key={c} className="text-right tabular-nums">
+                  {number(totals[c])}
                 </TableCell>
               ))}
+              <TableCell className="text-right tabular-nums">
+                {number(rows.reduce((n, r) => n + r.total, 0))}
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>
@@ -141,9 +125,8 @@ export function Sections({
           <h2>Sections</h2>
         </CardTitle>
         <CardDescription>
-          Most remaining Bootstrap first. The sparkline is the section's hits
-          for every commit up to the snapshot. Open a section for its units,
-          what blocks them and its lock entries.
+          Most remaining Bootstrap first. Open a section for its units, what
+          blocks them, its lock entries and a section brief.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -155,20 +138,14 @@ export function Sections({
               <TableHead>Bootstrap-free</TableHead>
               <TableHead className="text-right">Hits</TableHead>
               <TableHead className="text-right">Δ hits</TableHead>
-              <TableHead>Trend</TableHead>
-              <TableHead className="text-right">Pages ready</TableHead>
+              <TableHead className="text-right">Since adoption</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {detail.sections.map((s) => {
               if (!s.units && !hits(s)) return null
               const before = compare.sections.find((c) => c.name === s.name)
-              const pages = detail.units.filter(
-                (u) => u.section === s.name && u.route !== undefined,
-              )
-              const ready = pages.filter(
-                (u) => hits(u) === 0 && u.closureHits === 0,
-              ).length
+              const adoption = series[0]?.sections[s.name]
               return (
                 <TableRow key={s.name}>
                   <TableCell>
@@ -199,16 +176,10 @@ export function Sections({
                   <TableCell className="text-right">
                     {before && <Delta value={hits(s) - hits(before)} />}
                   </TableCell>
-                  <TableCell>
-                    <Sparkline
-                      values={series.map((x) => {
-                        const row = x.sections[s.name]
-                        return row ? row[4] + row[5] : 0
-                      })}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {pages.length ? `${ready} / ${pages.length}` : ''}
+                  <TableCell className="text-right">
+                    {adoption && (
+                      <Delta value={hits(s) - (adoption[4] + adoption[5])} />
+                    )}
                   </TableCell>
                 </TableRow>
               )

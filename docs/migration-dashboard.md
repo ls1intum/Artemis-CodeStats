@@ -51,17 +51,20 @@ parses templates with `@angular/compiler`).
   loaded through a route file are not connected to it. Content projection from outside a
   unit is not resolved.
 - **Blocks** — for a unit with hits, the number of Bootstrap-free, unlocked units whose
-  closure contains it.
+  closure contains it. `blockers` lists the imported units with hits for every unit.
 - **Lockable** — a directory under `src/main/webapp/app` that is not locked, contains at
   least one unlocked unit and at least one external template, and in which every unit and
   orphan file has zero hits and zero closure hits. Only maximal directories are listed, with
   the three entries to add.
 - **Section** — the first directory below `src/main/webapp/app`; `app` for root files and
   `content` for global styles.
-- **Page** — a unit referenced by `component` or `loadComponent` in a `*.routes.ts` /
-  `*.route.ts` file, with the `path` of that route definition (the shortest when several).
-  A page is _ready_ when it and everything it imports have zero hits, _blocked_ when only
-  imported units have hits.
+- **Page** — a unit reached from `app.routes.ts` through `component`, `loadComponent`,
+  `children` (inline or a same-file array) and `loadChildren`, with its full path joined from
+  the parents (`:dynamic` marks a segment that is not a string literal; named outlets are
+  skipped). A page is _ready_ when it, everything it imports and the route components it
+  renders inside (`routeParents`) have zero hits, _blocked_ when only those have hits. The
+  global shell (`app.component` with navbar, footer and overlays) renders on every page and
+  is reported separately rather than blocking every page.
 - **Spacing** — Bootstrap spacing-scale classes (`m*-0..5`, `p*-0..5`, `gap-0..5`) per unit.
   The rule allows them because Tailwind has the same names, but their values change once a
   directory is locked, so they are listed as work in the brief, not as hits.
@@ -100,24 +103,26 @@ visible; the views are:
 | View       | Content                                                                                                     |
 | ---------- | ----------------------------------------------------------------------------------------------------------- |
 | Overview   | Units whose hits grew (only when any), step-area burndown per commit with lock-list changes, commits that moved the numbers with PR links |
-| Sections   | Sections table with status bar, Δ, per-section trend sparkline, pages ready; heatmap of hits per section × class family; side sheet per section with units, imported units with hits, shared stylesheets, lockable directories and a section brief |
-| Pages      | Routed pages ready / blocked / Bootstrap per section, and every page sorted by remaining work                |
+| Sections   | Sections table with status bar, Δ vs comparison and since adoption; heatmap of hits per section × kind of work (row-normalised); side sheet per section with units, imported units with hits, shared stylesheets, lockable directories and a section brief |
+| Pages      | Routed pages ready / blocked / Bootstrap per section, the global shell's hits, and every page with its full route sorted by remaining work |
 | Next steps | Brief for people and agents (copy as markdown, download JSON), lockable directories with copyable lock entries, shared units that block the most |
 | Inventory  | Remaining Bootstrap classes with guideline targets, PrimeNG with kit equivalents, ng-bootstrap, TUM UI kit usage and unused selectors, stylesheets with residue |
-| History    | Checkpoint table with detail downloads, and the agent entry points                                          |
+| History    | Checkpoint table with detail downloads                                                                      |
 
 ## For agents and scripts
 
 Static files, regenerated hourly, are the integration surface; no server or MCP endpoint is
 needed to read them ([a JSON file is often the better MCP server](https://materializedview.io/p/mcp-server-could-have-been-json-file)).
 
-- `llms.txt` at the site root indexes the entry points ([llms.txt convention](https://llmstxt.org/)).
-- `migrations/brief.md` — status, directories to lock with the exact three entries, shared
-  units to fix first, and per-section unit tasks with each Bootstrap class mapped to the
-  guideline target, PrimeNG mapped to kit selectors, stylesheet residue and spacing work.
-  Written so a coding agent can start migrating from it. `migrations/brief.json` is the same
-  content as data and names the detail file it was built from. The dashboard renders the same
-  brief for any snapshot or section (copy / download).
+- `llms.txt` at the site root indexes the entry points ([llms.txt convention](https://llmstxt.org/)),
+  regenerated with the data so the section list stays current.
+- `migrations/brief.md` — status, the migration runbook (closure rule, targets, spacing, local
+  verification with `pnpm migrate:check`, the three lock lists), directories to lock with the
+  exact entries, shared units to fix first, the global shell, and a section index.
+  `migrations/brief/<section>.md` lists every unit with Bootstrap in that section in work
+  order (fewest imported hits first) with each class mapped to its target, PrimeNG mapped to
+  kit selectors, stylesheet residue, spacing work and the imported units that block it. Every
+  brief has a `.json` twin. The dashboard renders the same brief for any snapshot or section.
 - `migrations/index.json` and `migrations/<sha>.json` — the full data; schemas in
   `src/features/migrations/model.ts`.
 

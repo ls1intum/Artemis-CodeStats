@@ -43,6 +43,7 @@
   --color-status-clean: #8cbcec;
   --color-status-dirty: #b9b7b1;
   --color-progress: #006300;
+  --color-remaining: #eb6834;
 }
 
 :root {

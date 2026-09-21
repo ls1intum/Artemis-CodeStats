@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { analyzeTree } from './analyze'
 import { planHistory } from './history'
-import { renderBrief } from '../../src/features/migrations/brief'
+import { renderBrief, renderLlmsTxt } from '../../src/features/migrations/brief'
 import {
   analyzerVersion,
   detailSchema,
@@ -156,16 +156,23 @@ export async function generateReports({
   )
     manifest.generatedAt = cached.data.generatedAt
   atomicWrite(cachePath, manifestSchema.parse(manifest))
-  // Agent-facing entry points: a markdown brief and its JSON twin for the latest checkpoint.
+  // Agent-facing entry points for the latest checkpoint: a brief, one brief per section, llms.txt.
   const latest = manifest.snapshots.at(-1)!
-  const brief = renderBrief(
-    latest,
-    detailSchema.parse(
-      JSON.parse(readFileSync(join(output, `${latest.commit}.json`), 'utf8')),
-    ),
+  const latestDetail = detailSchema.parse(
+    JSON.parse(readFileSync(join(output, `${latest.commit}.json`), 'utf8')),
   )
-  writeFileSync(join(output, 'brief.md'), brief.markdown)
-  atomicWrite(join(output, 'brief.json'), brief.json)
+  const briefDir = join(output, 'brief')
+  rmSync(briefDir, { recursive: true, force: true })
+  mkdirSync(briefDir)
+  const publish = (name: string, section?: string) => {
+    const brief = renderBrief(latest, latestDetail, { section })
+    writeFileSync(`${name}.md`, brief.markdown)
+    atomicWrite(`${name}.json`, brief.json)
+  }
+  publish(join(output, 'brief'))
+  for (const s of latestDetail.sections)
+    if (s.units > 0 && s.dirty > 0) publish(join(briefDir, s.name), s.name)
+  writeFileSync(join(output, '..', 'llms.txt'), renderLlmsTxt(latestDetail))
   const retained = new Set(
     manifest.evidenceCommits.map((commit) => `${commit}.json`),
   )
