@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact report commit to deploy
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -15,6 +21,8 @@ concurrency:
 jobs:
   verify:
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.ref || github.sha }}
   deploy:
     needs: verify
     permissions:
@@ -26,6 +34,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      - name: Prevent stale deployment
+        id: freshness
+        env:
+          EXPECTED_COMMIT: ${{ inputs.ref || github.sha }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_head=$(git ls-remote --exit-code "$REPOSITORY_URL" "refs/heads/$DEFAULT_BRANCH")
+          read -r current_commit current_ref <<< "$remote_head"
+          if [[ ! "$current_commit" =~ ^[a-f0-9]{40}$ || "$current_ref" != "refs/heads/$DEFAULT_BRANCH" ]]; then
+            echo "Could not validate the default-branch revision" >&2
+            exit 1
+          fi
+          if [[ "$EXPECTED_COMMIT" == "$current_commit" ]]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipped stale deployment of $EXPECTED_COMMIT: $DEFAULT_BRANCH is now $current_commit. A newer push or the next collection run will deploy the current revision." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - if: steps.freshness.outputs.current == 'true'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - if: steps.freshness.outputs.current == 'true'
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
         id: deployment

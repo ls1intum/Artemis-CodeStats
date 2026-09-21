@@ -33,6 +33,12 @@ export function MigrationDashboard() {
     })
   const compare =
     data.snapshots.find((s) => s.commit === search.compare) ?? data.snapshots[0]
+  const currentIndex = data.snapshots.findIndex(
+    (s) => s.commit === current.commit,
+  )
+  const compareIndex = data.snapshots.findIndex(
+    (s) => s.commit === compare.commit,
+  )
   const module = search.module ?? ''
   const dimension = search.dimension ?? ''
   const query = search.q ?? ''
@@ -42,12 +48,16 @@ export function MigrationDashboard() {
   const legacyDelta = current.legacyFiles - compare.legacyFiles
   const options = data.snapshots.map((s) => (
     <option key={s.commit} value={s.commit}>
-      {s.date.slice(0, 10)} · {s.commit.slice(0, 8)}
+      {new Date(s.date).toISOString().replace('T', ' ').slice(0, 16)} UTC ·{' '}
+      {s.commit.slice(0, 8)}
       {s.commit === data.baseline
         ? ' · Kit pilot'
         : s.commit === data.packageAdoption
           ? ' · Package adoption'
           : ''}
+      {data.evidenceCommits.includes(s.commit)
+        ? ' · File evidence'
+        : ' · Summary'}
     </option>
   ))
   const modules = [
@@ -124,7 +134,7 @@ export function MigrationDashboard() {
         >
           {stale && (
             <p>
-              <strong>Stale source:</strong> the latest sampled commit is more
+              <strong>Stale source:</strong> the latest analyzed commit is more
               than seven days old. Do not interpret this as live Artemis status.
             </p>
           )}
@@ -138,6 +148,17 @@ export function MigrationDashboard() {
           )}
         </section>
       )}
+      <p className="text-sm text-slate-600">
+        Checks Artemis develop hourly; delayed runs catch up every first-parent
+        commit since package adoption. GitHub scheduling can be delayed.{' '}
+        <a
+          className="migration-link"
+          href="https://github.com/ls1intum/Artemis-CodeStats/actions/workflows/daily-report.yml"
+        >
+          Check collection runs ↗
+        </a>{' '}
+        Reload to retrieve the latest published report.
+      </p>
       <section className="migration-panel" aria-label="Snapshot comparison">
         <div className="grid gap-4 md:grid-cols-2">
           <Label
@@ -178,8 +199,12 @@ export function MigrationDashboard() {
             Compare commits ↗
           </a>
           <span>
-            Generated {new Date(data.generatedAt).toISOString().slice(0, 10)} ·
-            Analyzer v{data.analyzerVersion}
+            Analysis generated{' '}
+            {new Date(data.generatedAt)
+              .toISOString()
+              .replace('T', ' ')
+              .slice(0, 16)}{' '}
+            UTC · Analyzer v{data.analyzerVersion}
           </span>
           <Button
             variant="link"
@@ -189,7 +214,7 @@ export function MigrationDashboard() {
             Use package-adoption baseline
           </Button>
         </div>
-        {Date.parse(compare.date) > Date.parse(current.date) && (
+        {compareIndex > currentIndex && (
           <p className="mt-3 text-sm text-amber-800">
             Reverse comparison: your comparison is newer than the selected
             snapshot.
@@ -203,11 +228,7 @@ export function MigrationDashboard() {
         dimension={dimension}
         onSelect={(dimension) => update({ dimension })}
       />
-      <MigrationTrend
-        snapshots={data.snapshots.filter(
-          (s) => Date.parse(s.date) <= Date.parse(current.date),
-        )}
-      />
+      <MigrationTrend snapshots={data.snapshots.slice(0, currentIndex + 1)} />
       <ModuleMatrix
         current={current}
         compare={compare}
@@ -272,6 +293,7 @@ export function MigrationDashboard() {
             <Input
               id="evidence-query"
               type="search"
+              disabled={!data.evidenceCommits.includes(current.commit)}
               value={query}
               placeholder="e.g. assessment or p-dialog"
               onChange={(e) => update({ q: e.target.value || undefined }, true)}

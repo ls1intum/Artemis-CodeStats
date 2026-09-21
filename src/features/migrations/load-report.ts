@@ -29,6 +29,8 @@ export async function loadMigrationReport(
   const current =
     manifest.snapshots.find((snapshot) => snapshot.commit === commit) ??
     manifest.snapshots[manifest.snapshots.length - 1]
+  if (!manifest.evidenceCommits.includes(current.commit))
+    return { manifest, current, detail: undefined, detailError: undefined }
   try {
     const detail = await loadJson(
       `${current.commit}.json`,

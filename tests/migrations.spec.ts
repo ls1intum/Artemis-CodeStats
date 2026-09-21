@@ -55,10 +55,10 @@ test('comparison baseline, empty state and accessible trend', async ({
   )
   await page.getByText('View accessible trend data', { exact: true }).click()
   await expect(
-    page.getByRole('table', { name: 'Affected files per sampled commit' }),
+    page.getByRole('table', { name: 'Affected files per analyzed commit' }),
   ).toBeVisible()
   const trend = page.getByRole('table', {
-    name: 'Affected files per sampled commit',
+    name: 'Affected files per analyzed commit',
   })
   for (const dimension of [
     'PrimeNG',
@@ -348,4 +348,42 @@ test('DTO archive loads only selected details and pins historical source links',
     ),
   )
   expect(detailRequests).toHaveLength(2)
+})
+
+test('per-commit summaries do not request unretained evidence or show a loading/error state', async ({
+  page,
+}) => {
+  const response = await page.request.get('migrations/index.json')
+  const manifest = await response.json()
+  const summary = manifest.snapshots.find(
+    (snapshot: { commit: string }) =>
+      !manifest.evidenceCommits.includes(snapshot.commit),
+  )
+  expect(summary).toBeTruthy()
+  const details: string[] = []
+  page.on('request', (request) => {
+    if (/\/migrations\/[a-f0-9]{40}\.json$/.test(request.url()))
+      details.push(request.url())
+  })
+  await page.goto(`./#/?current=${summary.commit}`)
+  await expect(page.getByLabel('Selected snapshot')).toHaveValue(summary.commit)
+  await expect(
+    page.getByRole('heading', { name: 'Summary-only historical snapshot' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: 'Inspect this commit on GitHub' }),
+  ).toHaveAttribute(
+    'href',
+    `https://github.com/ls1intum/Artemis/commit/${summary.commit}`,
+  )
+  expect(details).toEqual([])
+  await expect(
+    page.getByRole('button', { name: 'Retry evidence' }),
+  ).toHaveCount(0)
+  await page
+    .getByLabel('Selected snapshot')
+    .selectOption(manifest.snapshots.at(-1).commit)
+  await expect(
+    page.getByRole('heading', { name: 'Source evidence', exact: true }),
+  ).toBeVisible()
 })

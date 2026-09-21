@@ -9,6 +9,7 @@ import {
   Legend,
 } from 'recharts'
 import {
+  commitUrl,
   dimensionKeys,
   dimensions,
   type Dimension,
@@ -24,6 +25,8 @@ const series: Record<Dimension, { color: string; dash?: string }> = {
   tailwind: { color: '#1d4ed8', dash: '8 3' },
 }
 const dateLabel = (value: number) => new Date(value).toISOString().slice(0, 10)
+const timeLabel = (value: number) =>
+  new Date(value).toISOString().replace('T', ' ').slice(0, 19)
 
 export function MigrationTrend({ snapshots }: { snapshots: Snapshot[] }) {
   const data = snapshots.map((s) => ({
@@ -36,9 +39,9 @@ export function MigrationTrend({ snapshots }: { snapshots: Snapshot[] }) {
       <div className="mb-6">
         <h2 id="trend-title">Migration evidence over time</h2>
         <p>
-          Weekly samples since the owned-kit pilot, plus exact adoption
-          milestones. Distinct files per dimension; series overlap. Dates use
-          elapsed time, not equally spaced snapshots. Scope: all modules.
+          Every first-parent commit since package adoption; weekly samples
+          before adoption. Distinct files per dimension; series overlap. Dates
+          use elapsed time, not equally spaced snapshots. Scope: all modules.
         </p>
       </div>
       <div className="grid gap-8 xl:grid-cols-2">
@@ -80,7 +83,9 @@ export function MigrationTrend({ snapshots }: { snapshots: Snapshot[] }) {
                     tick={{ fontSize: 11 }}
                     domain={[0, 'auto']}
                   />
-                  <Tooltip labelFormatter={(v) => dateLabel(Number(v))} />
+                  <Tooltip
+                    labelFormatter={(v) => `${timeLabel(Number(v))} UTC`}
+                  />
                   <Legend iconType="plainline" />
                   {dimensionKeys
                     .filter((key) => dimensions[key].kind === kind)
@@ -106,18 +111,19 @@ export function MigrationTrend({ snapshots }: { snapshots: Snapshot[] }) {
       <details className="mt-5">
         <summary>View accessible trend data</summary>
         <div
-          className="overflow-x-auto"
+          className="overflow-auto max-h-[32rem]"
           tabIndex={0}
           role="region"
           aria-label="Trend data"
         >
           <table className="migration-table">
             <caption className="sr-only">
-              Affected files per sampled commit
+              Affected files per analyzed commit
             </caption>
             <thead>
               <tr>
                 <th scope="col">Date (UTC)</th>
+                <th scope="col">Commit</th>
                 {dimensionKeys.map((key) => (
                   <th scope="col" key={key}>
                     {dimensions[key].label}
@@ -128,7 +134,14 @@ export function MigrationTrend({ snapshots }: { snapshots: Snapshot[] }) {
             <tbody>
               {data.map((row) => (
                 <tr key={row.commit}>
-                  <th scope="row">{dateLabel(row.timestamp)}</th>
+                  <th scope="row" className="whitespace-nowrap">
+                    {timeLabel(row.timestamp)}
+                  </th>
+                  <td>
+                    <a className="migration-link" href={commitUrl(row.commit)}>
+                      {row.commit.slice(0, 8)}
+                    </a>
+                  </td>
                   {dimensionKeys.map((key) => (
                     <td key={key}>{row[key]}</td>
                   ))}

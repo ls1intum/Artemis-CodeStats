@@ -9,8 +9,12 @@ is the active route. Archival is a prioritization decision, not a completion cer
 History starts at the [owned-kit pilot, #13226](https://github.com/ls1intum/Artemis/pull/13226)
 (July 17, `e6e7c9cca1e961ce05463177bc316dc42c8d1c38`) and includes the exact
 [workspace-package adoption, #13323](https://github.com/ls1intum/Artemis/pull/13323)
-(August 4, `45bcba707254de4ccee7bb4c83526fbdfa45c6fc`). Weekly first-parent samples
-plus both milestones and HEAD are retained. Intermediate regressions can be missed.
+(August 4, `45bcba707254de4ccee7bb4c83526fbdfa45c6fc`). Every first-parent commit since package adoption is retained as a summary, including
+commits between collection runs. Earlier pilot history is sampled weekly. Full file
+evidence is retained at weekly checkpoints, both milestones and HEAD. Other commits
+are explicitly summary-only: counts and module comparisons remain available without
+requesting a nonexistent detail file. Side-branch commits are not separate integrated
+states; first-parent history tracks what actually reached `develop`.
 
 Each dimension counts **distinct affected files**; `legacyFiles` is their deduplicated
 legacy union. Never sum dimensions or treat modern and legacy files as disjoint.
@@ -39,7 +43,7 @@ are visible. Fixture coverage is **not detector precision/recall**.
 | Location | Responsibility |
 |---|---|
 | `report/ui/analyze.ts`, `bootstrap.ts` | Source analysis and pinned upstream class policy |
-| `report/ui/index.ts` | Read Git archives without checkout mutation; validate/cache/publish reports |
+| `report/ui/index.ts`, `generate.ts`, `history.ts` | CLI, immutable Git analysis/cache/publication, and per-commit history/retention policy |
 | `src/features/migrations/model.ts` | Zod contracts, cross-field invariants, dimension vocabulary |
 | `load-report.ts`, `src/lib/router.tsx` | Router loading, cancellation, cache keys and errors |
 | Feature components | Metrics, time-scaled charts, module table, evidence and methodology |
@@ -64,8 +68,10 @@ patterns, and have equivalent six-dimension tabular data.
 The generator writes detail files, then atomically replaces the manifest; this is **not a
 whole-directory transaction**. CI failure prevents publication. Both manifest and detail
 require the same analyzer version; bump it and rebuild all history when semantics change.
-Cache reuse reconciles detail evidence with global/module counts. Unreferenced rolling-HEAD
-files are pruned. `generatedAt` stays unchanged for an unchanged analysis.
+Cache reuse reconciles retained detail evidence with global/module counts; summary-only
+entries are schema-validated. Unreferenced rolling-HEAD detail files are pruned, not their
+post-adoption summaries. Manifest schema v2 explicitly lists retained evidence commits.
+`generatedAt` stays unchanged for an unchanged analysis; it is not a successful-poll heartbeat.
 
 All 877 DTO snapshots remain available. Build/dev preparation derives summaries; Vite URL
 imports emit original detail JSON as assets. Only selected details are fetched through a
@@ -189,19 +195,81 @@ npm run report:ui                 # pinned source; validate and reuse cache
 npm run report:ui -- --rebuild    # recompute every retained sample
 ```
 
-Build/dev scripts prepare DTO summaries automatically. The daily workflow pins `origin/develop`,
-validates reports and builds before committing; it requires a restricted `GH_PAT` to trigger
-Pages. Reusable verification produces the artifact consumed by the separate deployment job.
-The write-enabled scheduled report and Pages deployment paths still require post-merge verification.
+Build/dev scripts prepare DTO summaries automatically. The hourly workflow pins `origin/develop`
+and validates reports before committing. Reusable verification builds and browser-tests the
+exact persisted commit, then passes its artifact to the deployment job. The write-enabled
+scheduled report and Pages deployment paths still require post-merge verification.
 
 Local production URL: **http://127.0.0.1:4173/Artemis-CodeStats/** using
 `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort`.
 On this host only, Chromium's `/tmp` restriction requires `TMPDIR=/dev/shm` for browser tests.
 No live Jean environment was registered; the test runner starts/stops this preview server.
 
-Verified: 18 detector/data tests; 12 browser scenarios in Chromium and Firefox (24 executions); lint/typecheck/build/format;
-workflow actionlint; full 11-snapshot analyzer-v3 rebuild and cache check. Analyzer V8 coverage
-is 99.68% lines / 92.16% branches, **not accuracy**. Six existing shared-component Fast Refresh
+Verified: 20 detector/data/history tests; 13 browser scenarios in Chromium and Firefox (26 executions); lint/typecheck/build/format;
+workflow actionlint; full 407-summary / 11-detail analyzer-v3 backfill and cache check. Analyzer V8 coverage
+is 99.68% lines / 93.27% branches, **not accuracy**. Six existing shared-component Fast Refresh
 warnings remain. DTO summary/data JS is ~2.73 MB + ~65 KB UI (formerly ~83.9 MB); selected
 original JSON is separate. Initial app JS is ~251 KB gzip. Signals archive still bulk-loads
 ~12.5 MB uncompressed. No WebKit, manual screen-reader/zoom study, or remote deployment verification.
+
+
+## Automatic updates and recovery
+
+Pressure tests use real temporary Git histories to check missed-run catch-up, intermediate
+regression/recovery, idempotent runs, dirty checkout preservation, missing detail regeneration,
+and corrupt cache repair. The actual publication shell was also exercised against disposable
+bare remotes: changed push, unchanged/no empty commit, concurrent push rejection, and exact
+submodule-pin publication. Five deployment-guard checks cover current/stale SHAs and failed,
+missing or malformed remote lookup. Local shell tests do not exercise hosted permissions or
+Pages APIs. The full initial backfill took approximately 11 minutes on the implementation host;
+steady-state cache validation took seconds. An interrupted backfill must recompute unpublished
+summary-only work on retry; expensive analyzer upgrades should be regenerated before merging.
+
+- **Cadence:** hourly at minute 17, manual dispatch, or a `repository_dispatch` event of
+  type `artemis-updated`. The sender in Artemis is not installed; polling is independently
+  sufficient. The collector ignores event payload revisions and fetches `origin/develop`.
+- **Catch-up:** plan the complete first-parent history each time; reuse valid cached
+  summaries and analyze all missing commits since adoption. A temporary regression that
+  disappeared before the next run is still represented. Initial backfill and analyzer
+  upgrades are more expensive than steady-state incremental collection.
+- **Publishing:** use `GITHUB_TOKEN` for a normal, non-force push; explicitly invoke reusable
+  verification/deployment with the resulting exact SHA. Do not rely on a token-generated
+  push to trigger another workflow. No PAT secret is needed. Human pushes to `main` still
+  trigger ordinary Pages verification/deployment.
+- **Recovery:** unchanged runs create no report commit but still verify and deploy. This
+  retries a previous deployment failure even if Artemis has not changed. A concurrent
+  `main` update safely rejects the push; rerun or let the next hourly run catch up. Failed
+  analysis or tests prevent publication; failed verification prevents Pages deployment.
+  A final remote-HEAD guard skips stale deployments overtaken by a newer default-branch
+  revision; remote lookup failures fail closed instead of deploying old content.
+- **Monitoring:** `generatedAt` describes analysis generation, not the last successful
+  check. Consult the linked collection and deployment runs. Enable GitHub Actions failure
+  notifications and verify the workflow remains enabled. There is no guaranteed maximum
+  latency: GitHub can delay/drop schedules and disable schedules in inactive public repos.
+- **Setup:** after merge, confirm Actions has repository contents-write permission and
+  the `github-pages` environment permits the default branch. Branch rules must permit the
+  bot's report commits. Manually dispatch the collector and confirm its output SHA matches
+  verification checkout and Pages publication. Then run it unchanged to verify the
+  no-empty-commit/redeployment path. These write-enabled paths cannot be proven by PR CI.
+
+Repository settings inspected on September 21, 2026: workflow tokens have write permission,
+Pages uses Actions, the Pages environment permits `main`, and collection is enabled. These
+read-only checks do not substitute for exercising the new write/deploy path after merge.
+
+Optional upstream notification, after configuring a narrowly scoped GitHub App/token in
+Artemis with permission to dispatch to this repository:
+
+```sh
+curl --fail-with-body --request POST \
+  --header "Authorization: Bearer $CODESTATS_DISPATCH_TOKEN" \
+  --header "Accept: application/vnd.github+json" \
+  --header "Content-Type: application/json" \
+  https://api.github.com/repos/ls1intum/Artemis-CodeStats/dispatches \
+  --data '{"event_type":"artemis-updated"}'
+```
+
+Installing an upstream sender is separate work in Artemis, not implied here.
+
+References: [GitHub schedule behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule),
+[token-trigger restrictions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow),
+and [reusable workflows and permissions](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows).

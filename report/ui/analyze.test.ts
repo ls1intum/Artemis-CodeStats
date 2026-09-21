@@ -128,14 +128,16 @@ test('reduction handles no baseline, elimination and regression without clamping
     true,
   )
 })
-test('published reports validate; evidence reproduces every file count', () => {
+test('published reports validate; retained evidence reproduces published file counts', () => {
   const manifest = manifestSchema.parse(
     JSON.parse(readFileSync('public/migrations/index.json', 'utf8')),
   )
   assert.ok(
     manifest.snapshots.some((s) => s.commit === manifest.packageAdoption),
   )
-  for (const snapshot of manifest.snapshots) {
+  for (const snapshot of manifest.snapshots.filter((s) =>
+    manifest.evidenceCommits.includes(s.commit),
+  )) {
     const detail = detailSchema.parse(
       JSON.parse(
         readFileSync(`public/migrations/${snapshot.commit}.json`, 'utf8'),

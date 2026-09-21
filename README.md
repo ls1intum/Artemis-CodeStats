@@ -49,12 +49,20 @@ npm run report:ui -- --rebuild
 
 The analyzer reads the **pinned** Artemis Git revision without checking out historical
 commits or changing the working tree. Reports contain full commit provenance and
-versioned schemas. Weekly first-parent samples plus the two adoption milestones and
-HEAD are published under `public/migrations/`.
+versioned schemas. Every first-parent commit since internal-package adoption gets a
+summary, so a delayed collection catches up without losing intermediate regressions.
+Earlier pilot history is sampled weekly. Full file evidence is retained for weekly
+checkpoints, the two milestones and HEAD; other commits are explicitly summary-only.
 
-The daily workflow updates the submodule to `origin/develop`, generates and validates
-reports, and commits both the source pin and evidence. Configure `GH_PAT` with repository
-contents-write permission so report commits trigger the Pages deployment workflow.
+The workflow checks `origin/develop` **hourly at minute 17**, with manual dispatch and
+an optional `repository_dispatch` event (`artemis-updated`) for faster upstream notification.
+It commits the source pin and validated reports using `GITHUB_TOKEN`, then explicitly
+verifies/builds/deploys that exact commit to Pages. **No `GH_PAT` is required.** Unchanged
+runs create no empty commits but still verify/deploy, recovering a previous deployment
+failure. The Artemis-side event sender is not installed by this PR; hourly polling works
+without it. GitHub may delay/drop scheduled runs, so this is not an instant-update SLA.
+See [collection runs](https://github.com/ls1intum/Artemis-CodeStats/actions/workflows/daily-report.yml)
+and the [automation runbook](docs/migration-dashboard.md#automatic-updates-and-recovery).
 
 The old `npm run report`, `npm run report:dto` and their historical data remain available
 for manual archival research; they are no longer part of the scheduled UI pipeline.

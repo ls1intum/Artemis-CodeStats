@@ -118,14 +118,30 @@ export const snapshotSchema = z
   })
 export const manifestSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     analyzerVersion: z.literal(analyzerVersion),
     generatedAt: z.string().datetime(),
     baseline: sha,
     packageAdoption: sha,
     snapshots: z.array(snapshotSchema).min(1),
+    evidenceCommits: z.array(sha).min(1),
   })
   .superRefine((data, ctx) => {
+    if (
+      new Set(data.evidenceCommits).size !== data.evidenceCommits.length ||
+      data.evidenceCommits.some(
+        (commit) => !data.snapshots.some((s) => s.commit === commit),
+      ) ||
+      ![
+        data.baseline,
+        data.packageAdoption,
+        data.snapshots.at(-1)?.commit,
+      ].every((commit) => commit && data.evidenceCommits.includes(commit))
+    )
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Invalid retained evidence commits',
+      })
     if (data.snapshots[0]?.commit !== data.baseline)
       ctx.addIssue({ code: 'custom', message: 'Missing adoption baseline' })
     if (!data.snapshots.some((s) => s.commit === data.packageAdoption))

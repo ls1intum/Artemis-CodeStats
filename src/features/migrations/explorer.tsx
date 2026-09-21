@@ -1,6 +1,12 @@
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
-import { dimensions, sourceUrl, type Dimension, type Detail } from './model'
+import {
+  dimensions,
+  sourceUrl,
+  commitUrl,
+  type Dimension,
+  type Detail,
+} from './model'
 
 export function EvidenceExplorer({
   commit,
@@ -36,7 +42,15 @@ export function EvidenceExplorer({
   if (!data)
     return (
       <section className="migration-panel" role="status">
-        Loading source evidence…
+        <h2>Summary-only historical snapshot</h2>
+        <p>
+          Counts and module comparisons are retained for every first-parent
+          commit since package adoption. Detailed file evidence is retained for
+          weekly checkpoints, both adoption milestones, and the latest commit.
+        </p>
+        <a className="migration-link" href={commitUrl(commit)}>
+          Inspect this commit on GitHub ↗
+        </a>
       </section>
     )
   const filtered = data.findings.filter(
