@@ -1,95 +1,49 @@
-name: Hourly Report Generator
+name: UI Migration Reports
 
 on:
   schedule:
-    # Run every hour at minute 0
-    - cron: '0 * * * *'
-  # Allow manual trigger for testing
+    - cron: '0 5 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: migration-reports
+  cancel-in-progress: false
 
 jobs:
   generate-report:
     runs-on: ubuntu-latest
-
+    if: github.ref_name == github.event.repository.default_branch
+    timeout-minutes: 20
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full git history for reports
           fetch-depth: 0
-          # Include submodules for artemis folder
           submodules: true
-          # Use PAT instead of GITHUB_TOKEN
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+          # PAT commits trigger the Pages workflow, unlike GITHUB_TOKEN commits.
+          token: ${{ secrets.GH_PAT }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Install dependencies
-        run: npm ci --force
-
-      - name: Setup Git identity
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci
+      - name: Update pinned Artemis revision
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Update artemis submodule
+          git -C artemis fetch origin develop
+          git -C artemis checkout --detach origin/develop
+      - run: npm run typecheck:report
+      - run: npm run report:ui
+      - run: npm test
+      - run: npm run build
+      - name: Publish validated reports
+        env:
+          REPORT_BRANCH: ${{ github.ref_name }}
         run: |
-          # Navigate into the artemis submodule directory
-          cd artemis
-
-          # Make sure we're on the main branch (or default branch)
-          git checkout develop || git checkout main || git checkout master
-
-          # Pull the latest changes
-          git pull
-
-          # Go back to the main repo directory
-          cd ..
-
-      - name: Run client-side report
-        run: |
-          # Force report to use the current state of artemis
-          npm run report
-
-          # Also generate the relative time report if needed
-          npm run report -- --relative 2h
-
-      - name: Run DTO violations report (static analysis)
-        run: |
-          # Full static analysis with JavaParser - no Artemis compilation needed!
-          # This provides 93% accuracy with full details (files, lines, endpoints)
-          npm run report:dto
-        timeout-minutes: 5
-
-      - name: Commit changes
-        run: |
-          # Add artemis submodule changes
-          git add artemis
-
-          # Add any new report files
-          git add data/
-
-          # Check if there are any changes
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          # Commit with current timestamp
-          git commit -m "chore: update code stats report and artemis submodule for $(date +'%Y-%m-%d %H:%M')"
-
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          branch: ${{ github.ref_name }}
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add artemis public/migrations
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "chore: refresh UI migration evidence"
+          git push origin "HEAD:$REPORT_BRANCH"

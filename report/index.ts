@@ -187,7 +187,7 @@ function getCommitsFromStartDate(startDate: Date): CommitInfo[] {
         if (isNaN(commitDate.getTime())) {
           commitDate = new Date(); // Use current date as fallback
         }
-      } catch (error) {
+      } catch {
         console.warn(`Warning: Invalid date format in commit: ${commitTimestamp}`);
         commitDate = new Date(); // Use current date as fallback
       }

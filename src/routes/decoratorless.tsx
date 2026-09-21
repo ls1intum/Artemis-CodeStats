@@ -8,7 +8,7 @@ import { AlertCircle, ArrowUp, ArrowDown, Trophy, Target, Info, Users } from "lu
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { decoratorlessAPIReports } from "@/lib/data"
+import { decoratorlessAPIReports } from "@/lib/decoratorless-data"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 

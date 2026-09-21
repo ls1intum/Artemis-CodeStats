@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useLoaderData, useNavigate } from "@tanstack/react-router"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -11,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { dtoViolationReports } from "@/lib/data"
+import { dtoViolationReports } from "@/lib/dto-data"
 
 // Import proper components
 import { DtoModuleLeaderboard } from "@/components/dto-module-leaderboard"
@@ -23,10 +24,9 @@ import { DtoViolationsExplorer } from "@/components/dto-violations-explorer"
 export function DtoUsageDashboard() {
   const hasData = dtoViolationReports && dtoViolationReports.length > 0
 
-  // Default: current = latest commit, compare = first (earliest) commit
-  const [selectedReportIndex, setSelectedReportIndex] = useState(
-    hasData ? dtoViolationReports.length - 1 : 0
-  )
+  const { selectedIndex: selectedReportIndex, report: selectedReport } = useLoaderData({ from: "/dto-usage" })
+  const navigate = useNavigate({ from: "/dto-usage" })
+  const setSelectedReportIndex = (current: number) => void navigate({ search: { current } })
   const [compareReportIndex, setCompareReportIndex] = useState(0)
 
   const formatDate = (date: Date) => {
@@ -40,7 +40,7 @@ export function DtoUsageDashboard() {
   }
 
   // No data state
-  if (!hasData) {
+  if (!hasData || !selectedReport) {
     return (
       <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6">
@@ -65,7 +65,7 @@ export function DtoUsageDashboard() {
     )
   }
 
-  const currentReport = dtoViolationReports[selectedReportIndex]
+  const currentReport = selectedReport
   const compareReport = dtoViolationReports[compareReportIndex]
 
   const current = currentReport.dtoViolations.totals

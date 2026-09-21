@@ -43,7 +43,7 @@ export function DecoratorlessAPITable({ data }: DecoratorlessAPITableProps) {
   tableData.forEach(row => {
     Object.keys(totals).forEach(key => {
       if (key !== 'module') {
-        totals[key] += (row as any)[key];
+        totals[key] += row[key as keyof Omit<typeof row, 'module'>];
       }
     })
   })

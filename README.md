@@ -1,95 +1,71 @@
-# Artemis-CodeStats
+# Artemis CodeStats
 
-A visualization tool for analyzing code statistics and technical debt from the Artemis learning platform.
+An evidence-based migration observatory for the [Artemis learning platform](https://github.com/ls1intum/Artemis).
 
-**[View Online](https://ls1intum.github.io/Artemis-CodeStats/)**
+**[Open the dashboard](https://ls1intum.github.io/Artemis-CodeStats/)** ·
+[Architecture, grading rubric, research and A+ roadmap](docs/migration-dashboard.md)
 
-## Installation
+## Active: UI modernization
 
-```bash
-# Clone repository with submodules
-git clone --recurse-submodules https://github.com/ls1intum/Artemis-CodeStats.git
+Track TUM UI and Tailwind adoption independently from removal of PrimeNG, ng-bootstrap,
+Bootstrap classes and legacy style tokens. Explore real history, module footprints and
+source-line evidence with shareable filters. No invented overall completion score.
 
-# Install dependencies
-npm install
-```
+Initialized from the [owned-kit pilot on July 17, 2026](https://github.com/ls1intum/Artemis/pull/13226),
+including the exact [internal-package adoption on August 4](https://github.com/ls1intum/Artemis/pull/13323).
+Signals/decoratorless API and DTO dashboards remain under **Archived migrations**, with
+historical reports preserved. Their scheduled collection has stopped; archival does not
+claim they are 100% complete.
 
-## Usage
+## Develop and verify
 
-```bash
-# Start development server
+Requires Node 24 and npm. The UI uses committed report artifacts; no Artemis server is needed.
+
+```sh
+npm ci
 npm run dev
-
-# Generate statistics report for current codebase
-npm run report
-
-# Build for production
+npm run lint
+npm run typecheck:report
+npm test
 npm run build
+npx playwright install chromium firefox
+npm run test:e2e -- --workers=2
 ```
 
-## Reporting Features
+Build/dev preparation derives compact summaries of all historical DTO reports; full details
+load only for the selected snapshot. No archive history is discarded.
 
-The report tool analyzes the Angular codebase to uncover technical debt and usage patterns.
+`npm run test:e2e` serves the production build at
+`http://127.0.0.1:4173/Artemis-CodeStats/`. Run the build first.
 
-### Current State Analysis
+## Refresh reports
 
-To generate reports for the current state of the codebase:
-
-```bash
-npm run report
+```sh
+git submodule update --init artemis
+npm run report:ui
+# Required after changing detector semantics:
+npm run report:ui -- --rebuild
 ```
 
-This generates reports in the `data/client/` directory, organized by report type.
+The analyzer reads the **pinned** Artemis Git revision without checking out historical
+commits or changing the working tree. Reports contain full commit provenance and
+versioned schemas. Weekly first-parent samples plus the two adoption milestones and
+HEAD are published under `public/migrations/`.
 
-### Historical Analysis
+The daily workflow updates the submodule to `origin/develop`, generates and validates
+reports, and commits both the source pin and evidence. Configure `GH_PAT` with repository
+contents-write permission so report commits trigger the Pages deployment workflow.
 
-You can analyze codebase changes over time by specifying a start date or relative time period:
+The old `npm run report`, `npm run report:dto` and their historical data remain available
+for manual archival research; they are no longer part of the scheduled UI pipeline.
 
-```bash
-# Analyze commits from today back to March 28, 2025
-npm run report -- --start 2025-03-28
+## Interpret responsibly
 
-# Analyze commits from the last 24 hours
-npm run report -- --relative 24h
+Counts are distinct affected files, not component instances. Dimensions overlap; the
+legacy-file total is deduplicated. Tailwind evidence is intentionally conservative,
+shared Bootstrap/Tailwind spacing names are not guessed, and no source detector can
+certify visual parity or accessibility. See the [coverage contract and runbook](docs/migration-dashboard.md).
 
-# Analyze commits from the last 7 days
-npm run report -- --relative 7d
-
-# Analyze 5 most recent commits since March 28, 2025
-npm run report -- --start 2025-03-28 --commits 5 
-
-# Analyze 5 most recent commits in the last week
-npm run report -- --relative 7d --commits 5
-
-# Analyze every 3rd commit (up to 10 commits total) since March 28, 2025
-npm run report -- --start 2025-03-28 --commits 10 --interval 3
-```
-
-#### Parameters
-
-- `--start` / `-s`: The date in YYYY-MM-DD format from which to start analyzing commits backward
-- `--relative` / `-r`: Relative time period to analyze (e.g., "24h", "7d", "2w", "1m", "1y")
-- `--commits` / `-c`: Maximum number of commits to analyze (default: all commits since start date)
-- `--interval` / `-i`: Interval between commits to analyze (default: 1)
-
-For relative time formats, the following units are supported:
-
-- `h`: hours (e.g., `24h` = last 24 hours)
-- `d`: days (e.g., `7d` = last 7 days)
-- `w`: weeks (e.g., `2w` = last 2 weeks)
-- `m`: months (e.g., `1m` = last month)
-- `y`: years (e.g., `1y` = last year)
-
-Reports are stored in the `data/client/` directory, with filenames containing the commit hash and timestamp.
-
-### Automated Hourly Reports
-
-A GitHub Action runs every hour to generate reports analyzing changes from the past hour and commit them to the repository. This ensures real-time tracking of code metrics with minimal delay.
-
-The workflow uses the `--relative 1h` parameter to focus only on the most recent changes, providing an up-to-date view of code evolution.
-
-These automated reports are accessible through the visualization interface and provide detailed trend data with hourly granularity.
-
-## About
-
-This project provides data visualization for code metrics, usage patterns, and statistics from the Artemis interactive learning platform. Built with React, TypeScript, and ShadCN with Recharts.
+Built with React, TypeScript, Vite, Tailwind, TanStack Router, Recharts and Zod. The report
+pipeline uses TypeScript and Angular parsers. This dashboard measures Artemis's Angular
+UI kit; it does not depend on that kit to render its own React UI.

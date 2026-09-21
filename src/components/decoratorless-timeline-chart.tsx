@@ -116,7 +116,7 @@ export function DecoratorlessTimelineChart({ data, currentIndex }: Decoratorless
   // Custom tooltip for the chart
   const CustomTooltip = ({ active, payload }: {
     active?: boolean;
-    payload?: Array<any>;
+    payload?: Array<{ payload: (typeof chartData)[number] }>;
   }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload

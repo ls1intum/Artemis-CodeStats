@@ -33,8 +33,6 @@ interface FlattenedViolation {
   file: string
 }
 
-const ARTEMIS_GITHUB_BASE = "https://github.com/ls1intum/Artemis/blob/develop/src/main/java/"
-
 export function DtoViolationsExplorer({ data }: DtoViolationsExplorerProps) {
   const [search, setSearch] = useState("")
   const [moduleFilter, setModuleFilter] = useState<string>("all")
@@ -190,7 +188,7 @@ export function DtoViolationsExplorer({ data }: DtoViolationsExplorerProps) {
   }
 
   const getGithubUrl = (file: string) => {
-    return ARTEMIS_GITHUB_BASE + file
+    return `https://github.com/ls1intum/Artemis/blob/${data.metadata.artemis.commitHash}/src/main/java/${file.split("/").map(encodeURIComponent).join("/")}`
   }
 
   return (
@@ -364,6 +362,7 @@ export function DtoViolationsExplorer({ data }: DtoViolationsExplorerProps) {
                         <TableCell>
                           <a
                             href={getGithubUrl(v.file)}
+                            aria-label={`Source: ${v.file}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-800"
