@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { detailSchema, manifestSchema } from './model'
+import { detailSchema, manifestSchema, type Manifest } from './model'
 
 async function loadJson<T>(
   file: string,
@@ -20,38 +20,32 @@ async function loadJson<T>(
   return parsed.data
 }
 
-// Router loader dependencies exclude display filters, so filtering never reloads evidence.
+export const checkpoints = (manifest: Manifest) =>
+  manifest.snapshots.filter((s) => manifest.evidenceCommits.includes(s.commit))
+
+// Detail exists only for checkpoints; unknown requests fall back to the latest and its predecessor.
 export async function loadMigrationReport(
-  commit: string | undefined,
+  requested: { snapshot?: string; compare?: string },
   signal: AbortSignal,
 ) {
   const manifest = await loadJson('index.json', manifestSchema, signal)
-  const current =
-    manifest.snapshots.find((snapshot) => snapshot.commit === commit) ??
-    manifest.snapshots[manifest.snapshots.length - 1]
-  if (!manifest.evidenceCommits.includes(current.commit))
-    return { manifest, current, detail: undefined, detailError: undefined }
-  try {
-    const detail = await loadJson(
-      `${current.commit}.json`,
-      detailSchema,
-      signal,
-    )
-    if (detail.commit !== current.commit)
-      throw new Error(
-        'Report identity mismatch. Regenerate and publish matching reports.',
-      )
-    return { manifest, current, detail, detailError: undefined }
-  } catch (error) {
-    if (signal.aborted) throw error
-    return {
-      manifest,
-      current,
-      detail: undefined,
-      detailError:
-        error instanceof Error
-          ? error.message
-          : 'Could not load source evidence.',
-    }
-  }
+  const points = checkpoints(manifest)
+  const snapshot =
+    points.find((s) => s.commit === requested.snapshot) ?? points.at(-1)!
+  const index = points.indexOf(snapshot)
+  const compare =
+    points.find((s) => s.commit === requested.compare) ??
+    points[Math.max(0, index - 1)]
+  const [detail, compareDetail] = await Promise.all(
+    [snapshot, compare].map(async (s) => {
+      const detail = await loadJson(`${s.commit}.json`, detailSchema, signal)
+      if (detail.commit !== s.commit)
+        throw new Error(
+          'Report identity mismatch. Regenerate and publish matching reports.',
+        )
+      return detail
+    }),
+  )
+  return { manifest, snapshot, compare, detail, compareDetail }
 }
+export type MigrationReport = Awaited<ReturnType<typeof loadMigrationReport>>

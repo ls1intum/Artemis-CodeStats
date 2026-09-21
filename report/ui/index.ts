@@ -1,7 +1,7 @@
 import { resolve } from 'node:path'
 import { generateReports } from './generate'
 
-generateReports({
+await generateReports({
   repo: resolve('artemis'),
   output: resolve('public/migrations'),
   baseline: 'e6e7c9cca1e961ce05463177bc316dc42c8d1c38',

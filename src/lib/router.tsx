@@ -15,21 +15,9 @@ import {
 } from '@/features/migrations/route-feedback'
 
 const searchSchema = z.object({
-  current: z.string().optional().catch(undefined),
+  snapshot: z.string().optional().catch(undefined),
   compare: z.string().optional().catch(undefined),
-  module: z.string().optional().catch(undefined),
-  dimension: z
-    .enum([
-      'primeng',
-      'ngBootstrap',
-      'bootstrap',
-      'legacyTokens',
-      'tumUi',
-      'tailwind',
-    ])
-    .optional()
-    .catch(undefined),
-  q: z.string().optional().catch(undefined),
+  section: z.string().optional().catch(undefined),
 })
 
 const rootRoute = createRootRoute({
@@ -41,9 +29,12 @@ const indexRoute = createRoute({
   path: '/',
   component: MigrationDashboard,
   validateSearch: (search) => searchSchema.parse(search),
-  loaderDeps: ({ search }) => ({ current: search.current }),
+  loaderDeps: ({ search }) => ({
+    snapshot: search.snapshot,
+    compare: search.compare,
+  }),
   loader: ({ deps, abortController }) =>
-    loadMigrationReport(deps.current, abortController.signal),
+    loadMigrationReport(deps, abortController.signal),
   staleTime: Infinity,
   pendingComponent: MigrationPending,
   errorComponent: MigrationError,

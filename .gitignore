@@ -29,3 +29,6 @@ test-results/
 
 # Rebuilt from preserved DTO history before dev/build
 src/generated/
+
+# Session notes
+.ai/

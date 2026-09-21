@@ -1,79 +1,52 @@
 # Artemis CodeStats
 
-An evidence-based migration observatory for the [Artemis learning platform](https://github.com/ls1intum/Artemis).
+Migration reports for the [Artemis learning platform](https://github.com/ls1intum/Artemis) client.
 
 **[Open the dashboard](https://ls1intum.github.io/Artemis-CodeStats/)** ·
-[Architecture, grading rubric, research and A+ roadmap](docs/migration-dashboard.md)
+[How it is measured](docs/migration-dashboard.md)
 
-## Active: UI modernization
+## Active: Bootstrap → Tailwind / TUM UI
 
-Track TUM UI and Tailwind adoption independently from removal of PrimeNG, ng-bootstrap,
-Bootstrap classes and legacy style tokens. Explore real history, module footprints and
-source-line evidence with shareable filters. No invented overall completion score.
+Remaining Bootstrap in the Artemis client, measured with Artemis's own
+`no-bootstrap-classes` lint rule and regression-lock list, for every first-parent commit on
+`develop` since the [TUM UI package adoption on August 4, 2026](https://github.com/ls1intum/Artemis/pull/13323)
+(weekly samples back to the [kit pilot on July 17](https://github.com/ls1intum/Artemis/pull/13226)).
+The dashboard shows the burndown, which pull requests moved it, which sections and shared
+components block progress, which directories can be locked now, and which PrimeNG,
+ng-bootstrap and Bootstrap APIs remain with their TUM UI targets.
 
-Initialized from the [owned-kit pilot on July 17, 2026](https://github.com/ls1intum/Artemis/pull/13226),
-including the exact [internal-package adoption on August 4](https://github.com/ls1intum/Artemis/pull/13323).
-Signals/decoratorless API and DTO dashboards remain under **Archived migrations**, with
-historical reports preserved. Their scheduled collection has stopped; archival does not
-claim they are 100% complete.
+The signals/decoratorless and DTO dashboards are archived under **Archived migrations**.
+Their data is preserved; their collection has stopped.
 
 ## Develop and verify
 
-Requires Node 24 and npm. The UI uses committed report artifacts; no Artemis server is needed.
+Requires Node 24 and npm. The UI reads committed report artifacts; no Artemis server is needed.
 
 ```sh
 npm ci
 npm run dev
-npm run lint
-npm run typecheck:report
+npm run lint && npm run format:check && npm run typecheck:report
 npm test
 npm run build
 npx playwright install chromium firefox
 npm run test:e2e -- --workers=2
 ```
 
-Build/dev preparation derives compact summaries of all historical DTO reports; full details
-load only for the selected snapshot. No archive history is discarded.
-
-`npm run test:e2e` serves the production build at
-`http://127.0.0.1:4173/Artemis-CodeStats/`. Run the build first.
+`npm run test:e2e` serves the production build at `http://127.0.0.1:4173/Artemis-CodeStats/`.
 
 ## Refresh reports
 
 ```sh
 git submodule update --init artemis
-npm run report:ui
-# Required after changing detector semantics:
-npm run report:ui -- --rebuild
+npm run report:ui              # incremental
+npm run report:ui -- --rebuild # after changing the analyzer
 ```
 
-The analyzer reads the **pinned** Artemis Git revision without checking out historical
-commits or changing the working tree. Reports contain full commit provenance and
-versioned schemas. Every first-parent commit since internal-package adoption gets a
-summary, so a delayed collection catches up without losing intermediate regressions.
-Earlier pilot history is sampled weekly. Full file evidence is retained for weekly
-checkpoints, the two milestones and HEAD; other commits are explicitly summary-only.
+The analyzer reads committed Artemis trees with `git archive` and never changes the submodule
+working tree. The workflow checks `origin/develop` hourly, commits validated reports with
+`GITHUB_TOKEN`, and deploys that exact commit to Pages; see
+[collection runs](https://github.com/ls1intum/Artemis-CodeStats/actions/workflows/daily-report.yml)
+and the [collection notes](docs/migration-dashboard.md#collection-and-publication).
 
-The workflow checks `origin/develop` **hourly at minute 17**, with manual dispatch and
-an optional `repository_dispatch` event (`artemis-updated`) for faster upstream notification.
-It commits the source pin and validated reports using `GITHUB_TOKEN`, then explicitly
-verifies/builds/deploys that exact commit to Pages. **No `GH_PAT` is required.** Unchanged
-runs create no empty commits but still verify/deploy, recovering a previous deployment
-failure. The Artemis-side event sender is not installed by this PR; hourly polling works
-without it. GitHub may delay/drop scheduled runs, so this is not an instant-update SLA.
-See [collection runs](https://github.com/ls1intum/Artemis-CodeStats/actions/workflows/daily-report.yml)
-and the [automation runbook](docs/migration-dashboard.md#automatic-updates-and-recovery).
-
-The old `npm run report`, `npm run report:dto` and their historical data remain available
-for manual archival research; they are no longer part of the scheduled UI pipeline.
-
-## Interpret responsibly
-
-Counts are distinct affected files, not component instances. Dimensions overlap; the
-legacy-file total is deduplicated. Tailwind evidence is intentionally conservative,
-shared Bootstrap/Tailwind spacing names are not guessed, and no source detector can
-certify visual parity or accessibility. See the [coverage contract and runbook](docs/migration-dashboard.md).
-
-Built with React, TypeScript, Vite, Tailwind, TanStack Router, Recharts and Zod. The report
-pipeline uses TypeScript and Angular parsers. This dashboard measures Artemis's Angular
-UI kit; it does not depend on that kit to render its own React UI.
+Built with React, TypeScript, Vite, Tailwind, shadcn/ui, TanStack Router, Recharts and Zod.
+The report pipeline uses the TypeScript and Angular compilers.

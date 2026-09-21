@@ -1,200 +1,161 @@
 import { z } from 'zod'
 
-export const analyzerVersion = 3
+export const analyzerVersion = 4
 
-export const dimensions = {
-  primeng: {
-    label: 'PrimeNG',
-    kind: 'legacy',
-    description:
-      'Files importing PrimeNG or using p-* elements / PrimeNG directives.',
-  },
-  ngBootstrap: {
-    label: 'ng-bootstrap',
-    kind: 'legacy',
-    description:
-      'Files importing @ng-bootstrap or using ngb elements / directives.',
-  },
-  bootstrap: {
-    label: 'Bootstrap classes',
-    kind: 'legacy',
-    description:
-      'Files with unambiguous Bootstrap classes; shared spacing names are excluded.',
-  },
-  legacyTokens: {
-    label: 'Legacy style tokens',
-    kind: 'legacy',
-    description: 'Files referencing --bs-* or --p-* CSS variables.',
-  },
-  tumUi: {
-    label: 'TUM UI',
-    kind: 'modern',
-    description:
-      'Files importing the owned kit or using tum-ui-* elements / tumUi directives.',
-  },
-  tailwind: {
-    label: 'Tailwind evidence',
-    kind: 'modern',
-    description:
-      'Templates with distinctive Tailwind utilities; not proof of complete migration.',
-  },
-} as const
-export type Dimension = keyof typeof dimensions
-export const dimensionKeys = Object.keys(dimensions) as Dimension[]
-export const legacyKeys = dimensionKeys.filter(
-  (key) => dimensions[key].kind === 'legacy',
-)
 const count = z.number().int().nonnegative()
-export const countsSchema = z.object({
+const sha = z.string().regex(/^[a-f0-9]{40}$/)
+
+export const statuses = ['locked', 'clean', 'dirty'] as const
+export type Status = (typeof statuses)[number]
+
+export const totalsSchema = z.object({
+  units: count,
+  locked: count,
+  clean: count,
+  dirty: count,
+  classHits: count,
+  styleHits: count,
+  lockedResidue: count,
+  lockedDirs: count,
+  lockableDirs: count,
   primeng: count,
   ngBootstrap: count,
-  bootstrap: count,
-  legacyTokens: count,
   tumUi: count,
-  tailwind: count,
+  kit: count,
 })
-export type Counts = z.infer<typeof countsSchema>
-export const emptyCounts = (): Counts => ({
-  primeng: 0,
-  ngBootstrap: 0,
-  bootstrap: 0,
-  legacyTokens: 0,
-  tumUi: 0,
-  tailwind: 0,
+export type Totals = z.infer<typeof totalsSchema>
+
+export const summarySchema = z.object({
+  commit: sha,
+  date: z.string().datetime({ offset: true }),
+  subject: z.string(),
+  totals: totalsSchema,
 })
-const sha = z.string().regex(/^[a-f0-9]{40}$/)
-const moduleSchema = z.object({
-  name: z.string(),
-  files: count,
-  legacyFiles: count,
-  counts: countsSchema,
-})
-export const snapshotSchema = z
-  .object({
-    commit: sha,
-    date: z.string().datetime({ offset: true }),
-    files: count,
-    templates: count,
-    legacyFiles: count,
-    counts: countsSchema,
-    modules: z.array(moduleSchema),
-    diagnostics: z.array(z.object({ path: z.string(), message: z.string() })),
-  })
-  .superRefine((snapshot, ctx) => {
-    const invalid = (message: string) =>
-      ctx.addIssue({ code: 'custom', message })
-    if (
-      new Set(snapshot.modules.map((module) => module.name)).size !==
-      snapshot.modules.length
-    )
-      invalid('Duplicate modules')
-    for (const scope of [snapshot, ...snapshot.modules]) {
-      if (
-        scope.legacyFiles > scope.files ||
-        dimensionKeys.some((key) => scope.counts[key] > scope.files)
-      )
-        invalid('Affected-file counts exceed scanned files')
-      if (
-        legacyKeys.some((key) => scope.counts[key] > scope.legacyFiles) ||
-        scope.legacyFiles >
-          legacyKeys.reduce((sum, key) => sum + scope.counts[key], 0)
-      )
-        invalid('Legacy union contradicts dimension counts')
-    }
-    for (const key of ['files', 'legacyFiles'] as const)
-      if (
-        snapshot.modules.reduce((sum, module) => sum + module[key], 0) !==
-        snapshot[key]
-      )
-        invalid(`Module ${key} do not reconcile`)
-    for (const key of dimensionKeys)
-      if (
-        snapshot.modules.reduce(
-          (sum, module) => sum + module.counts[key],
-          0,
-        ) !== snapshot.counts[key]
-      )
-        invalid(`Module ${key} counts do not reconcile`)
-  })
+export type Summary = z.infer<typeof summarySchema>
+
 export const manifestSchema = z
   .object({
-    schemaVersion: z.literal(2),
+    schemaVersion: z.literal(3),
     analyzerVersion: z.literal(analyzerVersion),
     generatedAt: z.string().datetime(),
     baseline: sha,
     packageAdoption: sha,
-    snapshots: z.array(snapshotSchema).min(1),
     evidenceCommits: z.array(sha).min(1),
+    snapshots: z.array(summarySchema).min(1),
   })
   .superRefine((data, ctx) => {
+    const invalid = (message: string) =>
+      ctx.addIssue({ code: 'custom', message })
+    const commits = data.snapshots.map((s) => s.commit)
+    if (new Set(commits).size !== commits.length) invalid('Duplicate snapshots')
+    if (commits[0] !== data.baseline) invalid('Missing baseline snapshot')
     if (
-      new Set(data.evidenceCommits).size !== data.evidenceCommits.length ||
-      data.evidenceCommits.some(
-        (commit) => !data.snapshots.some((s) => s.commit === commit),
+      [data.baseline, data.packageAdoption, commits.at(-1)].some(
+        (c) => !c || !data.evidenceCommits.includes(c),
       ) ||
-      ![
-        data.baseline,
-        data.packageAdoption,
-        data.snapshots.at(-1)?.commit,
-      ].every((commit) => commit && data.evidenceCommits.includes(commit))
+      data.evidenceCommits.some((c) => !commits.includes(c))
     )
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Invalid retained evidence commits',
-      })
-    if (data.snapshots[0]?.commit !== data.baseline)
-      ctx.addIssue({ code: 'custom', message: 'Missing adoption baseline' })
-    if (!data.snapshots.some((s) => s.commit === data.packageAdoption))
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Missing package-adoption milestone',
-      })
+      invalid('Invalid evidence commits')
     if (
       data.snapshots.some(
         (s, i) =>
           i > 0 && Date.parse(s.date) < Date.parse(data.snapshots[i - 1].date),
       )
     )
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Snapshots must be chronological',
-      })
-    if (
-      new Set(data.snapshots.map((s) => s.commit)).size !==
-      data.snapshots.length
-    )
-      ctx.addIssue({ code: 'custom', message: 'Duplicate snapshots' })
+      invalid('Snapshots must be chronological')
   })
-export const findingSchema = z.object({
-  path: z.string(),
-  module: z.string(),
-  line: z.number().int().positive(),
-  dimension: z.enum([
-    'primeng',
-    'ngBootstrap',
-    'bootstrap',
-    'legacyTokens',
-    'tumUi',
-    'tailwind',
-  ]),
-  evidence: z.string(),
+export type Manifest = z.infer<typeof manifestSchema>
+
+const usage = z.record(z.string(), count)
+export const unitSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['component', 'directive']),
+  selector: z.string().optional(),
+  section: z.string(),
+  template: z.string().optional(),
+  styles: z.array(z.string()),
+  status: z.enum(statuses),
+  scanned: z.boolean(),
+  classHits: count,
+  styleHits: count,
+  closureHits: count,
+  blocks: count,
+  blockers: z.array(z.string()),
+  tokens: usage,
+  primeng: usage,
+  ngBootstrap: usage,
+  tumUi: usage,
 })
+export type Unit = z.infer<typeof unitSchema>
+
+export const sectionSchema = z.object({
+  name: z.string(),
+  units: count,
+  locked: count,
+  clean: count,
+  dirty: count,
+  classHits: count,
+  styleHits: count,
+  lockableDirs: count,
+  blockers: count,
+})
+export type Section = z.infer<typeof sectionSchema>
+
+const inventoryEntry = z.object({
+  name: z.string(),
+  occurrences: count,
+  units: count,
+})
+export type InventoryEntry = z.infer<typeof inventoryEntry>
+
 export const detailSchema = z.object({
   analyzerVersion: z.literal(analyzerVersion),
   commit: sha,
-  findings: z.array(findingSchema),
+  rule: sha,
+  kit: z.array(z.string()),
+  lockGlobs: z.array(z.string()),
+  lockable: z.array(z.object({ dir: z.string(), units: count })),
+  sections: z.array(sectionSchema),
+  units: z.array(unitSchema),
+  files: z.array(
+    z.object({
+      path: z.string(),
+      section: z.string(),
+      classHits: count,
+      styleHits: count,
+      tokens: usage,
+    }),
+  ),
+  inventory: z.object({
+    bootstrap: z.array(inventoryEntry),
+    primeng: z.array(inventoryEntry),
+    ngBootstrap: z.array(inventoryEntry),
+    tumUi: z.array(inventoryEntry),
+  }),
+  diagnostics: z.array(z.object({ path: z.string(), message: z.string() })),
 })
 export type Detail = z.infer<typeof detailSchema>
-export type Finding = z.infer<typeof findingSchema>
-export type Snapshot = z.infer<typeof snapshotSchema>
-export type Manifest = z.infer<typeof manifestSchema>
-export function sourceUrl(commit: string, path: string, line?: number) {
-  return `https://github.com/ls1intum/Artemis/blob/${commit}/${path.split('/').map(encodeURIComponent).join('/')}${line ? `#L${line}` : ''}`
-}
-// Negative reduction is a regression; zero baseline is deliberately not 100%.
-export function reduction(baseline: number, current: number): number | null {
-  return baseline === 0 ? null : ((baseline - current) / baseline) * 100
-}
 
-export const commitUrl = (sha: string) =>
-  `https://github.com/ls1intum/Artemis/commit/${sha}`
+export const appRoot = 'src/main/webapp/app'
+export const sectionOf = (path: string) =>
+  !path.startsWith(`${appRoot}/`)
+    ? 'content'
+    : path.slice(appRoot.length + 1).includes('/')
+      ? path.slice(appRoot.length + 1).split('/')[0]
+      : 'app'
+
+export const sourceUrl = (commit: string, path: string) =>
+  `https://github.com/ls1intum/Artemis/blob/${commit}/${path.split('/').map(encodeURIComponent).join('/')}`
+export const commitUrl = (commit: string) =>
+  `https://github.com/ls1intum/Artemis/commit/${commit}`
+export const pullRequestNumber = (subject: string) =>
+  /\(#(\d+)\)\s*$/.exec(subject)?.[1]
+export const pullRequestUrl = (number: string) =>
+  `https://github.com/ls1intum/Artemis/pull/${number}`
+
+// The three lists the Artemis migration-source-coverage test keeps consistent.
+export const lockEntries = (dir: string) => ({
+  eslint: `'${dir}/**/*.html',`,
+  stylelint: `"${dir}/**/*.scss",`,
+  tailwind: `@source '${dir.replace(/^src\/main\/webapp\//, './')}';`,
+})

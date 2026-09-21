@@ -7,6 +7,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Activity, ChevronDown } from 'lucide-react'
+import { Toaster } from '@/components/ui/sonner'
 
 export function RootLayout() {
   const currentPath = useRouterState().location.pathname
@@ -35,7 +36,7 @@ export function RootLayout() {
                 Artemis CodeStats
               </span>
               <span className="block text-xs text-slate-500">
-                Migration observatory
+                Artemis client migration reports
               </span>
             </span>
           </Link>
@@ -99,10 +100,8 @@ export function RootLayout() {
           tabIndex={-1}
           className="mx-auto max-w-[1440px] m-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
         >
-          <strong>Archived migration.</strong> Historical signals and DTO
-          reports remain available for reference. Archival reflects project
-          priority, not certified 100% completion. These reports are no longer
-          refreshed by the scheduled workflow.{' '}
+          <strong>Archived.</strong> This report is no longer refreshed by the
+          scheduled workflow.{' '}
           <Link className="underline" to="/">
             Return to UI modernization
           </Link>
@@ -110,14 +109,15 @@ export function RootLayout() {
         </aside>
       )}
       <Outlet />
+      <Toaster />
       <footer className="border-t bg-white px-6 py-6 text-xs text-slate-500">
         <div className="mx-auto max-w-[1440px] flex flex-wrap justify-between gap-3">
-          <span>Artemis CodeStats · Evidence, not vanity metrics.</span>
+          <span>Artemis CodeStats</span>
           <a
-            className="migration-link"
+            className="underline underline-offset-4"
             href="https://github.com/ls1intum/Artemis-CodeStats"
           >
-            Source & methodology ↗
+            Source ↗
           </a>
         </div>
       </footer>

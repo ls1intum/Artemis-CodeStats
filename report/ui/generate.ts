@@ -11,18 +11,25 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { analyzeDirectory } from './analyze'
+import { analyzeTree } from './analyze'
 import { planHistory } from './history'
 import {
   analyzerVersion,
   detailSchema,
-  dimensionKeys,
-  legacyKeys,
   manifestSchema,
   type Manifest,
 } from '../../src/features/migrations/model'
 
-export function generateReports({
+const analyzedPaths = [
+  'src/main/webapp/app',
+  'src/main/webapp/content',
+  'src/main/webapp/tailwind.css',
+  'rules/no-bootstrap-classes.mjs',
+  'eslint.config.mjs',
+  'packages/tum-ui/src/lib',
+]
+
+export async function generateReports({
   repo,
   output,
   baseline,
@@ -34,7 +41,7 @@ export function generateReports({
   baseline: string
   packageAdoption: string
   rebuild?: boolean
-}): Manifest {
+}): Promise<Manifest> {
   const git = (...args: string[]) =>
     execFileSync('git', ['-C', repo, ...args], {
       encoding: 'utf8',
@@ -47,27 +54,27 @@ export function generateReports({
   const head = git('rev-parse', 'HEAD')
   git('merge-base', '--is-ancestor', baseline, head)
   git('merge-base', '--is-ancestor', packageAdoption, head)
+  const revision = (row: string) => {
+    const [commit, date, subject] = row.split('\x1f')
+    return { commit, date, subject }
+  }
   const history = git(
     'log',
     '--first-parent',
     '--reverse',
-    '--format=%H %cI',
+    '--format=%H%x1f%cI%x1f%s',
     `${baseline}..${head}`,
   )
     .split('\n')
     .filter(Boolean)
-    .map((row) => {
-      const [commit, date] = row.split(' ')
-      return { commit, date }
-    })
+    .map(revision)
   const planned = planHistory(
     [
-      { commit: baseline, date: git('show', '-s', '--format=%cI', baseline) },
+      revision(git('show', '-s', '--format=%H%x1f%cI%x1f%s', baseline)),
       ...history,
     ],
     packageAdoption,
   )
-  const commits = planned.snapshots
   mkdirSync(output, { recursive: true })
   const cachePath = join(output, 'index.json')
   const cached =
@@ -75,7 +82,7 @@ export function generateReports({
       ? manifestSchema.safeParse(JSON.parse(readFileSync(cachePath, 'utf8')))
       : undefined
   const manifest: Manifest = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     analyzerVersion,
     generatedAt: new Date().toISOString(),
     baseline,
@@ -87,38 +94,27 @@ export function generateReports({
     writeFileSync(`${path}.tmp`, JSON.stringify(value) + '\n')
     renameSync(`${path}.tmp`, path)
   }
-  for (const { commit, date } of commits) {
+  for (const revision of planned.snapshots) {
+    const { commit, date } = revision
     const retainEvidence = planned.evidenceCommits.includes(commit)
     const detailPath = join(output, `${commit}.json`)
     const prior =
       cached?.success && cached.data.snapshots.find((s) => s.commit === commit)
-    if (!rebuild && prior && (!retainEvidence || existsSync(detailPath))) {
-      if (!retainEvidence) {
-        manifest.snapshots.push(prior)
-        continue
-      }
-      const detail = detailSchema.parse(
-        JSON.parse(readFileSync(detailPath, 'utf8')),
-      )
-      if (detail.commit !== commit)
-        throw new Error(`Detail identity mismatch: ${commit}`)
-      for (const scope of [prior, ...prior.modules]) {
-        const findings =
-          'name' in scope
-            ? detail.findings.filter((finding) => finding.module === scope.name)
-            : detail.findings
-        const fileCount = (keys: readonly string[]) =>
-          new Set(
-            findings
-              .filter((finding) => keys.includes(finding.dimension))
-              .map((finding) => finding.path),
-          ).size
+    if (prior && (!retainEvidence || existsSync(detailPath))) {
+      if (retainEvidence) {
+        const detail = detailSchema.parse(
+          JSON.parse(readFileSync(detailPath, 'utf8')),
+        )
+        const units = detail.units.length
         if (
-          dimensionKeys.some((key) => fileCount([key]) !== scope.counts[key]) ||
-          fileCount(legacyKeys) !== scope.legacyFiles
+          detail.commit !== commit ||
+          units !== prior.totals.units ||
+          detail.units.filter((u) => u.status === 'dirty').length !==
+            prior.totals.dirty ||
+          detail.lockable.length !== prior.totals.lockableDirs
         )
           throw new Error(
-            `Cached evidence counts do not match ${commit}; run with --rebuild`,
+            `Cached evidence does not match ${commit}; run with --rebuild`,
           )
       }
       manifest.snapshots.push(prior)
@@ -126,50 +122,45 @@ export function generateReports({
     }
     const temp = mkdtempSync(join(tmpdir(), 'codestats-ui-'))
     try {
-      // Read committed trees without checkout, stash, worktree creation, or mutation of Artemis.
+      // Read committed trees without checkout or mutation of the Artemis submodule.
+      const present = git(
+        'ls-tree',
+        '--name-only',
+        commit,
+        '--',
+        ...analyzedPaths,
+      )
+        .split('\n')
+        .filter(Boolean)
       const archive = execFileSync(
         'git',
-        [
-          '-C',
-          repo,
-          'archive',
-          commit,
-          'src/main/webapp/app',
-          'src/main/webapp/content',
-        ],
-        { maxBuffer: 128 * 1024 * 1024 },
+        ['-C', repo, 'archive', commit, '--', ...present],
+        { maxBuffer: 256 * 1024 * 1024 },
       )
       execFileSync('tar', ['-x', '-C', temp], { input: archive })
-      const { snapshot, findings } = analyzeDirectory(temp, commit, date)
-      manifest.snapshots.push(snapshot)
-      if (retainEvidence)
-        atomicWrite(
-          detailPath,
-          detailSchema.parse({ analyzerVersion, commit, findings }),
-        )
+      const { summary, detail } = await analyzeTree(temp, revision)
+      manifest.snapshots.push(summary)
+      if (retainEvidence) atomicWrite(detailPath, detailSchema.parse(detail))
+      const t = summary.totals
       console.log(
-        `${date.slice(0, 10)} ${commit.slice(0, 8)}: ${snapshot.files} files, ${snapshot.legacyFiles} legacy, ${snapshot.diagnostics.length} diagnostics`,
+        `${date.slice(0, 10)} ${commit.slice(0, 8)}: ${t.units} units, ${t.locked} locked, ${t.clean} clean, ${t.dirty} dirty, ${t.classHits + t.styleHits} hits, ${detail.diagnostics.length} diagnostics`,
       )
     } finally {
       rmSync(temp, { recursive: true, force: true })
     }
   }
-  // Do not refresh the freshness timestamp if the source and analysis did not change.
   if (
     cached?.success &&
     JSON.stringify(cached.data.snapshots) === JSON.stringify(manifest.snapshots)
   )
     manifest.generatedAt = cached.data.generatedAt
   atomicWrite(cachePath, manifestSchema.parse(manifest))
-  // Keep every post-adoption summary, but bound the growth of detailed evidence.
   const retained = new Set(
     manifest.evidenceCommits.map((commit) => `${commit}.json`),
   )
-  for (const file of readdirSync(output)) {
+  for (const file of readdirSync(output))
     if (/^[a-f0-9]{40}\.json$/.test(file) && !retained.has(file))
       rmSync(join(output, file))
-  }
   console.log(`Published ${manifest.snapshots.length} snapshots to ${output}`)
-
   return manifest
 }

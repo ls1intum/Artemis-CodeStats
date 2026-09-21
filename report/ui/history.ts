@@ -1,4 +1,4 @@
-type Revision = { commit: string; date: string }
+type Revision = { commit: string; date: string; subject: string }
 
 // First-parent history represents develop's integrated state, not side-branch commits.
 export function planHistory(history: Revision[], packageAdoption: string) {

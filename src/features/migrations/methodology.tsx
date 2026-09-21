@@ -1,100 +1,111 @@
-import { ExternalLink } from 'lucide-react'
-import { sourceUrl, commitUrl, type Manifest, type Snapshot } from './model'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import { commitUrl, sourceUrl, type Detail, type Manifest } from './model'
 
 export function Methodology({
-  data,
-  current,
+  manifest,
+  detail,
 }: {
-  data: Manifest
-  current: Snapshot
+  manifest: Manifest
+  detail: Detail
 }) {
+  const link = (path: string, text = path) => (
+    <a
+      className="underline underline-offset-4"
+      href={sourceUrl(detail.commit, path)}
+    >
+      {text}
+    </a>
+  )
   return (
-    <section className="migration-panel" aria-labelledby="method-title">
-      <h2 id="method-title">Trust the evidence. Know its limits.</h2>
-      <div className="grid gap-6 md:grid-cols-2 mt-5 text-sm leading-relaxed">
-        <div>
-          <h3 className="font-semibold mb-2">Coverage & provenance</h3>
+    <Accordion type="single" collapsible>
+      <AccordionItem value="method">
+        <AccordionTrigger>How this is measured</AccordionTrigger>
+        <AccordionContent className="grid max-w-4xl gap-3 text-sm leading-relaxed">
+          <dl className="grid gap-2 sm:grid-cols-[10rem_1fr]">
+            <dt className="font-medium">Hit</dt>
+            <dd>
+              A class token matched by Artemis's own{' '}
+              {link('rules/no-bootstrap-classes.mjs', 'no-bootstrap-classes')}{' '}
+              rule at this commit, in templates (also inline templates and the
+              static parts of interpolated class lists, which the lint does not
+              scan) and in TypeScript class strings (host bindings,{' '}
+              <code>addClass</code>, properties named <code>*class*</code>); or,
+              in SCSS, a <code>--bs-*</code> variable, a hex or{' '}
+              <code>rgb()</code>/<code>hsl()</code> color, or a Bootstrap Sass
+              import, which the stylelint lock rejects. Shared spacing utilities
+              such as <code>mb-3</code> are not hits.
+            </dd>
+            <dt className="font-medium">Unit</dt>
+            <dd>
+              An Angular component or directive: its TypeScript file, external
+              template and style files. Files owned by no unit (shared SCSS
+              partials, helpers, global styles) are listed per section but do
+              not count as units.
+            </dd>
+            <dt className="font-medium">Locked</dt>
+            <dd>
+              The unit's template path matches the regression-lock list in{' '}
+              {link('eslint.config.mjs')} ({detail.lockGlobs.length} entries at
+              this commit). Locked is Artemis's definition of done for the
+              Bootstrap phase; a locked unit may still use PrimeNG.
+            </dd>
+            <dt className="font-medium">Bootstrap-free, unlocked</dt>
+            <dd>
+              Zero hits, not yet locked. It may still render Bootstrap through
+              the units it imports.
+            </dd>
+            <dt className="font-medium">Rendered</dt>
+            <dd>
+              The units reachable through TypeScript imports: template children,
+              dialogs opened from code and lazily loaded routes. Routing by
+              string selector or content projection from outside a unit is not
+              resolved.
+            </dd>
+            <dt className="font-medium">Lockable</dt>
+            <dd>
+              A directory that is not locked, in which every unit and file has
+              zero hits and renders nothing with hits. The copied entries follow
+              the three lists that Artemis's{' '}
+              {link(
+                'rules/migration-source-coverage.spec.mjs',
+                'migration-source-coverage',
+              )}{' '}
+              test keeps consistent.
+            </dd>
+            <dt className="font-medium">Snapshots</dt>
+            <dd>
+              Totals for every first-parent commit on develop since{' '}
+              <a
+                className="underline underline-offset-4"
+                href={commitUrl(manifest.packageAdoption)}
+              >
+                package adoption
+              </a>
+              , collected hourly. Full unit detail is kept for weekly
+              checkpoints, milestones and the latest commit. Analysis executes
+              the rule module of the analyzed commit.
+            </dd>
+          </dl>
           <p>
-            TypeScript imports, Angular external and literal inline templates,
-            and CSS/SCSS token references in app and global content sources.
-            Tests, stories, declarations and the kit’s own implementation are
-            excluded. Baseline:{' '}
-            <a className="migration-link" href={commitUrl(data.baseline)}>
-              July 17 owned-kit pilot
-            </a>
-            ; package extraction:{' '}
-            <a
-              className="migration-link"
-              href={commitUrl(data.packageAdoption)}
-            >
-              August 4 adoption
-            </a>
-            .
+            Counts are static evidence, not a visual-parity or accessibility
+            certificate. Runtime class construction that the rule cannot see is
+            not counted.
           </p>
-          <p className="mt-3">
-            Bootstrap rules are pinned to{' '}
-            <a
-              className="migration-link"
-              href={sourceUrl(
-                '6d7f286184ec6546ba15beac26dd21600a498fba',
-                'rules/no-bootstrap-classes.mjs',
-              )}
-            >
-              Artemis’s own lint policy
-            </a>
-            . Shared classes such as <code>p-3</code> are deliberately not
-            assigned to either framework.
-          </p>
-        </div>
-        <div>
-          <h3 className="font-semibold mb-2">
-            Not a visual-quality or completion certificate
-          </h3>
-          <p>
-            Dynamic class construction, computed templates, wrapper dependencies
-            and some directives are not resolved. Imports are dependency
-            evidence, not runtime usage. Tailwind is a conservative signal, not
-            exhaustive coverage. Deleted files and module moves can reduce
-            counts without a migration. Manual light/dark, responsive, keyboard
-            and assistive-technology checks remain required.
-          </p>
-          <p className="mt-3">
-            Do not sum dimensions, rank individual contributors, or forecast a
-            completion date from these counts. A smaller legacy footprint is
-            useful evidence, not proof of feature parity.
-          </p>
-        </div>
-      </div>
-      <details className="mt-5">
-        <summary>Analysis diagnostics ({current.diagnostics.length})</summary>
-        {current.diagnostics.length ? (
-          <ul className="mt-3 text-sm space-y-2">
-            {current.diagnostics.map((d, i) => (
-              <li key={i}>
-                <a
-                  className="migration-link"
-                  href={sourceUrl(current.commit, d.path)}
-                >
-                  {d.path}
-                </a>
-                : {d.message}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-3">
-            No Angular template parse errors in this snapshot. This does not
-            remove the documented coverage limits.
-          </p>
-        )}
-      </details>
-      <a
-        className="migration-link inline-flex items-center gap-1 mt-5 text-sm"
-        href="https://github.com/ls1intum/Artemis-CodeStats/blob/main/docs/migration-dashboard.md"
-      >
-        Architecture, quality rubric & A+ release gates{' '}
-        <ExternalLink size={13} />
-      </a>
-    </section>
+          {detail.diagnostics.length > 0 && (
+            <p>
+              {detail.diagnostics.length} template parse diagnostics:{' '}
+              {detail.diagnostics.slice(0, 5).map((d) => (
+                <span key={d.path}>{link(d.path)} </span>
+              ))}
+            </p>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }
