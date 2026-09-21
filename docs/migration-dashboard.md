@@ -67,7 +67,7 @@ require the same analyzer version; bump it and rebuild all history when semantic
 Cache reuse reconciles detail evidence with global/module counts. Unreferenced rolling-HEAD
 files are pruned. `generatedAt` stays unchanged for an unchanged analysis.
 
-All 875 DTO snapshots remain available. Build/dev preparation derives summaries; Vite URL
+All 877 DTO snapshots remain available. Build/dev preparation derives summaries; Vite URL
 imports emit original detail JSON as assets. Only selected details are fetched through a
 route loader. No history was truncated to improve the bundle. Historical source links use
 the selected commit rather than the moving `develop` branch.
