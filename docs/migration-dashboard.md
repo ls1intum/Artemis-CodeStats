@@ -192,7 +192,7 @@ npm run report:ui -- --rebuild    # recompute every retained sample
 Build/dev scripts prepare DTO summaries automatically. The daily workflow pins `origin/develop`,
 validates reports and builds before committing; it requires a restricted `GH_PAT` to trigger
 Pages. Reusable verification produces the artifact consumed by the separate deployment job.
-It has not been exercised remotely during this audit.
+The write-enabled scheduled report and Pages deployment paths still require post-merge verification.
 
 Local production URL: **http://127.0.0.1:4173/Artemis-CodeStats/** using
 `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort`.
