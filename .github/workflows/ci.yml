@@ -47,6 +47,7 @@ jobs:
 
   # The committed reports must be what the generator produces from the pinned Artemis revision:
   # an incremental run with the workflow token (cached summaries, login lookups) changes nothing.
+  # Checked at the branch head, not the merge ref, whose submodule pin may already be newer.
   reports:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -54,6 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           fetch-depth: 0
           submodules: true
