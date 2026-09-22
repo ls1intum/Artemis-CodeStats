@@ -19,7 +19,7 @@ const searchSchema = z.object({
   view: z.enum(views).optional().catch(undefined),
   snapshot: z.string().optional().catch(undefined),
   compare: z.string().optional().catch(undefined),
-  section: z.string().optional().catch(undefined),
+  module: z.string().optional().catch(undefined),
 })
 
 const rootRoute = createRootRoute({

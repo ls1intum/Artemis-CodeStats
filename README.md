@@ -13,7 +13,7 @@ list; PrimeNG, ng-bootstrap and TUM UI by what each unit uses. Every first-paren
 `develop` since the [TUM UI package adoption on August 4, 2026](https://github.com/ls1intum/Artemis/pull/13323)
 is a full snapshot that can be selected and compared (weekly samples back to the
 [kit pilot on July 17](https://github.com/ls1intum/Artemis/pull/13226)).
-The dashboard shows the trends per dependency, which pull requests moved them, which sections,
+The dashboard shows the trends per dependency, which pull requests moved them, which modules,
 pages and shared components block progress, which directories can be locked now, and which
 Bootstrap classes, PrimeNG and ng-bootstrap usages remain with the TUM UI component that
 replaces them, and who moved the migration: a contributor leaderboard credits every

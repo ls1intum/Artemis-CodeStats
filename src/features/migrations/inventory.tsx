@@ -236,7 +236,7 @@ export function Inventory({
     },
     {
       id: 'section',
-      header: 'Section',
+      header: 'Module',
       accessorKey: 'section',
       sortDescFirst: false,
     },

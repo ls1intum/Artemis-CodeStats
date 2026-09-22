@@ -58,8 +58,8 @@ export function Methodology({
             <dd>
               An Angular component or directive: its TypeScript file, external
               template and style files. Files owned by no unit (shared SCSS
-              partials, helpers, global styles) are listed per section but do
-              not count as units.
+              partials, helpers, global styles) are listed per module but do not
+              count as units.
             </dd>
             <dt className="font-medium">Locked</dt>
             <dd>
@@ -97,6 +97,14 @@ export function Methodology({
                 'migration-source-coverage',
               )}{' '}
               test keeps consistent.
+            </dd>
+            <dt className="font-medium">Module</dt>
+            <dd>
+              A top-level directory of the client (<code>app/course</code>,{' '}
+              <code>app/exam</code>, …); <code>app</code> holds the root files
+              and <code>content</code> the global styles. Selecting a module
+              scopes every view to its units; imported units in other modules
+              still count towards what blocks a page or unit.
             </dd>
             <dt className="font-medium">Snapshots</dt>
             <dd>

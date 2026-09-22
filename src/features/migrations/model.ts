@@ -9,7 +9,7 @@ export const statuses = ['locked', 'clean', 'dirty'] as const
 export const views = [
   'overview',
   'contributors',
-  'sections',
+  'modules',
   'pages',
   'next',
   'inventory',

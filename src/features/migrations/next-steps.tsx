@@ -64,7 +64,7 @@ function QuickWins({ detail }: { detail: DetailView }) {
     },
     {
       id: 'section',
-      header: 'Section',
+      header: 'Module',
       accessorKey: 'section',
       sortDescFirst: false,
     },
@@ -120,7 +120,7 @@ function QuickWins({ detail }: { detail: DetailView }) {
         <CardDescription>
           {number(rows.length)} units with at most three Bootstrap hits that
           import nothing with Bootstrap. Each becomes legacy-free with one small
-          change; a directory of them can be locked right after. Sort by section
+          change; a directory of them can be locked right after. Sort by module
           to batch them into one pull request.
         </CardDescription>
       </CardHeader>
@@ -248,7 +248,7 @@ type Closest = {
   progress?: string
 }
 
-// Sections with the least legacy left: finishing one is visible progress.
+// Modules with the least legacy left: finishing one is visible progress.
 function ClosestSections({
   detail,
   compare,
@@ -278,7 +278,7 @@ function ClosestSections({
   const columns: ColumnDef<Closest, unknown>[] = [
     {
       id: 'section',
-      header: 'Section',
+      header: 'Module',
       accessorFn: (r) => r.section.name,
       sortDescFirst: false,
       cell: ({ getValue }) => (
@@ -359,8 +359,8 @@ function ClosestSections({
           <h2>Closest to legacy-free</h2>
         </CardTitle>
         <CardDescription>
-          Sections with the fewest units left that still use Bootstrap, PrimeNG
-          or ng-bootstrap.
+          Modules with the fewest units left that still use Bootstrap, PrimeNG
+          or ng-bootstrap; finishing one is visible progress.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -423,7 +423,9 @@ export function NextSteps({
       )}
       <Blockers detail={detail} compare={compare} />
       <KitGaps detail={detail} compare={compare} />
-      <ClosestSections detail={detail} compare={compare} series={series} />
+      {detail.sections.length > 1 && (
+        <ClosestSections detail={detail} compare={compare} series={series} />
+      )}
     </div>
   )
 }

@@ -61,7 +61,7 @@ export function LockableTable({
     },
     {
       id: 'section',
-      header: 'Section',
+      header: 'Module',
       accessorFn: (l) => l.dir.split('/')[1],
       sortDescFirst: false,
     },

@@ -43,7 +43,7 @@ export function Sections({
   detail: DetailView
   compare: DetailView
   series: Summary[]
-  onSelect: (section: string, trigger: HTMLElement) => void
+  onSelect: (module: string) => void
 }) {
   const end = Date.parse(series.at(-1)?.date ?? detail.commit)
   const rows: SectionRow[] = detail.sections
@@ -63,18 +63,15 @@ export function Sections({
   const columns: ColumnDef<SectionRow, unknown>[] = [
     {
       id: 'section',
-      header: 'Section',
+      header: 'Module',
       accessorFn: (r) => r.section.name,
       sortDescFirst: false,
       meta: { sticky: true },
       cell: ({ row }) => (
         <button
           type="button"
-          data-section-trigger={row.original.section.name}
           className="font-medium underline underline-offset-4"
-          onClick={(event) =>
-            onSelect(row.original.section.name, event.currentTarget)
-          }
+          onClick={() => onSelect(row.original.section.name)}
         >
           {row.original.section.name}
         </button>
@@ -227,14 +224,16 @@ export function Sections({
     <Card>
       <CardHeader>
         <CardTitle asChild>
-          <h2>Sections</h2>
+          <h2>Modules</h2>
         </CardTitle>
         <CardDescription>
+          A module is a top-level directory of the client (course, exam, …).
           Every column sorts; the default is most remaining Bootstrap first.
           Unit counts per library carry their change against the comparison.
-          Last progress is the latest commit that reduced the section's hits or
-          made a unit legacy-free; more than four idle weeks is marked. Open a
-          section for its units, what blocks them and its lock entries.
+          Last progress is the latest commit that reduced the module's hits or
+          made a unit legacy-free; more than four idle weeks is marked. Click a
+          module to scope the whole dashboard to it: its units, pages, next
+          steps, inventory and contributors.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -293,7 +292,7 @@ export function FamilyHeatmap({ detail }: { detail: DetailView }) {
   const defs: ColumnDef<HeatRow, unknown>[] = [
     {
       id: 'section',
-      header: 'Section',
+      header: 'Module',
       accessorKey: 'name',
       sortDescFirst: false,
       meta: { sticky: true },
@@ -332,12 +331,12 @@ export function FamilyHeatmap({ detail }: { detail: DetailView }) {
           <h2>What kind of work remains where</h2>
         </CardTitle>
         <CardDescription>
-          Bootstrap hits per section by the kind of work they need, SCSS
-          residue, and PrimeNG and ng-bootstrap occurrences; shading is the
-          share within the section, and every column sorts. Layout and grid
-          classes convert mechanically to Tailwind utilities; buttons, forms,
-          tables, components, PrimeNG and ng-bootstrap need TUM UI kit
-          components; SCSS residue needs semantic tokens.
+          Bootstrap hits per module by the kind of work they need, SCSS residue,
+          and PrimeNG and ng-bootstrap occurrences; shading is the share within
+          the module, and every column sorts. Layout and grid classes convert
+          mechanically to Tailwind utilities; buttons, forms, tables,
+          components, PrimeNG and ng-bootstrap need TUM UI kit components; SCSS
+          residue needs semantic tokens.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -349,7 +348,7 @@ export function FamilyHeatmap({ detail }: { detail: DetailView }) {
           footer={
             <TableFooter>
               <TableRow className="font-medium">
-                <TableCell>All sections</TableCell>
+                <TableCell>All modules</TableCell>
                 {columns.map((c) => (
                   <TableCell key={c} className="text-right tabular-nums">
                     {number(totals[c])}

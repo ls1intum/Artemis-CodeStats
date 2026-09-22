@@ -12,13 +12,26 @@ import {
 } from '@/components/ui/command'
 import { Label } from '@/components/ui/label'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { commitUrl, pullRequest, type Manifest, type Summary } from './model'
-import { day, dayTime } from './format'
+import {
+  commitUrl,
+  pullRequest,
+  type Manifest,
+  type Section,
+  type Summary,
+} from './model'
+import { day, dayTime, number } from './format'
 import { weekBefore } from './load-report'
 
 type Option = { commit: string; label: string; note?: string }
@@ -107,16 +120,27 @@ function CommitPicker({
   )
 }
 
+const everyModule = 'all'
+
 export function Controls({
   manifest,
   snapshot,
   compare,
+  modules,
+  module,
   onChange,
 }: {
   manifest: Manifest
   snapshot: Summary
   compare: Summary
-  onChange: (patch: { snapshot?: string; compare?: string }) => void
+  // Modules of the snapshot, for the scope picker.
+  modules: Section[]
+  module?: string
+  onChange: (patch: {
+    snapshot?: string
+    compare?: string
+    module?: string
+  }) => void
 }) {
   const all = manifest.snapshots
   const latest = all.at(-1)!
@@ -154,6 +178,32 @@ export function Controls({
           }))}
         onChange={(commit) => onChange({ compare: commit })}
       />
+      <div className="grid gap-1.5">
+        <Label htmlFor="module">Module</Label>
+        <Select
+          value={module ?? everyModule}
+          onValueChange={(v) =>
+            onChange({ module: v === everyModule ? undefined : v })
+          }
+        >
+          <SelectTrigger id="module" className="w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={everyModule}>All modules</SelectItem>
+            {[...modules]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((m) => (
+                <SelectItem key={m.name} value={m.name}>
+                  {m.name}
+                  <span className="text-muted-foreground">
+                    {number(m.units)} units
+                  </span>
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </div>
       <p className="text-sm text-muted-foreground">
         <a
           className="underline underline-offset-4"

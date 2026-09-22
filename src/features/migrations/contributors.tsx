@@ -214,6 +214,7 @@ export function Contributors({
                 type="single"
                 variant="outline"
                 size="sm"
+                className="flex-wrap"
                 value={window}
                 onValueChange={(v) => v && setWindow(v as Window)}
                 aria-label="Window"

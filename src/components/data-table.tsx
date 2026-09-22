@@ -87,7 +87,7 @@ export function DataTable<T>({
               onChange={(e) => setGlobalFilter(e.target.value)}
               placeholder={search}
               aria-label={search}
-              className="w-72"
+              className="w-full sm:w-72"
             />
           )}
           {toolbar}

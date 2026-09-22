@@ -1,20 +1,16 @@
-import { useMemo, useRef, useState, type RefObject } from 'react'
+import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { DataTable } from '@/components/data-table'
+import { ListPopover } from './list-popover'
 import {
   sourceUrl,
   stageOf,
@@ -43,53 +39,19 @@ const usage = (u: Record<string, number>) =>
   Object.values(u).reduce((a, b) => a + b, 0)
 
 // A count that opens a list; used for imported units with hits and for library usage.
-function ListPopover({
-  label,
-  title,
-  items,
-}: {
-  label: React.ReactNode
-  title: string
-  items: { key: string; left: React.ReactNode; right: React.ReactNode }[]
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="underline decoration-dotted underline-offset-4"
-        >
-          {label}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-96 text-sm">
-        <p className="mb-2 font-medium">{title}</p>
-        <ul className="grid gap-1">
-          {items.slice(0, 12).map((item) => (
-            <li key={item.key} className="flex justify-between gap-3">
-              {item.left}
-              {item.right}
-            </li>
-          ))}
-          {items.length > 12 && (
-            <li className="text-muted-foreground">
-              and {items.length - 12} more
-            </li>
-          )}
-        </ul>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-function SectionBody({
+// Everything about one module: its units by stage, stylesheets with residue, lockable
+// directories and files outside a unit. Shown in the Modules view when a module is selected.
+export function ModuleDetail({
   section,
   detail,
   compare,
+  all,
 }: {
   section: string
   detail: DetailView
   compare: DetailView
+  // Unscoped detail: imported units may live in other modules.
+  all: DetailView
 }) {
   const [filter, setFilter] = useState<Stage | 'all'>('all')
   const summary = detail.sections.find((s) => s.name === section)!
@@ -105,10 +67,10 @@ function SectionBody({
   // Memoized so row cells keep their DOM (and popover state) when the filter changes.
   const unitColumns = useMemo<ColumnDef<UnitView, unknown>[]>(() => {
     const kit = new Set(detail.kit)
-    const unitById = new Map(detail.units.map((u) => [u.id, u]))
+    const unitById = new Map(all.units.map((u) => [u.id, u]))
     const previous = new Map(compare.units.map((u) => [u.id, u]))
     const styleOwners = new Map<string, number>()
-    for (const u of detail.units)
+    for (const u of all.units)
       for (const s of u.styles)
         styleOwners.set(s, (styleOwners.get(s) ?? 0) + 1)
     return [
@@ -290,7 +252,7 @@ function SectionBody({
         cell: ({ getValue }) => getValue<number>() || '',
       },
     ]
-  }, [detail, compare, section])
+  }, [detail, compare, all, section])
   const styleColumns: ColumnDef<StyleFile, unknown>[] = [
     {
       id: 'file',
@@ -339,11 +301,13 @@ function SectionBody({
     },
   ]
   return (
-    <>
-      <SheetHeader>
-        <SheetTitle>{section}</SheetTitle>
-        <SheetDescription>
-          {number(summary.units)} units · {number(hits(summary))} hits
+    <Card>
+      <CardHeader>
+        <CardTitle asChild>
+          <h2>{section} module</h2>
+        </CardTitle>
+        <CardDescription>
+          {number(summary.units)} units · {number(hits(summary))} Bootstrap hits
           {before && (
             <>
               {' '}
@@ -352,7 +316,7 @@ function SectionBody({
           )}
           {summary.units > 0 &&
             ` · ${percent(summary.legacyFree, summary.units)} legacy-free · ${summary.locked} locked`}
-        </SheetDescription>
+        </CardDescription>
         {summary.units > 0 && (
           <StageBar
             counts={{
@@ -363,16 +327,26 @@ function SectionBody({
             legend
           />
         )}
-      </SheetHeader>
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 overflow-y-auto px-4 pb-4">
+      </CardHeader>
+      <CardContent className="grid grid-cols-[minmax(0,1fr)] gap-6">
         {lockable.length > 0 && (
           <section className="grid gap-2">
             <h3 className="font-semibold">Lockable directories</h3>
+            <p className="text-sm text-muted-foreground">
+              Nothing under these directories has Bootstrap left; the copied
+              entries go into the three Artemis lists.
+            </p>
             <LockableTable lockable={lockable} commit={detail.commit} />
           </section>
         )}
         <section className="grid gap-3">
           <h3 className="font-semibold">Units</h3>
+          <p className="text-sm text-muted-foreground">
+            Every component and directive of the module. Hits are Bootstrap hits
+            in its own template and styles; imported hits are in units it
+            imports (open the count for the list); PrimeNG / ngb opens the
+            usages with the TUM UI component that replaces each.
+          </p>
           <DataTable
             columns={unitColumns}
             data={units}
@@ -387,6 +361,7 @@ function SectionBody({
                 type="single"
                 variant="outline"
                 size="sm"
+                className="flex-wrap"
                 value={filter}
                 onValueChange={(v) => v && setFilter(v as Stage | 'all')}
                 aria-label="Filter units by stage"
@@ -421,7 +396,7 @@ function SectionBody({
               {files.map((f) => (
                 <li key={f.path} className="flex justify-between gap-3">
                   <a
-                    className="break-all underline underline-offset-4"
+                    className="underline underline-offset-4 [overflow-wrap:anywhere]"
                     href={sourceUrl(detail.commit, f.path)}
                   >
                     {f.path.replace(`app/${section}/`, '')}
@@ -432,61 +407,7 @@ function SectionBody({
             </ul>
           </section>
         )}
-      </div>
-    </>
-  )
-}
-
-export function SectionSheet({
-  section,
-  detail,
-  compare,
-  onClose,
-  opener,
-}: {
-  section: string | undefined
-  detail: DetailView
-  compare: DetailView
-  onClose: () => void
-  opener: RefObject<HTMLElement | null>
-}) {
-  const body = useRef<HTMLDivElement>(null)
-  return (
-    <Sheet open={!!section} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent
-        className="w-full gap-0 sm:max-w-6xl"
-        onOpenAutoFocus={(event) => {
-          event.preventDefault()
-          body.current?.focus()
-        }}
-        // Without a SheetTrigger, Radix would leave focus on <body> after closing.
-        onCloseAutoFocus={(event) => {
-          event.preventDefault()
-          const name = opener.current?.dataset.sectionTrigger
-          const target = name
-            ? document.querySelector<HTMLElement>(
-                `[data-section-trigger="${CSS.escape(name)}"]`,
-              )
-            : null
-          ;(target ?? opener.current)?.focus()
-          opener.current = null
-        }}
-      >
-        {section && (
-          <div
-            ref={body}
-            tabIndex={-1}
-            className="flex min-h-0 flex-1 flex-col gap-4 outline-none"
-          >
-            <SectionBody
-              key={section}
-              section={section}
-              detail={detail}
-              compare={compare}
-            />
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
+      </CardContent>
+    </Card>
   )
 }

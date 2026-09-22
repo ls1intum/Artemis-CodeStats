@@ -88,64 +88,65 @@ test('lock entries are copied for pasting into the three Artemis lists', async (
   expect(text).toMatch(/@source '\.\/app\/.*';/)
 })
 
-test('section drawer opens from the table, lives in the URL, lists blockers and returns focus', async ({
+test('a module scopes the whole dashboard from the table, the picker and the URL', async ({
   page,
 }) => {
-  await page.goto('./#/?view=sections')
+  await page.goto('./#/?view=modules')
   await loaded(page)
   await expect(
     page.getByRole('heading', { name: 'What kind of work remains where' }),
   ).toBeVisible()
   await expect(
-    page.getByRole('cell', { name: 'All sections' }).locator('..'),
+    page.getByRole('cell', { name: 'All modules' }).locator('..'),
   ).toContainText(/\d/)
-  await expect(
-    page.getByRole('columnheader', { name: 'Last progress' }).first(),
-  ).toBeVisible()
   // Sorting: the default is most Bootstrap hits first; clicking Legacy-free sorts by share.
-  const sections = page.getByRole('table').first()
-  const hitsHeader = sections.getByRole('columnheader', {
-    name: 'Bootstrap hits',
-  })
-  await expect(hitsHeader).toHaveAttribute('aria-sort', 'descending')
-  await sections
-    .getByRole('button', { name: 'Legacy-free', exact: true })
-    .click()
+  const modules = page.getByRole('table').first()
   await expect(
-    sections.getByRole('columnheader', { name: 'Legacy-free', exact: true }),
+    modules.getByRole('columnheader', { name: 'Bootstrap hits' }),
   ).toHaveAttribute('aria-sort', 'descending')
-  await expect(sections.locator('tbody tr').first()).toContainText('100%')
-  await sections
+  await modules
     .getByRole('button', { name: 'Legacy-free', exact: true })
     .click()
   await expect(
-    sections.getByRole('columnheader', { name: 'Legacy-free', exact: true }),
-  ).toHaveAttribute('aria-sort', 'ascending')
-  const trigger = page.getByRole('button', { name: 'course', exact: true })
-  await trigger.click()
-  const dialog = page.getByRole('dialog', { name: 'course' })
-  await expect(dialog).toBeVisible()
-  await expect(page).toHaveURL(/#\/\?view=sections&section=course/)
-  await expect(page).not.toHaveURL(/\?section=course#/)
-  const units = dialog
+    modules.getByRole('columnheader', { name: 'Legacy-free', exact: true }),
+  ).toHaveAttribute('aria-sort', 'descending')
+  await expect(modules.locator('tbody tr').first()).toContainText('100%')
+  const manifest = await (
+    await page.request.get('./migrations/index.json')
+  ).json()
+  const row = manifest.snapshots.at(-1).sections.course
+  await page.getByRole('button', { name: 'course', exact: true }).click()
+  await expect(page).toHaveURL(/module=course/)
+  await expect(page.getByRole('status')).toContainText('course module only')
+  await expect(
+    page.getByRole('heading', { name: 'course module' }),
+  ).toBeVisible()
+  // Headline tiles now count the module: units and hits come from its row.
+  await expect(
+    page
+      .getByRole('heading', { name: 'Bootstrap hits', exact: true })
+      .first()
+      .locator('..'),
+  ).toContainText((row[4] + row[5]).toLocaleString('en-US'))
+  await expect(page.getByRole('combobox', { name: 'Module' })).toContainText(
+    'course',
+  )
+  const units = page
     .getByRole('table')
     .filter({ has: page.getByRole('columnheader', { name: 'Stage' }) })
   await expect(units.locator('tbody tr').first()).toBeVisible()
-  await dialog
-    .getByRole('radio', { name: 'PrimeNG / ngb', exact: true })
-    .click()
+  await page.getByRole('radio', { name: 'PrimeNG / ngb', exact: true }).click()
   await expect(
-    dialog.locator('tbody').getByText('PrimeNG / ngb', { exact: true }).first(),
+    units.locator('tbody').getByText('PrimeNG / ngb', { exact: true }).first(),
   ).toBeVisible()
   await expect(
-    dialog.locator('tbody').getByText('Bootstrap', { exact: true }),
+    units.locator('tbody').getByText('Bootstrap', { exact: true }),
   ).toHaveCount(0)
-  await dialog.getByRole('radio', { name: 'Legacy-free', exact: true }).click()
-  await dialog.getByRole('radio', { name: 'All', exact: true }).click()
-  await dialog.getByLabel('Search units').fill('course-update')
+  await page.getByRole('radio', { name: 'All', exact: true }).click()
+  await page.getByLabel('Search units').fill('course-update')
   await expect(units.locator('tbody tr')).toHaveCount(1)
-  await dialog.getByLabel('Search units').fill('')
-  const blocked = dialog.getByRole('button', { name: /^\d[\d,]* in \d+$/ })
+  await page.getByLabel('Search units').fill('')
+  const blocked = page.getByRole('button', { name: /^\d[\d,]* in \d+$/ })
   await blocked.first().focus()
   await page.keyboard.press('Enter')
   const popover = page.getByRole('dialog').filter({
@@ -157,12 +158,26 @@ test('section drawer opens from the table, lives in the URL, lists blockers and 
   )
   await page.keyboard.press('Escape')
   await expect(popover).toHaveCount(0)
-  await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page).not.toHaveURL(/section=/)
-  await expect(trigger).toBeFocused()
-  await page.goto('./#/?view=sections&section=course')
-  await expect(page.getByRole('dialog', { name: 'course' })).toBeVisible()
+  // Other views stay scoped; Pages hides the module column and the shell note stays global.
+  await page.getByRole('tab', { name: 'Pages' }).click()
+  await expect(page).toHaveURL(
+    /view=pages&module=course|module=course&view=pages/,
+  )
+  await expect(page.getByRole('columnheader', { name: 'Module' })).toHaveCount(
+    0,
+  )
+  await page.getByRole('tab', { name: 'Next steps' }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Closest to legacy-free' }),
+  ).toHaveCount(0)
+  await page.getByRole('link', { name: 'Show all modules' }).click()
+  await expect(page).not.toHaveURL(/module=/)
+  await expect(
+    page.getByRole('heading', { name: 'Closest to legacy-free' }),
+  ).toBeVisible()
+  await page.goto('./#/?view=modules&module=nope')
+  await loaded(page)
+  await expect(page.getByRole('status')).toContainText('no module named')
 })
 
 test('every table fits a desktop viewport without sideways scrolling', async ({
@@ -171,7 +186,7 @@ test('every table fits a desktop viewport without sideways scrolling', async ({
   await page.setViewportSize({ width: 1440, height: 900 })
   for (const view of [
     'overview',
-    'sections',
+    'modules',
     'pages',
     'next',
     'inventory',
@@ -259,7 +274,9 @@ test('pages view and per-commit snapshots resolve through patches', async ({
   const t = manifest.snapshots.at(-1).totals
   await expect(page.getByText(/The global shell/)).toBeVisible()
   const label = await page
-    .getByRole('img', { name: /^Legacy-free \d+, Bootstrap-free/ })
+    .getByRole('img', {
+      name: /^Legacy-free \d+, PrimeNG or ng-bootstrap remain \d+, Bootstrap in imports/,
+    })
     .first()
     .getAttribute('aria-label')
   const legacyFree = Number(/Legacy-free (\d+)/.exec(label!)![1])
@@ -277,7 +294,7 @@ test('pages view and per-commit snapshots resolve through patches', async ({
     await page.request.get(`./migrations/${patched.commit}.json`)
   ).json()
   expect(manifest.bases).toContain(stored.base)
-  await page.goto(`./#/?view=sections&snapshot=${patched.commit}`)
+  await page.goto(`./#/?view=modules&snapshot=${patched.commit}`)
   await loaded(page)
   await expect(page.getByLabel('Snapshot')).toContainText(
     patched.commit.slice(0, 8),
@@ -318,15 +335,15 @@ test('missing and invalid reports fail visibly and can recover', async ({
   await expect(page.getByText('Migration data unavailable')).toBeVisible()
 })
 
-test('small-screen reflow, drawer columns and keyboard entry point', async ({
+test('small-screen reflow, scoped module columns and keyboard entry point', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('./#/?view=sections&section=course')
+  await page.goto('./#/?view=modules&module=course')
+  await loaded(page)
   const heads = await page
-    .getByRole('dialog', { name: 'course' })
     .getByRole('table')
-    .last()
+    .filter({ has: page.getByRole('columnheader', { name: 'Stage' }) })
     .getByRole('columnheader')
     .evaluateAll((cells) =>
       cells.map((c) => {
@@ -334,16 +351,9 @@ test('small-screen reflow, drawer columns and keyboard entry point', async ({
         return [r.left, r.right]
       }),
     )
+  expect(heads.length).toBeGreaterThan(3)
   for (let i = 1; i < heads.length; i++)
     expect(heads[i][0]).toBeGreaterThanOrEqual(heads[i - 1][1] - 1)
-  await expect
-    .poll(() =>
-      page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]')),
-    )
-    .toBe(true)
-  await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await loaded(page)
   await page.keyboard.press('Tab')
   await expect(
     page.getByRole('link', { name: 'Skip to content' }),
