@@ -121,14 +121,17 @@ dependency-free today and the import fails loudly if it stops exporting the matc
 State lives in the hash query (`view`, `snapshot`, `compare`, `section`). Both commit pickers
 search every snapshot by date, commit and subject; the comparison is always an earlier commit
 and defaults to the last commit at least a week before the snapshot. Headline tiles and the
-locked / clean / Bootstrap bar are always visible; the views are:
+locked / clean / Bootstrap bar are always visible. Every table is a TanStack `DataTable`
+(`src/components/data-table.tsx`): each column sorts (numbers descending first, `aria-sort` on
+the header), the large ones search across all columns, and the long ones scroll under a sticky
+header. The views are:
 
 | View       | Content                                                                                                     |
 | ---------- | ----------------------------------------------------------------------------------------------------------- |
 | Overview   | Units where legacy grew (only when any); four step-area trends per commit (Bootstrap hits, units using PrimeNG, ng-bootstrap, TUM UI) with lock-list changes; commits that moved the numbers with PR links |
-| Sections   | Sections table with stage bar, Δ vs comparison and since adoption, units per library and locked with their change, last progress (latest commit that reduced hits or made a unit legacy-free, marked after four idle weeks); heatmap of Bootstrap hits per kind of work plus SCSS, PrimeNG and ng-bootstrap occurrences (row-normalised); side sheet per section with units by stage, library usage with kit components, imported units with hits, shared stylesheets and lockable directories |
+| Sections   | Sections table (sort by legacy-free share, Δ legacy-free, Δ hits, since adoption, last progress or any library) with stage bar, units per library and locked with their change, last progress (latest commit that reduced hits or made a unit legacy-free, marked after four idle weeks); heatmap of Bootstrap hits per kind of work plus SCSS, PrimeNG and ng-bootstrap occurrences (row-normalised); side sheet per section with units by stage, library usage with kit components, imported units with hits, shared stylesheets and lockable directories |
 | Pages      | Routed pages legacy-free / components remain / blocked / Bootstrap per section, the global shell's hits, and every page with its full route sorted by remaining work |
-| Next steps | Quick wins (units with at most three hits that import nothing with Bootstrap, with the exact changes), lockable directories with copyable lock entries and "new since comparison", shared units with Bootstrap that block the most, kit gaps (legacy usages no kit component covers), sections closest to legacy-free |
+| Next steps | Quick wins (units with at most three hits that import nothing with Bootstrap, with the exact changes; sort by section to batch a pull request), lockable directories with copyable lock entries and "new since comparison", shared units with Bootstrap that block the most (with units unblocked per hit), kit gaps (legacy usages no kit component covers), sections closest to legacy-free |
 | Inventory  | Remaining Bootstrap classes with guideline targets, PrimeNG and ng-bootstrap with kit components and coverage (usages a kit component covers, largest gaps), TUM UI kit usage and unused selectors, stylesheets with residue; every row carries its change against the comparison and entries that disappeared are listed struck through |
 
 ## Develop, verify, regenerate
