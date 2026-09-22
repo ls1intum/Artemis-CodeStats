@@ -523,8 +523,18 @@ function listFiles(root: string, directory: string): string[] {
 }
 
 // Callers must extract each commit to its own directory: ESM caches modules by URL.
+// Once Artemis deletes the rule, Bootstrap is retired: nothing is banned and nothing is locked.
+export const retiredRule = 'retired'
 export async function loadRule(root: string) {
   const path = join(root, 'rules/no-bootstrap-classes.mjs')
+  if (!existsSync(path))
+    return {
+      rule: {
+        isBanned: () => false,
+        bannedClassesInBindingExpression: () => [],
+      } satisfies Rule,
+      sha: retiredRule,
+    }
   const source = readFileSync(path)
   const rule = (await import(pathToFileURL(path).href)) as Partial<Rule>
   if (
@@ -547,9 +557,12 @@ export async function analyzeTree(
 ): Promise<{ summary: Summary; detail: Detail }> {
   const { rule, sha } = await loadRule(root)
   const kit = readKit(root)
-  const lockGlobs = parseLockGlobs(
-    readFileSync(join(root, 'eslint.config.mjs'), 'utf8'),
-  ).filter((glob) => glob.startsWith(`${appRoot}/`))
+  const lockGlobs =
+    sha === retiredRule
+      ? []
+      : parseLockGlobs(
+          readFileSync(join(root, 'eslint.config.mjs'), 'utf8'),
+        ).filter((glob) => glob.startsWith(`${appRoot}/`))
   const sources = parseTailwindSources(
     readFileSync(join(root, 'src/main/webapp/tailwind.css'), 'utf8'),
   )

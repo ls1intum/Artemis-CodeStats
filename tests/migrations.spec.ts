@@ -42,9 +42,14 @@ test('overview renders real totals, burndown and lock entries', async ({
   await expect(page.locator('.recharts-area-area')).toHaveCount(4)
   await page.getByRole('tab', { name: 'Next steps' }).click()
   await expect(page).toHaveURL(/view=next/)
-  await expect(
-    page.getByRole('heading', { name: 'Lockable directories', level: 2 }),
-  ).toBeVisible()
+  for (const name of [
+    'Quick wins',
+    'Lockable directories',
+    'Shared units with Bootstrap that block the most',
+    'Kit gaps',
+    'Closest to legacy-free',
+  ])
+    await expect(page.getByRole('heading', { name, level: 2 })).toBeVisible()
   await expect(
     page
       .getByRole('table')
@@ -94,6 +99,9 @@ test('section drawer opens from the table, lives in the URL, lists blockers and 
   await expect(
     page.getByRole('cell', { name: 'All sections' }).locator('..'),
   ).toContainText(/\d/)
+  await expect(
+    page.getByRole('columnheader', { name: 'Last progress' }).first(),
+  ).toBeVisible()
   const trigger = page.getByRole('button', { name: 'course', exact: true })
   await trigger.click()
   const dialog = page.getByRole('dialog', { name: 'course' })

@@ -17,17 +17,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { inventoryOf, sourceUrl, type InventoryEntry } from './model'
 import type { DetailView } from './load-report'
 import { number } from './format'
+import { ValueDelta } from './status'
 import { bootstrapTarget, kitCoverage, kitTarget, ngbTarget } from './targets'
 
 function InventoryTable({
   entries,
+  previous,
   target,
   targetLabel,
+  positive = 'down',
 }: {
   entries: InventoryEntry[]
+  previous: InventoryEntry[]
   target?: (name: string) => string
   targetLabel?: string
+  positive?: 'down' | 'up'
 }) {
+  const before = new Map(previous.map((e) => [e.name, e]))
+  // Entries that disappeared since the comparison are progress worth seeing too.
+  const gone = previous.filter((e) => !entries.some((x) => x.name === e.name))
   return (
     <Table>
       <TableHeader>
@@ -44,17 +52,43 @@ function InventoryTable({
             <TableCell>
               <code>{e.name}</code>
             </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {number(e.occurrences)}
+            <TableCell className="text-right">
+              <ValueDelta
+                value={e.occurrences}
+                previous={before.get(e.name)?.occurrences ?? 0}
+                positive={positive}
+              />
             </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {number(e.units)}
+            <TableCell className="text-right">
+              <ValueDelta
+                value={e.units}
+                previous={before.get(e.name)?.units ?? 0}
+                positive={positive}
+              />
             </TableCell>
             {target && (
               <TableCell className="text-muted-foreground">
                 {target(e.name)}
               </TableCell>
             )}
+          </TableRow>
+        ))}
+        {gone.map((e) => (
+          <TableRow key={e.name} className="text-muted-foreground">
+            <TableCell>
+              <code className="line-through">{e.name}</code>
+            </TableCell>
+            <TableCell className="text-right">
+              <ValueDelta
+                value={0}
+                previous={e.occurrences}
+                positive={positive}
+              />
+            </TableCell>
+            <TableCell className="text-right">
+              <ValueDelta value={0} previous={e.units} positive={positive} />
+            </TableCell>
+            {target && <TableCell>gone since comparison</TableCell>}
           </TableRow>
         ))}
       </TableBody>
@@ -100,17 +134,26 @@ function Coverage({
   )
 }
 
-export function Inventory({ detail }: { detail: DetailView }) {
+const inventories = (detail: DetailView) => ({
+  bootstrap: inventoryOf([
+    ...detail.units.map((u) => u.tokens),
+    ...detail.files.map((f) => f.tokens),
+  ]),
+  primeng: inventoryOf(detail.units.map((u) => u.primeng)),
+  ngBootstrap: inventoryOf(detail.units.map((u) => u.ngBootstrap)),
+  tumUi: inventoryOf(detail.units.map((u) => u.tumUi)),
+})
+
+export function Inventory({
+  detail,
+  compare,
+}: {
+  detail: DetailView
+  compare: DetailView
+}) {
   const kit = new Set(detail.kit)
-  const inventory = {
-    bootstrap: inventoryOf([
-      ...detail.units.map((u) => u.tokens),
-      ...detail.files.map((f) => f.tokens),
-    ]),
-    primeng: inventoryOf(detail.units.map((u) => u.primeng)),
-    ngBootstrap: inventoryOf(detail.units.map((u) => u.ngBootstrap)),
-    tumUi: inventoryOf(detail.units.map((u) => u.tumUi)),
-  }
+  const inventory = inventories(detail)
+  const previous = inventories(compare)
   const used = new Set(inventory.tumUi.map((e) => e.name))
   const unused = detail.kit.filter((s) => !used.has(s))
   const scroll = 'max-h-[32rem] overflow-auto'
@@ -122,9 +165,10 @@ export function Inventory({ detail }: { detail: DetailView }) {
         </CardTitle>
         <CardDescription>
           Bootstrap classes, PrimeNG and ng-bootstrap elements, directives and
-          services still in the client at this snapshot, with the Tailwind
-          utility or TUM UI component that replaces them where the guideline or
-          the kit provides one; plus kit usage and stylesheet residue.
+          services still in the client at this snapshot with their change
+          against the comparison, and the Tailwind utility or TUM UI component
+          that replaces them where the guideline or the kit provides one; plus
+          kit usage and stylesheet residue.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -150,6 +194,7 @@ export function Inventory({ detail }: { detail: DetailView }) {
           <TabsContent value="bootstrap" className={scroll}>
             <InventoryTable
               entries={inventory.bootstrap}
+              previous={previous.bootstrap}
               target={bootstrapTarget}
               targetLabel="Target"
             />
@@ -162,6 +207,7 @@ export function Inventory({ detail }: { detail: DetailView }) {
             />
             <InventoryTable
               entries={inventory.primeng}
+              previous={previous.primeng}
               target={(n) => kitTarget(n, kit)}
               targetLabel="Kit component"
             />
@@ -174,6 +220,7 @@ export function Inventory({ detail }: { detail: DetailView }) {
             />
             <InventoryTable
               entries={inventory.ngBootstrap}
+              previous={previous.ngBootstrap}
               target={(n) => ngbTarget(n, kit)}
               targetLabel="Kit component"
             />
@@ -224,7 +271,11 @@ export function Inventory({ detail }: { detail: DetailView }) {
             </Table>
           </TabsContent>
           <TabsContent value="tumUi" className={`${scroll} grid gap-4`}>
-            <InventoryTable entries={inventory.tumUi} />
+            <InventoryTable
+              entries={inventory.tumUi}
+              previous={previous.tumUi}
+              positive="up"
+            />
             {unused.length > 0 && (
               <p className="text-sm text-muted-foreground">
                 In the kit, not used by the client yet:{' '}

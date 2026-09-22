@@ -14,8 +14,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { Detail, Summary } from './model'
-import { hits, number, percent } from './format'
-import { Delta, StageBar } from './status'
+import { day, hits, number, percent } from './format'
+import { Delta, StageBar, ValueDelta } from './status'
 import { families, family, type Family } from './targets'
 
 // Hits per section and class family: what kind of work remains where.
@@ -139,8 +139,11 @@ export function Sections({
           <h2>Sections</h2>
         </CardTitle>
         <CardDescription>
-          Most remaining Bootstrap first; unit counts per library. Open a
-          section for its units, what blocks them and its lock entries.
+          Most remaining Bootstrap first; unit counts per library with their
+          change against the comparison. Last progress is the latest commit that
+          reduced the section's hits or made a unit legacy-free; more than four
+          weeks ago is marked. Open a section for its units, what blocks them
+          and its lock entries.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -157,6 +160,7 @@ export function Sections({
               <TableHead className="text-right">ng-bootstrap</TableHead>
               <TableHead className="text-right">TUM UI</TableHead>
               <TableHead className="text-right">Locked</TableHead>
+              <TableHead className="text-right">Last progress</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -164,6 +168,20 @@ export function Sections({
               if (!s.units && !hits(s)) return null
               const before = compare.sections.find((c) => c.name === s.name)
               const adoption = series[0]?.sections[s.name]
+              // Latest commit that reduced this section's hits or made a unit legacy-free.
+              const progress = series.findLast((x, i) => {
+                const row = x.sections[s.name]
+                const prev = series[i - 1]?.sections[s.name]
+                return (
+                  !!row &&
+                  !!prev &&
+                  (row[4] + row[5] < prev[4] + prev[5] || row[6] > prev[6])
+                )
+              })
+              const idle =
+                progress &&
+                Date.parse(series.at(-1)!.date) - Date.parse(progress.date) >
+                  28 * 86_400_000
               return (
                 <TableRow key={s.name}>
                   <TableCell>
@@ -189,9 +207,12 @@ export function Sections({
                             bootstrap: s.dirty,
                           }}
                         />
-                        <span className="tabular-nums">
-                          {percent(s.legacyFree, s.units)}
-                        </span>
+                        <ValueDelta
+                          value={s.legacyFree}
+                          previous={before?.legacyFree}
+                          positive="up"
+                          format={(v) => percent(v, s.units)}
+                        />
                       </span>
                     )}
                   </TableCell>
@@ -206,17 +227,37 @@ export function Sections({
                       <Delta value={hits(s) - (adoption[4] + adoption[5])} />
                     )}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {s.primeng || ''}
+                  <TableCell className="text-right">
+                    <ValueDelta value={s.primeng} previous={before?.primeng} />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {s.ngBootstrap || ''}
+                  <TableCell className="text-right">
+                    <ValueDelta
+                      value={s.ngBootstrap}
+                      previous={before?.ngBootstrap}
+                    />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {s.tumUi || ''}
+                  <TableCell className="text-right">
+                    <ValueDelta
+                      value={s.tumUi}
+                      previous={before?.tumUi}
+                      positive="up"
+                    />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {s.locked || ''}
+                  <TableCell className="text-right">
+                    <ValueDelta
+                      value={s.locked}
+                      previous={before?.locked}
+                      positive="up"
+                    />
+                  </TableCell>
+                  <TableCell
+                    className={`text-right whitespace-nowrap ${idle ? 'text-destructive' : 'text-muted-foreground'}`}
+                  >
+                    {hits(s) + s.primeng + s.ngBootstrap === 0
+                      ? 'done'
+                      : progress
+                        ? day(progress.date)
+                        : 'none since adoption'}
                   </TableCell>
                 </TableRow>
               )

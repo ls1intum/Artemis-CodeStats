@@ -274,6 +274,33 @@ test('tree analysis derives units, status, closure, lockability and inventories'
   assert.match(detail.rule, /^[a-f0-9]{40}$/)
 })
 
+test('a deleted Bootstrap rule means Bootstrap is retired, not an error', async () => {
+  const retired = mkdtempSync(join(tmpdir(), 'codestats-retired-'))
+  try {
+    writeFixture(
+      retired,
+      Object.fromEntries(
+        Object.entries(files).filter(
+          ([path]) => !/no-bootstrap-classes|eslint\.config/.test(path),
+        ),
+      ),
+    )
+    const { summary, detail } = await analyzeTree(retired, meta)
+    assert.equal(detail.rule, 'retired')
+    assert.equal(summary.totals.classHits, 0)
+    assert.equal(summary.totals.locked, 0)
+    assert.equal(summary.totals.lockedDirs, 0)
+    assert.equal(summary.totals.styleHits, 6, 'SCSS residue is still counted')
+    assert.equal(
+      summary.totals.primeng,
+      2,
+      'component libraries are still counted',
+    )
+  } finally {
+    rmSync(retired, { recursive: true, force: true })
+  }
+})
+
 test('missing Angular units fail loudly instead of reporting success', async () => {
   const empty = mkdtempSync(join(tmpdir(), 'codestats-empty-'))
   try {

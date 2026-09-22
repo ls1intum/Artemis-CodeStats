@@ -1,4 +1,5 @@
 import { Copy } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -30,9 +31,11 @@ function copyEntries(dirs: string[]) {
 export function LockableTable({
   lockable,
   commit,
+  isNew,
 }: {
   lockable: Detail['lockable']
   commit: string
+  isNew?: (dir: string) => boolean
 }) {
   if (!lockable.length) return null
   const rows = [...lockable].sort(
@@ -60,6 +63,11 @@ export function LockableTable({
                 >
                   {dir}
                 </a>
+                {isNew?.(dir) && (
+                  <Badge variant="secondary" className="ml-2">
+                    new
+                  </Badge>
+                )}
               </TableCell>
               <TableCell className="text-right tabular-nums">{units}</TableCell>
               <TableCell>

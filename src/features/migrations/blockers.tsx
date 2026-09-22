@@ -15,9 +15,17 @@ import {
 } from '@/components/ui/table'
 import { sourceUrl } from './model'
 import type { DetailView } from './load-report'
-import { hits, number, unitFile } from './format'
+import { hits, unitFile } from './format'
+import { ValueDelta } from './status'
 
-export function Blockers({ detail }: { detail: DetailView }) {
+export function Blockers({
+  detail,
+  compare,
+}: {
+  detail: DetailView
+  compare: DetailView
+}) {
+  const before = new Map(compare.units.map((u) => [u.id, u]))
   const rows = detail.units
     .filter((u) => u.blocks > 0)
     .sort((a, b) => b.blocks - a.blocks || hits(a) - hits(b))
@@ -62,8 +70,11 @@ export function Blockers({ detail }: { detail: DetailView }) {
                   )}
                 </TableCell>
                 <TableCell>{u.section}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {number(u.blocks)}
+                <TableCell className="text-right">
+                  <ValueDelta
+                    value={u.blocks}
+                    previous={before.get(u.id)?.blocks}
+                  />
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {hits(u)}

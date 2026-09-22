@@ -169,7 +169,8 @@ export type StyleFile = z.infer<typeof styleFileSchema>
 const detailBase = z.object({
   analyzerVersion: z.literal(analyzerVersion),
   commit: sha,
-  rule: sha,
+  // Blob hash of rules/no-bootstrap-classes.mjs, or 'retired' once Artemis has deleted it.
+  rule: z.string(),
   kit: z.array(z.string()),
   lockGlobs: z.array(z.string()),
   lockable: z.array(z.object({ dir: z.string(), units: count })),

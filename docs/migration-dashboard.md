@@ -106,6 +106,12 @@ relative to `src/main/webapp/`. Bases are about 0.7 MB, patches about 50 KB on a
 `src/features/migrations/model.ts`; the generator refuses a cached detail whose unit, dirty or
 lockable counts disagree with the manifest.
 
+Every view derives from the selected snapshot and comparison, so all of them move with each
+collected commit; nothing is hand-maintained except the kit mapping tables in `targets.ts`.
+Once Artemis deletes `rules/no-bootstrap-classes.mjs`, the analyzer records the rule as
+`retired`: Bootstrap hits and locks become zero while SCSS residue, PrimeNG, ng-bootstrap and
+TUM UI keep being measured.
+
 The analyzer executes the rule module of the analyzed commit (`git archive`, no checkout).
 That is code from the Artemis repository running in the collection workflow; the rule is
 dependency-free today and the import fails loudly if it stops exporting the matcher.
@@ -120,10 +126,10 @@ locked / clean / Bootstrap bar are always visible; the views are:
 | View       | Content                                                                                                     |
 | ---------- | ----------------------------------------------------------------------------------------------------------- |
 | Overview   | Units where legacy grew (only when any); four step-area trends per commit (Bootstrap hits, units using PrimeNG, ng-bootstrap, TUM UI) with lock-list changes; commits that moved the numbers with PR links |
-| Sections   | Sections table with stage bar, Δ vs comparison and since adoption, units per library, locked; heatmap of Bootstrap hits per kind of work plus SCSS, PrimeNG and ng-bootstrap occurrences (row-normalised); side sheet per section with units by stage, library usage with kit components, imported units with hits, shared stylesheets and lockable directories |
+| Sections   | Sections table with stage bar, Δ vs comparison and since adoption, units per library and locked with their change, last progress (latest commit that reduced hits or made a unit legacy-free, marked after four idle weeks); heatmap of Bootstrap hits per kind of work plus SCSS, PrimeNG and ng-bootstrap occurrences (row-normalised); side sheet per section with units by stage, library usage with kit components, imported units with hits, shared stylesheets and lockable directories |
 | Pages      | Routed pages legacy-free / components remain / blocked / Bootstrap per section, the global shell's hits, and every page with its full route sorted by remaining work |
-| Next steps | Lockable directories with copyable lock entries, shared units that block the most                           |
-| Inventory  | Remaining Bootstrap classes with guideline targets, PrimeNG and ng-bootstrap with kit components and coverage (usages a kit component covers, largest gaps), TUM UI kit usage and unused selectors, stylesheets with residue |
+| Next steps | Quick wins (units with at most three hits that import nothing with Bootstrap, with the exact changes), lockable directories with copyable lock entries and "new since comparison", shared units with Bootstrap that block the most, kit gaps (legacy usages no kit component covers), sections closest to legacy-free |
+| Inventory  | Remaining Bootstrap classes with guideline targets, PrimeNG and ng-bootstrap with kit components and coverage (usages a kit component covers, largest gaps), TUM UI kit usage and unused selectors, stylesheets with residue; every row carries its change against the comparison and entries that disappeared are listed struck through |
 
 ## Develop, verify, regenerate
 

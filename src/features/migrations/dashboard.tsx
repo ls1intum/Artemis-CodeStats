@@ -148,13 +148,13 @@ export function MigrationDashboard() {
           <FamilyHeatmap detail={detail} />
         </TabsContent>
         <TabsContent value="pages">
-          <Pages detail={detail} />
+          <Pages detail={detail} compare={compareDetail} />
         </TabsContent>
         <TabsContent value="next">
-          <NextSteps detail={detail} />
+          <NextSteps detail={detail} compare={compareDetail} series={series} />
         </TabsContent>
         <TabsContent value="inventory">
-          <Inventory detail={detail} />
+          <Inventory detail={detail} compare={compareDetail} />
         </TabsContent>
       </Tabs>
       <SectionSheet

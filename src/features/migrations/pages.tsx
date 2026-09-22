@@ -18,7 +18,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { sourceUrl, stageOf, type UnitView } from './model'
 import type { DetailView } from './load-report'
 import { hits, number, unitFile } from './format'
-import { SegmentBar } from './status'
+import { SegmentBar, ValueDelta } from './status'
 
 type PageState = 'modern' | 'components' | 'blocked' | 'bootstrap'
 const state = (u: UnitView): PageState =>
@@ -51,7 +51,13 @@ const stateFill: Record<PageState, string> = {
 const states: PageState[] = ['modern', 'components', 'blocked', 'bootstrap']
 
 // Routed pages are what users see; a page is ready when nothing it imports carries Bootstrap.
-export function Pages({ detail }: { detail: DetailView }) {
+export function Pages({
+  detail,
+  compare,
+}: {
+  detail: DetailView
+  compare: DetailView
+}) {
   const [filter, setFilter] = useState<PageState | 'all'>('all')
   const pages = detail.units.filter((u) => u.route !== undefined)
   const counts = (list: UnitView[]) =>
@@ -60,8 +66,13 @@ export function Pages({ detail }: { detail: DetailView }) {
       value: list.filter((u) => state(u) === s).length,
       className: stateFill[s],
     }))
+  const previousPages = compare.units.filter((u) => u.route !== undefined)
   const sections = [...new Set(pages.map((u) => u.section))]
-    .map((name) => ({ name, pages: pages.filter((u) => u.section === name) }))
+    .map((name) => ({
+      name,
+      pages: pages.filter((u) => u.section === name),
+      previous: previousPages.filter((u) => u.section === name),
+    }))
     .sort((a, b) => b.pages.length - a.pages.length)
   const remaining = (u: UnitView) => hits(u) + u.closureHits + u.routeHits
   const rows = pages
@@ -114,18 +125,20 @@ export function Pages({ detail }: { detail: DetailView }) {
             <TableBody>
               {sections.map((s) => {
                 const c = counts(s.pages)
+                const p = counts(s.previous)
                 return (
                   <TableRow key={s.name}>
                     <TableCell className="font-medium">{s.name}</TableCell>
                     <TableCell>
                       <SegmentBar segments={c} />
                     </TableCell>
-                    {c.map((x) => (
-                      <TableCell
-                        key={x.label}
-                        className="text-right tabular-nums"
-                      >
-                        {x.value || ''}
+                    {c.map((x, i) => (
+                      <TableCell key={x.label} className="text-right">
+                        <ValueDelta
+                          value={x.value}
+                          previous={p[i].value}
+                          positive={i === 0 ? 'up' : 'down'}
+                        />
                       </TableCell>
                     ))}
                   </TableRow>

@@ -144,3 +144,29 @@ export function StageBar({
     />
   )
 }
+
+// A number with its change against the comparison beside it; unchanged values stay quiet.
+export function ValueDelta({
+  value,
+  previous,
+  positive = 'down',
+  format = number,
+}: {
+  value: number
+  previous?: number
+  positive?: 'down' | 'up'
+  format?: (value: number) => string
+}) {
+  return (
+    <span className="inline-flex items-baseline justify-end gap-1.5 tabular-nums">
+      <span>{value ? format(value) : ''}</span>
+      {previous !== undefined && value - previous !== 0 && (
+        <Delta
+          value={value - previous}
+          positive={positive}
+          className="text-xs"
+        />
+      )}
+    </span>
+  )
+}
