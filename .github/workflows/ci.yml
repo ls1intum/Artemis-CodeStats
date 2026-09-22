@@ -27,6 +27,8 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck:report
       - run: npm test
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: npm run build
       - run: npx playwright install --with-deps chromium firefox
       - run: npm run test:e2e
@@ -42,3 +44,33 @@ jobs:
         if: github.event_name != 'pull_request'
         with:
           path: dist
+
+  # The committed reports must be what the generator produces from the pinned Artemis revision:
+  # an incremental run with the workflow token (cached summaries, login lookups) changes nothing.
+  reports:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          submodules: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run report:ui
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Reports are up to date
+        run: |
+          git status --porcelain public/migrations
+          test -z "$(git status --porcelain public/migrations)"
+          node -e '
+            const m = require("./public/migrations/index.json")
+            const missing = m.snapshots.filter((s) => !s.author.login)
+            console.log(`${m.snapshots.length} snapshots, ${missing.length} without a GitHub login`)
+          '

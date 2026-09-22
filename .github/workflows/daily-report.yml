@@ -43,6 +43,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - run: npm test
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Publish validated reports
         id: publish
         env:

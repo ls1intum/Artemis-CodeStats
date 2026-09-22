@@ -160,6 +160,13 @@ npm run report:ui             # incremental; --rebuild after changing the analyz
   `origin/develop`, analyzes every missing first-parent commit, runs the tests, commits the
   submodule pin and reports with `GITHUB_TOKEN`, then verifies, builds and deploys that exact
   commit to Pages through the reusable verification workflow. No PAT is required.
+- The same `GITHUB_TOKEN` resolves GitHub logins for new commit authors through the public
+  Artemis commits API (at most 200 requests per run; a rejected token, a rate limit or a
+  network failure ends lookups for that run without failing it, and unresolved commits are
+  asked again next run). `npm test` proves the token can read that API whenever
+  `GITHUB_TOKEN` is set; PR CI (`reports` job in `ci.yml`) also reruns the generator
+  incrementally against the pinned submodule and fails when the committed reports differ, so
+  analyzer changes must ship regenerated data.
 - Unchanged runs create no commit but still verify and deploy, which retries a failed
   deployment. Concurrent `main` updates reject the push; the next run catches up. A remote-HEAD
   guard skips deployments overtaken by a newer default-branch revision and fails closed when
