@@ -1,8 +1,9 @@
-# UI migration dashboard
+# Client UI modernization dashboard
 
 Tracks the Artemis client migration from Bootstrap, ng-bootstrap and PrimeNG to Tailwind and
-the TUM UI kit (`@tumaet/ui-angular`). Every number is derived from Artemis's own definition of
-the migration, not from a separate heuristic.
+the TUM UI kit (`@tumaet/ui-angular`). Bootstrap is measured with Artemis's own definition of the
+migration (lint rule, lock list); PrimeNG, ng-bootstrap and TUM UI by what each unit uses and
+imports, matched against the kit's selectors at the same commit.
 
 ## What Artemis defines, and what we reuse
 
@@ -40,6 +41,13 @@ parses templates with `@angular/compiler`).
   counted once. Files that no unit owns (shared partials, helpers, `content/scss`) are reported
   per section but are not units. Totals and sections count every file once; a template or
   stylesheet shared by several units appears in each unit's own row (marked as shared).
+- **Stage** — `legacy-free` when a unit has no Bootstrap hits and uses neither PrimeNG nor
+  ng-bootstrap; `PrimeNG or ng-bootstrap remain` when it is Bootstrap-free but uses one of them;
+  `Bootstrap` otherwise. `totals.legacyFree` and the per-section rows carry the counts.
+- **Kit component** — the TUM UI selector that covers a PrimeNG usage (`p-dialog` →
+  `tum-ui-dialog`, `pTooltip` → `tumUiTooltip`) or an ng-bootstrap usage (`ngbTooltip` →
+  `tumUiTooltip`, `NgbModal` → `tum-ui-dialog`, `ngbDropdown` → `tum-ui-menu`, …), only when the
+  kit of the same commit ships that selector. Usages without one are kit gaps.
 - **Status** — `locked` when the template path (or the `.html` sibling of a directive or
   inline-template component) matches a lock glob; otherwise `dirty` when the unit has hits,
   `clean` when it has none. Hits inside locked units are reported as _locked residue_: they
@@ -62,8 +70,8 @@ parses templates with `@angular/compiler`).
   `children` (inline or a same-file array) and `loadChildren`, with its full path joined from
   the parents (`:dynamic` marks a segment that is not a string literal; named outlets are
   skipped). A page is _ready_ when it, everything it imports and the route components it
-  renders inside (`routeParents`) have zero hits, _blocked_ when only those have hits. The
-  global shell (`app.component` with navbar, footer and overlays) renders on every page and
+  renders inside (`routeParents`) have zero hits, _blocked_ when only those have hits, and
+  _legacy-free_ when additionally none of them use PrimeNG or ng-bootstrap. The global shell (`app.component` with navbar, footer and overlays) renders on every page and
   is reported separately rather than blocking every page.
 - **Spacing** — Bootstrap spacing-scale classes (`m*-0..5`, `p*-0..5`, `gap-0..5`) per unit.
   The rule allows them because Tailwind has the same names, but their values change once a
@@ -111,11 +119,11 @@ locked / clean / Bootstrap bar are always visible; the views are:
 
 | View       | Content                                                                                                     |
 | ---------- | ----------------------------------------------------------------------------------------------------------- |
-| Overview   | Units whose hits grew (only when any), step-area burndown per commit with lock-list changes, commits that moved the numbers with PR links |
-| Sections   | Sections table with status bar, Δ vs comparison and since adoption; heatmap of hits per section × kind of work (row-normalised); side sheet per section with units, imported units with hits, shared stylesheets and lockable directories |
-| Pages      | Routed pages ready / blocked / Bootstrap per section, the global shell's hits, and every page with its full route sorted by remaining work |
+| Overview   | Units where legacy grew (only when any); four step-area trends per commit (Bootstrap hits, units using PrimeNG, ng-bootstrap, TUM UI) with lock-list changes; commits that moved the numbers with PR links |
+| Sections   | Sections table with stage bar, Δ vs comparison and since adoption, units per library, locked; heatmap of Bootstrap hits per kind of work plus SCSS, PrimeNG and ng-bootstrap occurrences (row-normalised); side sheet per section with units by stage, library usage with kit components, imported units with hits, shared stylesheets and lockable directories |
+| Pages      | Routed pages legacy-free / components remain / blocked / Bootstrap per section, the global shell's hits, and every page with its full route sorted by remaining work |
 | Next steps | Lockable directories with copyable lock entries, shared units that block the most                           |
-| Inventory  | Remaining Bootstrap classes with guideline targets, PrimeNG with kit equivalents, ng-bootstrap, TUM UI kit usage and unused selectors, stylesheets with residue |
+| Inventory  | Remaining Bootstrap classes with guideline targets, PrimeNG and ng-bootstrap with kit components and coverage (usages a kit component covers, largest gaps), TUM UI kit usage and unused selectors, stylesheets with residue |
 
 ## Develop, verify, regenerate
 

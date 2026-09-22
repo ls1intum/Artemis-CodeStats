@@ -21,21 +21,22 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { sourceUrl, statuses, type Status } from './model'
+import { sourceUrl, stageOf, stages, type Stage } from './model'
 import type { DetailView } from './load-report'
-import { free, hits, number, percent, statusLabel, unitFile } from './format'
-import { Delta, StatusBar } from './status'
+import { hits, number, percent, stageLabel, unitFile } from './format'
+import { Delta, StageBar } from './status'
 import { LockableTable } from './lockable'
+import { kitTarget, ngbTarget } from './targets'
 
-const badgeVariant: Record<Status, 'default' | 'secondary' | 'outline'> = {
-  locked: 'default',
-  clean: 'secondary',
-  dirty: 'outline',
+const badgeVariant: Record<Stage, 'default' | 'secondary' | 'outline'> = {
+  modern: 'default',
+  components: 'secondary',
+  bootstrap: 'outline',
 }
-const filterLabel: Record<Status, string> = {
-  locked: 'Locked',
-  clean: 'Clean',
-  dirty: 'Bootstrap',
+const filterLabel: Record<Stage, string> = {
+  modern: 'Legacy-free',
+  components: 'PrimeNG / ngb',
+  bootstrap: 'Bootstrap',
 }
 const usage = (u: Record<string, number>) =>
   Object.values(u).reduce((a, b) => a + b, 0)
@@ -49,7 +50,8 @@ function SectionBody({
   detail: DetailView
   compare: DetailView
 }) {
-  const [filter, setFilter] = useState<Status | 'all'>('all')
+  const [filter, setFilter] = useState<Stage | 'all'>('all')
+  const kit = new Set(detail.kit)
   const summary = detail.sections.find((s) => s.name === section)!
   const before = compare.sections.find((s) => s.name === section)
   const unitById = new Map(detail.units.map((u) => [u.id, u]))
@@ -58,7 +60,8 @@ function SectionBody({
     for (const s of u.styles) styleOwners.set(s, (styleOwners.get(s) ?? 0) + 1)
   const units = detail.units
     .filter(
-      (u) => u.section === section && (filter === 'all' || u.status === filter),
+      (u) =>
+        u.section === section && (filter === 'all' || stageOf(u) === filter),
     )
     .sort(
       (a, b) =>
@@ -84,9 +87,18 @@ function SectionBody({
             </>
           )}
           {summary.units > 0 &&
-            ` · ${percent(free(summary), summary.units)} Bootstrap-free`}
+            ` · ${percent(summary.legacyFree, summary.units)} legacy-free · ${summary.locked} locked`}
         </SheetDescription>
-        {summary.units > 0 && <StatusBar counts={summary} legend />}
+        {summary.units > 0 && (
+          <StageBar
+            counts={{
+              modern: summary.legacyFree,
+              components: summary.units - summary.legacyFree - summary.dirty,
+              bootstrap: summary.dirty,
+            }}
+            legend
+          />
+        )}
       </SheetHeader>
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 overflow-y-auto px-4 pb-4">
         {lockable.length > 0 && (
@@ -103,13 +115,13 @@ function SectionBody({
               variant="outline"
               size="sm"
               value={filter}
-              onValueChange={(v) => v && setFilter(v as Status | 'all')}
-              aria-label="Filter units by status"
+              onValueChange={(v) => v && setFilter(v as Stage | 'all')}
+              aria-label="Filter units by stage"
             >
               <ToggleGroupItem value="all" className="flex-none px-3">
                 All
               </ToggleGroupItem>
-              {statuses.map((s) => (
+              {stages.map((s) => (
                 <ToggleGroupItem key={s} value={s} className="flex-none px-3">
                   {filterLabel[s]}
                 </ToggleGroupItem>
@@ -120,7 +132,7 @@ function SectionBody({
             <TableHeader>
               <TableRow>
                 <TableHead>Unit</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Stage</TableHead>
                 <TableHead className="text-right">Hits</TableHead>
                 <TableHead className="text-right">Imports with hits</TableHead>
                 <TableHead>Bootstrap classes</TableHead>
@@ -150,9 +162,14 @@ function SectionBody({
                       </a>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={badgeVariant[u.status]}>
-                        {statusLabel[u.status]}
+                      <Badge variant={badgeVariant[stageOf(u)]}>
+                        {stageLabel[stageOf(u)]}
                       </Badge>
+                      {u.status === 'locked' && (
+                        <Badge variant="outline" className="ml-1">
+                          locked
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {hits(u) || ''}
@@ -223,9 +240,55 @@ function SectionBody({
                       {u.spacing || ''}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {usage(u.primeng) || usage(u.ngBootstrap)
-                        ? `${usage(u.primeng)} / ${usage(u.ngBootstrap)}`
-                        : ''}
+                      {usage(u.primeng) || usage(u.ngBootstrap) ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="underline decoration-dotted underline-offset-4"
+                            >
+                              {usage(u.primeng)} / {usage(u.ngBootstrap)}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" className="w-96 text-sm">
+                            <p className="mb-2 font-medium">
+                              Library usage and kit component
+                            </p>
+                            <ul className="grid gap-1">
+                              {[
+                                ...Object.entries(u.primeng).map(
+                                  ([name, n]) =>
+                                    [name, n, kitTarget(name, kit)] as const,
+                                ),
+                                ...Object.entries(u.ngBootstrap).map(
+                                  ([name, n]) =>
+                                    [name, n, ngbTarget(name, kit)] as const,
+                                ),
+                              ].map(([name, n, target]) => (
+                                <li
+                                  key={name}
+                                  className="flex justify-between gap-3"
+                                >
+                                  <span>
+                                    <code>{name}</code>
+                                    {n > 1 && (
+                                      <span className="text-muted-foreground">
+                                        {' '}
+                                        ×{n}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    {target ? `→ ${target}` : 'no kit target'}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        ''
+                      )}
                     </TableCell>
                   </TableRow>
                 )

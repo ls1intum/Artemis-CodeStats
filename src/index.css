@@ -42,6 +42,7 @@
   --color-status-locked: #2a78d6;
   --color-status-clean: #8cbcec;
   --color-status-dirty: #b9b7b1;
+  --color-status-blocked: #d9d7d0;
   --color-progress: #006300;
   --color-remaining: #eb6834;
 }

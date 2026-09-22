@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-const title = 'Bootstrap → Tailwind / TUM UI migration'
+const title = 'Client UI modernization'
 const loaded = (page: Page) =>
   expect(page.getByRole('heading', { name: title })).toBeVisible()
 
@@ -19,15 +19,27 @@ test('overview renders real totals, burndown and lock entries', async ({
   await expect(
     page
       .getByRole('heading', { name: 'Bootstrap hits', exact: true })
+      .first()
       .locator('..'),
   ).toContainText(hits.toLocaleString('en-US'))
   await expect(
-    page.getByRole('img', { name: /^Locked \d+, Bootstrap-free/ }).first(),
+    page
+      .getByRole('img', {
+        name: /^Legacy-free \d+, PrimeNG or ng-bootstrap remain/,
+      })
+      .first(),
   ).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: 'Bootstrap hits per integrated commit' }),
+    page
+      .getByRole('heading', { name: 'Legacy-free units', exact: true })
+      .locator('..'),
+  ).toContainText(`${latest.totals.legacyFree.toLocaleString('en-US')} of`)
+  await expect(
+    page.getByRole('heading', {
+      name: 'Legacy retired and kit adopted, per integrated commit',
+    }),
   ).toBeVisible()
-  await expect(page.locator('.recharts-area-area').first()).toBeVisible()
+  await expect(page.locator('.recharts-area-area')).toHaveCount(4)
   await page.getByRole('tab', { name: 'Next steps' }).click()
   await expect(page).toHaveURL(/view=next/)
   await expect(
@@ -91,13 +103,16 @@ test('section drawer opens from the table, lives in the URL, lists blockers and 
   await expect(
     dialog.getByRole('table').last().locator('tbody tr').first(),
   ).toBeVisible()
-  await dialog.getByRole('radio', { name: 'Clean', exact: true }).click()
+  await dialog
+    .getByRole('radio', { name: 'PrimeNG / ngb', exact: true })
+    .click()
   await expect(
-    dialog.locator('tbody').getByText('Bootstrap-free, unlocked').first(),
+    dialog.locator('tbody').getByText('PrimeNG or ng-bootstrap remain').first(),
   ).toBeVisible()
   await expect(
     dialog.locator('tbody').getByText('Bootstrap', { exact: true }),
   ).toHaveCount(0)
+  await dialog.getByRole('radio', { name: 'Legacy-free', exact: true }).click()
   const blocked = dialog.getByRole('button', { name: /^\d[\d,]* in \d+$/ })
   await blocked.first().focus()
   await page.keyboard.press('Enter')
@@ -128,15 +143,16 @@ test('pages view and per-commit snapshots resolve through patches', async ({
   ).json()
   const t = manifest.snapshots.at(-1).totals
   await expect(page.getByText(/The global shell/)).toBeVisible()
-  await expect(
-    page.getByRole('img', { name: /^Imports no Bootstrap \d+/ }).first(),
-  ).toHaveAttribute(
-    'aria-label',
-    new RegExp(`Imports no Bootstrap ${t.pagesClean},`),
-  )
-  await page.getByRole('radio', { name: 'Ready', exact: true }).click()
+  const label = await page
+    .getByRole('img', { name: /^Legacy-free \d+, Bootstrap-free/ })
+    .first()
+    .getAttribute('aria-label')
+  const legacyFree = Number(/Legacy-free (\d+)/.exec(label!)![1])
+  const components = Number(/remain (\d+)/.exec(label!)![1])
+  expect(legacyFree + components).toBe(t.pagesClean)
+  await page.getByRole('radio', { name: 'Legacy-free', exact: true }).click()
   await expect(page.getByRole('table').last().locator('tbody tr')).toHaveCount(
-    t.pagesClean,
+    legacyFree,
   )
   // A commit that is not a base is stored as a patch and must render with full detail.
   const patched = manifest.snapshots.find(
@@ -152,7 +168,10 @@ test('pages view and per-commit snapshots resolve through patches', async ({
     patched.commit.slice(0, 8),
   )
   await expect(
-    page.getByRole('cell', { name: 'All sections' }).locator('..'),
+    page
+      .getByRole('heading', { name: 'Bootstrap hits', exact: true })
+      .first()
+      .locator('..'),
   ).toContainText(
     (patched.totals.classHits + patched.totals.styleHits).toLocaleString(
       'en-US',

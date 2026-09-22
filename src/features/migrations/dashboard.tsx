@@ -1,11 +1,12 @@
 import { useRef } from 'react'
 import { useLoaderData, useNavigate, useSearch } from '@tanstack/react-router'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { sourceUrl, views, type View } from './model'
+import { inventoryOf, sourceUrl, views, type View } from './model'
 import { Controls } from './controls'
 import { Headline } from './headline'
 import { Regressions } from './regressions'
-import { Burndown } from './burndown'
+import { Trends } from './trends'
+import { kitCoverage, kitTarget, ngbTarget } from './targets'
 import { Changes } from './changes'
 import { FamilyHeatmap, Sections } from './sections'
 import { SectionSheet } from './section-sheet'
@@ -42,6 +43,7 @@ export function MigrationDashboard() {
       ? search.section
       : undefined
   const view = search.view ?? 'overview'
+  const kit = new Set(detail.kit)
   return (
     <main
       tabIndex={-1}
@@ -51,11 +53,12 @@ export function MigrationDashboard() {
       <div className="grid gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            Bootstrap → Tailwind / TUM UI migration
+            Client UI modernization
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Remaining Bootstrap in the Artemis client, measured with Artemis's
-            own{' '}
+            Retiring Bootstrap, ng-bootstrap and PrimeNG from the Artemis client
+            for Tailwind and the TUM UI kit. Bootstrap is measured with
+            Artemis's own{' '}
             <a
               className="underline underline-offset-4"
               href={sourceUrl(
@@ -65,8 +68,9 @@ export function MigrationDashboard() {
             >
               lint rule
             </a>{' '}
-            and lock list, plus what routed pages import. A unit is done when
-            its directory is locked.
+            and lock list; PrimeNG, ng-bootstrap and TUM UI by what each unit
+            uses and imports. A unit is legacy-free when none of the three
+            remain.
           </p>
         </div>
         <Controls
@@ -88,6 +92,16 @@ export function MigrationDashboard() {
         snapshot={snapshot}
         compare={compare}
         lockableUnits={detail.lockable.reduce((n, l) => n + l.units, 0)}
+        replaceable={{
+          primeng: kitCoverage(
+            inventoryOf(detail.units.map((u) => u.primeng)),
+            (n) => kitTarget(n, kit),
+          ),
+          ngBootstrap: kitCoverage(
+            inventoryOf(detail.units.map((u) => u.ngBootstrap)),
+            (n) => ngbTarget(n, kit),
+          ),
+        }}
       />
       <Tabs
         value={view}
@@ -107,7 +121,7 @@ export function MigrationDashboard() {
           className="grid grid-cols-[minmax(0,1fr)] gap-6"
         >
           <Regressions detail={detail} compare={compareDetail} />
-          <Burndown
+          <Trends
             series={series}
             snapshot={snapshot}
             latest={snapshot.commit === manifest.snapshots.at(-1)?.commit}

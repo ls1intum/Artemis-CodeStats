@@ -27,7 +27,7 @@ export function Blockers({ detail }: { detail: DetailView }) {
     <Card>
       <CardHeader>
         <CardTitle asChild>
-          <h2>Shared units that block the most</h2>
+          <h2>Shared units with Bootstrap that block the most</h2>
         </CardTitle>
         <CardDescription>
           Units with Bootstrap that Bootstrap-free, unlocked units import. Few

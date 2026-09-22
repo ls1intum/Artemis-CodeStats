@@ -1,4 +1,10 @@
-import { unitPath, type Status, type Summary, type Unit } from './model'
+import {
+  unitPath,
+  type Stage,
+  type Status,
+  type Summary,
+  type Unit,
+} from './model'
 
 type Hits = { classHits: number; styleHits: number }
 type Progress = Pick<Record<Status, number>, 'locked' | 'clean'>
@@ -32,6 +38,11 @@ export const dayTime = (date: string) =>
 export const unitFile = (unit: Pick<Unit, 'id' | 'template'>) =>
   unit.template ?? unitPath(unit.id)
 
+export const stageLabel: Record<Stage, string> = {
+  modern: 'Legacy-free',
+  components: 'PrimeNG or ng-bootstrap remain',
+  bootstrap: 'Bootstrap',
+}
 export const statusLabel: Record<Status, string> = {
   locked: 'Locked',
   clean: 'Bootstrap-free, unlocked',

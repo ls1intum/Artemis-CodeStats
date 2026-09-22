@@ -5,16 +5,18 @@ Migration reports for the [Artemis learning platform](https://github.com/ls1intu
 **[Open the dashboard](https://ls1intum.github.io/Artemis-CodeStats/)** ·
 [How it is measured](docs/migration-dashboard.md)
 
-## Active: Bootstrap → Tailwind / TUM UI
+## Active: client UI modernization
 
-Remaining Bootstrap in the Artemis client, measured with Artemis's own
-`no-bootstrap-classes` lint rule and regression-lock list. Every first-parent commit on
+Retiring Bootstrap, ng-bootstrap and PrimeNG from the Artemis client for Tailwind and the TUM UI
+kit. Bootstrap is measured with Artemis's own `no-bootstrap-classes` lint rule and regression-lock
+list; PrimeNG, ng-bootstrap and TUM UI by what each unit uses. Every first-parent commit on
 `develop` since the [TUM UI package adoption on August 4, 2026](https://github.com/ls1intum/Artemis/pull/13323)
 is a full snapshot that can be selected and compared (weekly samples back to the
 [kit pilot on July 17](https://github.com/ls1intum/Artemis/pull/13226)).
-The dashboard shows the burndown, which pull requests moved it, which sections and shared
-components block progress, which directories can be locked now, and which PrimeNG,
-ng-bootstrap and Bootstrap APIs remain with their TUM UI targets.
+The dashboard shows the trends per dependency, which pull requests moved them, which sections,
+pages and shared components block progress, which directories can be locked now, and which
+Bootstrap classes, PrimeNG and ng-bootstrap usages remain with the TUM UI component that
+replaces them.
 
 The signals/decoratorless and DTO dashboards are archived under **Archived migrations**.
 Their data is preserved; their collection has stopped.

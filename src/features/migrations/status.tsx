@@ -1,7 +1,7 @@
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { statuses, type Status } from './model'
-import { number, percent, statusLabel } from './format'
+import { stages, statuses, type Stage, type Status } from './model'
+import { number, percent, stageLabel, statusLabel } from './format'
 
 // Hits go down; adoption goes up. `positive` names the direction that is progress.
 export function Delta({
@@ -113,6 +113,33 @@ export function StatusBar({
         label: statusLabel[s],
         value: counts[s],
         className: statusFill[s],
+      }))}
+    />
+  )
+}
+
+const stageFill: Record<Stage, string> = {
+  modern: 'bg-status-locked',
+  components: 'bg-status-clean',
+  bootstrap: 'bg-status-dirty',
+}
+export function StageBar({
+  counts,
+  legend = false,
+  className,
+}: {
+  counts: Record<Stage, number>
+  legend?: boolean
+  className?: string
+}) {
+  return (
+    <SegmentBar
+      className={className}
+      legend={legend}
+      segments={stages.map((s) => ({
+        label: stageLabel[s],
+        value: counts[s],
+        className: stageFill[s],
       }))}
     />
   )

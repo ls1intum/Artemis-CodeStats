@@ -15,34 +15,40 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { sourceUrl, type UnitView } from './model'
+import { sourceUrl, stageOf, type UnitView } from './model'
 import type { DetailView } from './load-report'
 import { hits, number, unitFile } from './format'
 import { SegmentBar } from './status'
 
-type PageState = 'ready' | 'blocked' | 'bootstrap'
+type PageState = 'modern' | 'components' | 'blocked' | 'bootstrap'
 const state = (u: UnitView): PageState =>
   hits(u) > 0
     ? 'bootstrap'
     : u.closureHits + u.routeHits > 0
       ? 'blocked'
-      : 'ready'
+      : stageOf(u) === 'components' ||
+          u.closureComponents + u.routeComponents > 0
+        ? 'components'
+        : 'modern'
 const stateLabel: Record<PageState, string> = {
-  ready: 'Imports no Bootstrap',
-  blocked: 'Blocked by imported or parent units',
+  modern: 'Legacy-free',
+  components: 'Bootstrap-free, PrimeNG or ng-bootstrap remain',
+  blocked: 'Bootstrap in imported or parent units',
   bootstrap: 'Bootstrap in the page itself',
 }
 const shortLabel: Record<PageState, string> = {
-  ready: 'Ready',
+  modern: 'Legacy-free',
+  components: 'Components',
   blocked: 'Blocked',
   bootstrap: 'Bootstrap',
 }
 const stateFill: Record<PageState, string> = {
-  ready: 'bg-status-locked',
-  blocked: 'bg-status-clean',
+  modern: 'bg-status-locked',
+  components: 'bg-status-clean',
+  blocked: 'bg-status-blocked',
   bootstrap: 'bg-status-dirty',
 }
-const states: PageState[] = ['ready', 'blocked', 'bootstrap']
+const states: PageState[] = ['modern', 'components', 'blocked', 'bootstrap']
 
 // Routed pages are what users see; a page is ready when nothing it imports carries Bootstrap.
 export function Pages({ detail }: { detail: DetailView }) {
@@ -77,9 +83,9 @@ export function Pages({ detail }: { detail: DetailView }) {
           <CardDescription>
             Components reached from <code>app.routes.ts</code> through{' '}
             <code>component</code>, <code>loadComponent</code>,{' '}
-            <code>children</code> and <code>loadChildren</code>. A page is ready
-            when it, what it imports and the route components it renders inside
-            carry no Bootstrap.
+            <code>children</code> and <code>loadChildren</code>. A page is
+            legacy-free when it, what it imports and the route components it
+            renders inside use neither Bootstrap, PrimeNG nor ng-bootstrap.
             {shell && hits(shell) + shell.closureHits > 0 && (
               <>
                 {' '}
@@ -98,9 +104,11 @@ export function Pages({ detail }: { detail: DetailView }) {
               <TableRow>
                 <TableHead>Section</TableHead>
                 <TableHead className="w-64">Pages</TableHead>
-                <TableHead className="text-right">Ready</TableHead>
-                <TableHead className="text-right">Blocked</TableHead>
-                <TableHead className="text-right">Bootstrap</TableHead>
+                {states.map((st) => (
+                  <TableHead key={st} className="text-right">
+                    {shortLabel[st]}
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -169,6 +177,9 @@ export function Pages({ detail }: { detail: DetailView }) {
                 <TableHead className="text-right">Imported hits</TableHead>
                 <TableHead className="text-right">Parent route hits</TableHead>
                 <TableHead className="text-right">Units to fix</TableHead>
+                <TableHead className="text-right">
+                  Units with PrimeNG / ngb
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -197,6 +208,11 @@ export function Pages({ detail }: { detail: DetailView }) {
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {u.blockers.length + (hits(u) > 0 ? 1 : 0) || ''}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {u.closureComponents +
+                      u.routeComponents +
+                      (stageOf(u) === 'components' ? 1 : 0) || ''}
                   </TableCell>
                 </TableRow>
               ))}

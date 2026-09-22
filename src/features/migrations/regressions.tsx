@@ -1,10 +1,10 @@
 import { TriangleAlert } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { sourceUrl } from './model'
+import { sourceUrl, usesLibrary } from './model'
 import type { DetailView } from './load-report'
 import { hits, unitFile } from './format'
 
-// Units that gained Bootstrap since the comparison; standing residue is not a regression.
+// Units that gained Bootstrap, PrimeNG or ng-bootstrap since the comparison; standing residue is not a regression.
 export function Regressions({
   detail,
   compare,
@@ -17,22 +17,30 @@ export function Regressions({
   const rows = detail.units.flatMap((u) => {
     const previous = before.get(u.id)
     const grown = hits(u) - (previous ? hits(previous) : 0)
-    if (grown <= 0) return []
-    return [
-      {
-        unit: u,
-        note: previous ? `+${grown} hits` : `new unit with ${grown} hits`,
-      },
-    ]
+    const added = (['primeng', 'ngBootstrap'] as const).filter(
+      (lib) =>
+        usesLibrary(u[lib]) && (!previous || !usesLibrary(previous[lib])),
+    )
+    if (grown <= 0 && !added.length) return []
+    const notes = [
+      grown > 0 &&
+        (previous
+          ? `+${grown} Bootstrap hits`
+          : `new unit with ${grown} Bootstrap hits`),
+      ...added.map(
+        (lib) =>
+          `${previous ? 'now uses' : 'new unit using'} ${lib === 'primeng' ? 'PrimeNG' : 'ng-bootstrap'}`,
+      ),
+    ].filter(Boolean)
+    return [{ unit: u, note: notes.join(' · ') }]
   })
   if (!rows.length) return null
-  const total = rows.reduce((n, r) => n + hits(r.unit), 0)
   return (
     <Alert variant="destructive">
       <TriangleAlert aria-hidden="true" />
       <AlertTitle>
-        Bootstrap grew in {rows.length} unit{rows.length === 1 ? '' : 's'} since
-        the comparison ({total} hits)
+        Legacy grew in {rows.length} unit{rows.length === 1 ? '' : 's'} since
+        the comparison
       </AlertTitle>
       <AlertDescription>
         <ul className="grid min-w-0 gap-1">

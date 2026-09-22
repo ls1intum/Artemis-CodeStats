@@ -125,8 +125,9 @@ test('tree analysis derives units, status, closure, lockability and inventories'
     kit: 1,
     pages: 4,
     pagesClean: 1,
+    legacyFree: 5,
   })
-  assert.deepEqual(summary.sections.exam, [7, 0, 3, 4, 9, 3])
+  assert.deepEqual(summary.sections.exam, [7, 0, 3, 4, 9, 3, 3, 1, 1, 0])
   const unit = (id: string) => detail.units.find((u) => u.id.endsWith(id))!
   const list = unit('list.component.ts')
   assert.equal(list.status, 'locked')

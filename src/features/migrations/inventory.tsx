@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { inventoryOf, sourceUrl, type InventoryEntry } from './model'
 import type { DetailView } from './load-report'
 import { number } from './format'
-import { bootstrapTarget, kitTarget } from './targets'
+import { bootstrapTarget, kitCoverage, kitTarget, ngbTarget } from './targets'
 
 function InventoryTable({
   entries,
@@ -62,6 +62,44 @@ function InventoryTable({
   )
 }
 
+function Coverage({
+  entries,
+  target,
+  library,
+}: {
+  entries: InventoryEntry[]
+  target: (name: string) => string
+  library: string
+}) {
+  const [covered, total] = kitCoverage(entries, target)
+  const gaps = entries
+    .filter((e) => {
+      const t = target(e.name)
+      return !t || t.startsWith('no ')
+    })
+    .filter((e) => /^(p-|ngb-|p[A-Z]|ngb[A-Z])/.test(e.name))
+    .slice(0, 8)
+  return (
+    <p className="text-sm text-muted-foreground">
+      {number(covered)} of {number(total)} {library} usages have a TUM UI
+      component to move to.
+      {gaps.length > 0 && (
+        <>
+          {' '}
+          Largest gaps without a kit component:{' '}
+          {gaps.map((g, i) => (
+            <span key={g.name}>
+              {i > 0 && ', '}
+              <code>{g.name}</code> ({g.occurrences})
+            </span>
+          ))}
+          .
+        </>
+      )}
+    </p>
+  )
+}
+
 export function Inventory({ detail }: { detail: DetailView }) {
   const kit = new Set(detail.kit)
   const inventory = {
@@ -83,9 +121,10 @@ export function Inventory({ detail }: { detail: DetailView }) {
           <h2>What remains, and what replaces it</h2>
         </CardTitle>
         <CardDescription>
-          Legacy classes, elements, directives and services still in the client
-          at this snapshot, with the replacement the Artemis guideline names
-          where it names one.
+          Bootstrap classes, PrimeNG and ng-bootstrap elements, directives and
+          services still in the client at this snapshot, with the Tailwind
+          utility or TUM UI component that replaces them where the guideline or
+          the kit provides one; plus kit usage and stylesheet residue.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -115,15 +154,29 @@ export function Inventory({ detail }: { detail: DetailView }) {
               targetLabel="Target"
             />
           </TabsContent>
-          <TabsContent value="primeng" className={scroll}>
+          <TabsContent value="primeng" className={`${scroll} grid gap-3`}>
+            <Coverage
+              entries={inventory.primeng}
+              target={(n) => kitTarget(n, kit)}
+              library="PrimeNG"
+            />
             <InventoryTable
               entries={inventory.primeng}
               target={(n) => kitTarget(n, kit)}
-              targetLabel="Kit equivalent"
+              targetLabel="Kit component"
             />
           </TabsContent>
-          <TabsContent value="ngBootstrap" className={scroll}>
-            <InventoryTable entries={inventory.ngBootstrap} />
+          <TabsContent value="ngBootstrap" className={`${scroll} grid gap-3`}>
+            <Coverage
+              entries={inventory.ngBootstrap}
+              target={(n) => ngbTarget(n, kit)}
+              library="ng-bootstrap"
+            />
+            <InventoryTable
+              entries={inventory.ngBootstrap}
+              target={(n) => ngbTarget(n, kit)}
+              targetLabel="Kit component"
+            />
           </TabsContent>
           <TabsContent value="styles" className={`${scroll} grid gap-3`}>
             <p className="text-sm text-muted-foreground">

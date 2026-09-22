@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { commitUrl, pullRequest, type Summary } from './model'
-import { day, free, hits } from './format'
+import { day, hits } from './format'
 import { Delta } from './status'
 
 export function Changes({
@@ -36,11 +36,15 @@ export function Changes({
       return {
         ...s,
         hits: hits(s.totals) - hits(previous.totals),
-        free: free(s.totals) - free(previous.totals),
+        legacyFree: s.totals.legacyFree - previous.totals.legacyFree,
+        primeng: s.totals.primeng - previous.totals.primeng,
+        ngBootstrap: s.totals.ngBootstrap - previous.totals.ngBootstrap,
         locks: s.totals.lockedDirs - previous.totals.lockedDirs,
       }
     })
-    .filter((r) => r.hits || r.free || r.locks)
+    .filter(
+      (r) => r.hits || r.legacyFree || r.primeng || r.ngBootstrap || r.locks,
+    )
     .sort((a, b) => Math.abs(b.hits) - Math.abs(a.hits))
   if (!rows.length) return null
   const shown = rows.slice(0, 10)
@@ -64,11 +68,10 @@ export function Changes({
             <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>Commit</TableHead>
-              <TableHead className="text-right">Δ hits</TableHead>
-              <TableHead className="text-right">
-                Δ Bootstrap-free units
-              </TableHead>
-              <TableHead className="text-right">Δ lock entries</TableHead>
+              <TableHead className="text-right">Δ Bootstrap hits</TableHead>
+              <TableHead className="text-right">Δ legacy-free units</TableHead>
+              <TableHead className="text-right">Δ PrimeNG units</TableHead>
+              <TableHead className="text-right">Δ ng-bootstrap units</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -87,17 +90,27 @@ export function Changes({
                       {pr.number ? `#${pr.number}` : row.commit.slice(0, 8)}
                     </a>{' '}
                     <span className="text-muted-foreground">{pr.title}</span>
+                    {row.locks !== 0 && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {row.locks > 0 ? '+' : ''}
+                        {row.locks} lock entr
+                        {Math.abs(row.locks) === 1 ? 'y' : 'ies'}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <Delta value={row.hits} />
                   </TableCell>
                   <TableCell className="text-right">
-                    {row.free !== 0 && <Delta value={row.free} positive="up" />}
+                    {row.legacyFree !== 0 && (
+                      <Delta value={row.legacyFree} positive="up" />
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
-                    {row.locks !== 0 && (
-                      <Delta value={row.locks} positive="up" />
-                    )}
+                    {row.primeng !== 0 && <Delta value={row.primeng} />}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {row.ngBootstrap !== 0 && <Delta value={row.ngBootstrap} />}
                   </TableCell>
                 </TableRow>
               )

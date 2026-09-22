@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { lockEntries, pullRequest, unitPath, type Summary } from './model'
 import { day, percent, velocity } from './format'
-import { bootstrapTarget, kitTarget } from './targets'
+import { bootstrapTarget, kitCoverage, kitTarget, ngbTarget } from './targets'
 
 const summary = (day: number, hits: number): Summary => ({
   commit: 'a'.repeat(40),
@@ -24,6 +24,7 @@ const summary = (day: number, hits: number): Summary => ({
     kit: 0,
     pages: 0,
     pagesClean: 0,
+    legacyFree: 0,
   },
   sections: {},
 })
@@ -76,9 +77,32 @@ test('targets come from the guideline table, not from prefixes', () => {
     'custom class: rename (banned by prefix only)',
   )
   assert.equal(bootstrapTarget('card-body'), 'tum-ui-card / tum-ui-panel')
-  const kit = new Set(['tum-ui-dialog', 'tum-ui-progress-bar', 'tumUiTooltip'])
+  const kit = new Set([
+    'tum-ui-dialog',
+    'tum-ui-progress-bar',
+    'tumUiTooltip',
+    'tumUiInput',
+  ])
   assert.equal(kitTarget('p-dialog', kit), 'tum-ui-dialog')
+  assert.equal(kitTarget('DialogService', kit), 'tum-ui-dialog')
+  assert.equal(kitTarget('pInputText', kit), 'tumUiInput')
   assert.equal(kitTarget('p-progressbar', kit), 'tum-ui-progress-bar')
   assert.equal(kitTarget('pTooltip', kit), 'tumUiTooltip')
-  assert.equal(kitTarget('p-table', kit), '')
+  assert.equal(kitTarget('p-table', kit), '', 'not in this kit yet')
+  assert.equal(kitTarget('p-skeleton', kit), 'no kit component yet')
+  assert.equal(kitTarget('pTemplate', kit), '')
+  assert.equal(ngbTarget('ngbTooltip', kit), 'tumUiTooltip')
+  assert.equal(ngbTarget('NgbModal', kit), 'tum-ui-dialog')
+  assert.equal(ngbTarget('ngb-rating', kit), 'no kit component yet')
+  assert.deepEqual(
+    kitCoverage(
+      [
+        { name: 'p-dialog', occurrences: 3 },
+        { name: 'p-skeleton', occurrences: 2 },
+        { name: 'p-table', occurrences: 1 },
+      ],
+      (n) => kitTarget(n, kit),
+    ),
+    [3, 6],
+  )
 })

@@ -31,7 +31,18 @@ export function Methodology({
         <AccordionTrigger>How this is measured</AccordionTrigger>
         <AccordionContent className="grid max-w-4xl gap-3 text-sm leading-relaxed">
           <dl className="grid gap-2 sm:grid-cols-[10rem_1fr]">
-            <dt className="font-medium">Hit</dt>
+            <dt className="font-medium">Legacy</dt>
+            <dd>
+              Bootstrap, ng-bootstrap and PrimeNG, which the Artemis client
+              guideline names as migration-only dependencies; the target is
+              Tailwind for layout and the TUM UI kit for components. A unit is{' '}
+              <em>legacy-free</em> when it has no Bootstrap hits and uses
+              neither library; <em>PrimeNG or ng-bootstrap remain</em> when it
+              is Bootstrap-free but still uses one of them (elements,
+              directives, or services such as <code>DialogService</code> and{' '}
+              <code>NgbModal</code>); <em>Bootstrap</em> otherwise.
+            </dd>
+            <dt className="font-medium">Bootstrap hit</dt>
             <dd>
               A class token matched by Artemis's own{' '}
               {link('rules/no-bootstrap-classes.mjs', 'no-bootstrap-classes')}{' '}
@@ -52,14 +63,16 @@ export function Methodology({
             </dd>
             <dt className="font-medium">Locked</dt>
             <dd>
-              The unit's template path matches the regression-lock list in{' '}
-              {link('eslint.config.mjs')} ({detail.lockGlobs.length} entries at
-              this commit). A locked unit may still use PrimeNG.
+              The Bootstrap gate: the unit's template path matches the
+              regression-lock list in {link('eslint.config.mjs')} (
+              {detail.lockGlobs.length} entries at this commit), so Bootstrap
+              cannot return. Locking says nothing about PrimeNG or ng-bootstrap.
             </dd>
-            <dt className="font-medium">Bootstrap-free, unlocked</dt>
+            <dt className="font-medium">Kit component</dt>
             <dd>
-              Zero hits, not yet locked. It may still render Bootstrap through
-              the units it imports.
+              The TUM UI selector that covers a PrimeNG or ng-bootstrap usage,
+              matched against the kit sources of the same commit; usages without
+              one are kit gaps.
             </dd>
             <dt className="font-medium">Imports with hits</dt>
             <dd>

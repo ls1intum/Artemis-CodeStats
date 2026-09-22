@@ -32,11 +32,18 @@ export const totalsSchema = z.object({
   kit: count,
   pages: count,
   pagesClean: count,
+  // Units with no Bootstrap hits and no PrimeNG or ng-bootstrap usage: the modernization target.
+  legacyFree: count,
 })
 export type Totals = z.infer<typeof totalsSchema>
 
-// Per-section rows are compact tuples: units, locked, clean, dirty, classHits, styleHits.
+// Per-section rows are compact tuples:
+// units, locked, clean, dirty, classHits, styleHits, legacyFree, primeng, ngBootstrap, tumUi.
 export const sectionRowSchema = z.tuple([
+  count,
+  count,
+  count,
+  count,
   count,
   count,
   count,
@@ -125,8 +132,29 @@ export const sectionSchema = z.object({
   styleHits: count,
   lockableDirs: count,
   blockers: count,
+  legacyFree: count,
+  primeng: count,
+  ngBootstrap: count,
+  tumUi: count,
 })
 export type Section = z.infer<typeof sectionSchema>
+
+// A unit's modernization stage: Bootstrap first, then the remaining component libraries.
+export const stages = ['modern', 'components', 'bootstrap'] as const
+export type Stage = (typeof stages)[number]
+export const usesLibrary = (usage: Record<string, number>) =>
+  Object.keys(usage).length > 0
+export const stageOf = (u: {
+  classHits: number
+  styleHits: number
+  primeng: Record<string, number>
+  ngBootstrap: Record<string, number>
+}): Stage =>
+  u.classHits + u.styleHits > 0
+    ? 'bootstrap'
+    : usesLibrary(u.primeng) || usesLibrary(u.ngBootstrap)
+      ? 'components'
+      : 'modern'
 
 const styleFileSchema = z.object({
   path: z.string(),
@@ -251,6 +279,9 @@ export type Derived = {
   blockers: string[]
   blocks: number
   routeHits: number
+  // Units in the import closure, and in the parent routes, that still use PrimeNG or ng-bootstrap.
+  closureComponents: number
+  routeComponents: number
 }
 export type UnitView = Unit & Derived
 export function deriveClosures(units: Unit[]): Map<string, Derived> {
@@ -268,6 +299,8 @@ export function deriveClosures(units: Unit[]): Map<string, Derived> {
     seen.delete(id)
     return seen
   }
+  const components = (u: Unit) =>
+    usesLibrary(u.primeng) || usesLibrary(u.ngBootstrap) ? 1 : 0
   const derived = new Map<string, Derived>()
   for (const u of units) {
     const closure = [...reach(u.id)].map((id) => byId.get(id)!)
@@ -279,16 +312,21 @@ export function deriveClosures(units: Unit[]): Map<string, Derived> {
         .sort(),
       blocks: 0,
       routeHits: 0,
+      closureComponents: closure.reduce((n, o) => n + components(o), 0),
+      routeComponents: 0,
     })
   }
   for (const u of units) {
     const d = derived.get(u.id)!
     if (u.status === 'clean' && own(u) === 0)
       for (const id of d.blockers) derived.get(id)!.blocks++
-    d.routeHits = (u.routeParents ?? []).reduce((n, id) => {
+    for (const id of u.routeParents ?? []) {
       const parent = byId.get(id)
-      return parent ? n + own(parent) + derived.get(id)!.closureHits : n
-    }, 0)
+      if (!parent) continue
+      d.routeHits += own(parent) + derived.get(id)!.closureHits
+      d.routeComponents +=
+        components(parent) + derived.get(id)!.closureComponents
+    }
   }
   return derived
 }

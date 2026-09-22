@@ -18,6 +18,8 @@ import {
   appRoot,
   deriveClosures,
   sectionOf,
+  stageOf,
+  usesLibrary,
   webapp,
   unitPath,
   type Detail,
@@ -831,6 +833,10 @@ export async function analyzeTree(
       styleHits: 0,
       lockableDirs: 0,
       blockers: 0,
+      legacyFree: 0,
+      primeng: 0,
+      ngBootstrap: 0,
+      tumUi: 0,
     }
     sections.set(name, entry)
     return entry
@@ -840,6 +846,10 @@ export async function analyzeTree(
     const entry = section(unit.section)
     entry.units++
     entry[unit.status]++
+    if (stageOf(unit) === 'modern') entry.legacyFree++
+    if (usesLibrary(unit.primeng)) entry.primeng++
+    if (usesLibrary(unit.ngBootstrap)) entry.ngBootstrap++
+    if (usesLibrary(unit.tumUi)) entry.tumUi++
     for (const blocker of derived.get(unit.id)!.blockers)
       if (units.get(blocker)!.section !== unit.section) {
         const set = externalBlockers.get(unit.section) ?? new Set()
@@ -866,9 +876,9 @@ export async function analyzeTree(
       .reduce((n, u) => n + ownHits(u), 0),
     lockedDirs: lockGlobs.length,
     lockableDirs: lockable.length,
-    primeng: all.filter((u) => sum(u.primeng) > 0).length,
-    ngBootstrap: all.filter((u) => sum(u.ngBootstrap) > 0).length,
-    tumUi: all.filter((u) => sum(u.tumUi) > 0).length,
+    primeng: all.filter((u) => usesLibrary(u.primeng)).length,
+    ngBootstrap: all.filter((u) => usesLibrary(u.ngBootstrap)).length,
+    tumUi: all.filter((u) => usesLibrary(u.tumUi)).length,
     kit: kit.components,
     pages: all.filter((u) => u.route !== undefined).length,
     pagesClean: all.filter(
@@ -878,6 +888,7 @@ export async function analyzeTree(
         closureHits(u) === 0 &&
         routeHits(u) === 0,
     ).length,
+    legacyFree: all.filter((u) => stageOf(u) === 'modern').length,
   }
   // Stored paths are relative to src/main/webapp/.
   const rel = (path: string) => path.slice(webapp.length)
@@ -889,7 +900,18 @@ export async function analyzeTree(
       sections: Object.fromEntries(
         [...sections.values()].map((s) => [
           s.name,
-          [s.units, s.locked, s.clean, s.dirty, s.classHits, s.styleHits],
+          [
+            s.units,
+            s.locked,
+            s.clean,
+            s.dirty,
+            s.classHits,
+            s.styleHits,
+            s.legacyFree,
+            s.primeng,
+            s.ngBootstrap,
+            s.tumUi,
+          ],
         ]),
       ),
     },

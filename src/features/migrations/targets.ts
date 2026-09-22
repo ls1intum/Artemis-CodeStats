@@ -135,17 +135,83 @@ export const bootstrapTarget = (token: string) => {
   return ''
 }
 
-// A PrimeNG element or directive maps to a kit selector only when the kit ships that selector.
+// PrimeNG elements, directives and services map to the kit component that covers the same job,
+// only when the kit of the analyzed commit ships that selector.
+const primengKit: [RegExp, string][] = [
+  [
+    /^(pInputText|p-inputtext|pInputTextarea|pTextarea|p-textarea)$/,
+    'tumUiInput',
+  ],
+  [
+    /^(DialogService|DynamicDialogRef|DynamicDialogConfig|p-dialog|p-dynamicdialog)$/,
+    'tum-ui-dialog',
+  ],
+  [
+    /^(ConfirmationService|p-confirmdialog|p-confirmpopup)$/,
+    'tum-ui-confirm-dialog',
+  ],
+  [/^(MessageService|p-toast|p-message|p-messages)$/, 'tum-ui-message'],
+  [/^(p-badge|pBadge|p-tag)$/, 'tum-ui-tag'],
+  [/^(p-dropdown|p-select|p-multiselect|p-listbox)$/, 'tum-ui-select'],
+  [/^(p-inputswitch|p-toggleswitch)$/, 'tum-ui-toggle-switch'],
+  [/^(p-progressbar)$/, 'tum-ui-progress-bar'],
+  [/^(p-progressspinner)$/, 'tum-ui-progress-spinner'],
+  [
+    /^(p-tabs|p-tablist|p-tab|p-tabpanels|p-tabpanel|p-tabview|p-tabmenu)$/,
+    'tum-ui-tabs',
+  ],
+  [/^(p-menu|p-tieredmenu|p-contextmenu|p-menubar)$/, 'tum-ui-menu'],
+  [/^(p-selectbutton|p-togglebutton)$/, 'tum-ui-select-button'],
+  [/^(p-autocomplete)$/, 'tum-ui-autocomplete'],
+  [/^(p-calendar|p-datepicker)$/, 'tum-ui-date-picker'],
+  [/^(p-iconfield|p-inputicon)$/, 'tum-ui-icon-field'],
+  [/^(p-inputgroup|p-inputgroupaddon)$/, 'tum-ui-input-group'],
+  [/^(p-inputnumber)$/, 'tum-ui-input-number'],
+  [/^(p-radiobutton)$/, 'tum-ui-radio-button'],
+  [/^(p-checkbox)$/, 'tum-ui-checkbox'],
+  [/^(p-paginator)$/, 'tum-ui-paginator'],
+  [/^(p-panel|p-fieldset|p-accordion|p-accordion-panel)$/, 'tum-ui-panel'],
+  [/^(p-card)$/, 'tum-ui-card'],
+  [/^(p-popover|p-overlaypanel)$/, 'tum-ui-popover'],
+  [/^(pTooltip)$/, 'tumUiTooltip'],
+  [/^(pButton|p-button)$/, 'tum-ui-button'],
+  [/^(p-buttongroup)$/, 'tum-ui-button-group'],
+  [/^(p-table|p-treetable|p-scroller)$/, 'tum-ui-table'],
+  [/^(pSortableColumn|p-sorticon)$/, 'tumUiSortableColumn'],
+  [/^(p-chip)$/, 'tum-ui-chip'],
+  [/^(p-chart)$/, 'tum-ui-bar-chart'],
+  [
+    /^(p-skeleton|p-divider|p-splitter|p-splitterpanel|p-avatar|p-rating|p-slider|p-knob|p-tree|p-steps|p-stepper|p-editor|p-fileupload|p-galleria|p-image|p-carousel|p-timeline|p-orderlist|p-picklist|p-colorpicker|p-inputmask|p-password|p-floatlabel)$/,
+    'no kit component yet',
+  ],
+]
 export const kitTarget = (name: string, kit: Set<string>) => {
-  const candidates = /^p-/.test(name)
-    ? [
-        `tum-ui-${name.slice(2)}`,
-        `tum-ui-${name.slice(2).replace(/(bar|spinner|switch|button|number|picker|dialog|field|group)$/, '-$1')}`,
-      ]
-    : /^p[A-Z]/.test(name)
-      ? [`tumUi${name.slice(1)}`]
-      : []
-  return candidates.find((c) => kit.has(c)) ?? ''
+  const target = primengKit.find(([re]) => re.test(name))?.[1]
+  if (target) return target.startsWith('no ') || kit.has(target) ? target : ''
+  // Attribute directives such as pRipple or pTemplate belong to their host component.
+  return ''
+}
+
+// ng-bootstrap components and directives map to the kit component that covers the same job.
+const ngbKit: [RegExp, string][] = [
+  [/^(ngbTooltip|NgbTooltip)/, 'tumUiTooltip'],
+  [/^(ngb-popover|ngbPopover)/, 'tum-ui-popover'],
+  [/^(NgbModal|NgbActiveModal|ngb-modal)/, 'tum-ui-dialog'],
+  [/^ngbDropdown/, 'tum-ui-menu'],
+  [/^ngb-pagination/, 'tum-ui-paginator'],
+  [/^(ngbNav|ngb-nav)/, 'tum-ui-tabs'],
+  [/^(ngb-datepicker|ngbDatepicker)/, 'tum-ui-date-picker'],
+  [/^(ngbCollapse|ngb-accordion|ngbAccordion)/, 'tum-ui-panel'],
+  [/^(ngbTypeahead|ngb-typeahead)/, 'tum-ui-autocomplete'],
+  [/^ngb-progressbar/, 'tum-ui-progress-bar'],
+  [/^ngb-alert/, 'tum-ui-message'],
+  [/^ngb-carousel/, 'no kit component yet'],
+  [/^ngb-rating/, 'no kit component yet'],
+  [/^ngb-timepicker/, 'no kit component yet'],
+]
+export const ngbTarget = (name: string, kit: Set<string>) => {
+  const target = ngbKit.find(([re]) => re.test(name))?.[1] ?? ''
+  return target.startsWith('no ') || kit.has(target) ? target : ''
 }
 
 // Families group the remaining classes by the kind of work they need.
@@ -170,3 +236,17 @@ const familyPatterns: [RegExp, Family][] = [
 ]
 export const family = (token: string): Family =>
   familyPatterns.find(([re]) => re.test(token))?.[1] ?? 'Components'
+
+// Occurrences a kit component already covers, versus all occurrences of the library.
+export const kitCoverage = (
+  entries: { name: string; occurrences: number }[],
+  target: (name: string) => string,
+): [number, number] => [
+  entries
+    .filter((e) => {
+      const t = target(e.name)
+      return t && !t.startsWith('no ')
+    })
+    .reduce((n, e) => n + e.occurrences, 0),
+  entries.reduce((n, e) => n + e.occurrences, 0),
+]

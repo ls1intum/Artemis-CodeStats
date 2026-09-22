@@ -14,8 +14,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { Detail, Summary } from './model'
-import { free, hits, number, percent } from './format'
-import { Delta, StatusBar } from './status'
+import { hits, number, percent } from './format'
+import { Delta, StageBar } from './status'
 import { families, family, type Family } from './targets'
 
 // Hits per section and class family: what kind of work remains where.
@@ -30,14 +30,26 @@ export function FamilyHeatmap({ detail }: { detail: Detail }) {
   }
   for (const u of detail.units) add(u.section, u.tokens)
   for (const f of detail.files) add(f.section, f.tokens)
-  const columns = [...families, 'SCSS'] as const
+  const columns = [...families, 'SCSS', 'PrimeNG', 'ng-bootstrap'] as const
+  const occurrences = (section: string, key: 'primeng' | 'ngBootstrap') =>
+    detail.units
+      .filter((u) => u.section === section)
+      .reduce((n, u) => n + Object.values(u[key]).reduce((a, b) => a + b, 0), 0)
   const rows = detail.sections
-    .filter((s) => hits(s) > 0)
-    .map((s) => ({
-      name: s.name,
-      cells: { ...(cells.get(s.name) ?? empty()), SCSS: s.styleHits },
-      total: hits(s),
-    }))
+    .filter((s) => hits(s) > 0 || s.primeng > 0 || s.ngBootstrap > 0)
+    .map((s) => {
+      const row = {
+        ...(cells.get(s.name) ?? empty()),
+        SCSS: s.styleHits,
+        PrimeNG: occurrences(s.name, 'primeng'),
+        'ng-bootstrap': occurrences(s.name, 'ngBootstrap'),
+      }
+      return {
+        name: s.name,
+        cells: row,
+        total: columns.reduce((n, c) => n + row[c], 0),
+      }
+    })
   const totals = Object.fromEntries(columns.map((c) => [c, 0])) as Record<
     (typeof columns)[number],
     number
@@ -50,10 +62,12 @@ export function FamilyHeatmap({ detail }: { detail: Detail }) {
           <h2>What kind of work remains where</h2>
         </CardTitle>
         <CardDescription>
-          Hits per section by the kind of work they need; shading is the share
-          within the section. Layout and grid classes convert mechanically to
-          Tailwind utilities; buttons, forms, tables and components need the TUM
-          UI kit; SCSS residue needs semantic tokens.
+          Bootstrap hits per section by the kind of work they need, SCSS
+          residue, and PrimeNG and ng-bootstrap occurrences; shading is the
+          share within the section. Layout and grid classes convert mechanically
+          to Tailwind utilities; buttons, forms, tables, components, PrimeNG and
+          ng-bootstrap need TUM UI kit components; SCSS residue needs semantic
+          tokens.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -125,8 +139,8 @@ export function Sections({
           <h2>Sections</h2>
         </CardTitle>
         <CardDescription>
-          Most remaining Bootstrap first. Open a section for its units, what
-          blocks them and its lock entries.
+          Most remaining Bootstrap first; unit counts per library. Open a
+          section for its units, what blocks them and its lock entries.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -135,10 +149,14 @@ export function Sections({
             <TableRow>
               <TableHead>Section</TableHead>
               <TableHead className="text-right">Units</TableHead>
-              <TableHead>Bootstrap-free</TableHead>
-              <TableHead className="text-right">Hits</TableHead>
+              <TableHead>Legacy-free</TableHead>
+              <TableHead className="text-right">Bootstrap hits</TableHead>
               <TableHead className="text-right">Δ hits</TableHead>
               <TableHead className="text-right">Since adoption</TableHead>
+              <TableHead className="text-right">PrimeNG</TableHead>
+              <TableHead className="text-right">ng-bootstrap</TableHead>
+              <TableHead className="text-right">TUM UI</TableHead>
+              <TableHead className="text-right">Locked</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -163,9 +181,16 @@ export function Sections({
                   <TableCell>
                     {s.units > 0 && (
                       <span className="flex items-center gap-2">
-                        <StatusBar className="w-24" counts={s} />
+                        <StageBar
+                          className="w-24"
+                          counts={{
+                            modern: s.legacyFree,
+                            components: s.units - s.legacyFree - s.dirty,
+                            bootstrap: s.dirty,
+                          }}
+                        />
                         <span className="tabular-nums">
-                          {percent(free(s), s.units)}
+                          {percent(s.legacyFree, s.units)}
                         </span>
                       </span>
                     )}
@@ -180,6 +205,18 @@ export function Sections({
                     {adoption && (
                       <Delta value={hits(s) - (adoption[4] + adoption[5])} />
                     )}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {s.primeng || ''}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {s.ngBootstrap || ''}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {s.tumUi || ''}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {s.locked || ''}
                   </TableCell>
                 </TableRow>
               )
