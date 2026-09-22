@@ -158,7 +158,7 @@ export function DecoratorlessOverviewChart({ data, compareData }: DecoratorlessO
   // Custom tooltip
   const CustomTooltip = ({ active, payload, label }: {
     active?: boolean;
-    payload?: Array<any>;
+    payload?: Array<{ payload: (typeof chartData)[number] }>;
     label?: string;
   }) => {
     if (active && payload && payload.length) {

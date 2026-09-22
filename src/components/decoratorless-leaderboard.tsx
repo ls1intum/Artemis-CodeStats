@@ -257,7 +257,7 @@ export function DecoratorlessLeaderboard({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((module, _index) => (
+          {data.map((module) => (
             <TableRow key={module.name}>
               <TableCell className="text-center">
                 <div className="inline-flex items-center gap-1">

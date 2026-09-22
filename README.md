@@ -1,95 +1,56 @@
-# Artemis-CodeStats
+# Artemis CodeStats
 
-A visualization tool for analyzing code statistics and technical debt from the Artemis learning platform.
+Migration reports for the [Artemis learning platform](https://github.com/ls1intum/Artemis) client.
 
-**[View Online](https://ls1intum.github.io/Artemis-CodeStats/)**
+**[Open the dashboard](https://ls1intum.github.io/Artemis-CodeStats/)** ·
+[How it is measured](docs/migration-dashboard.md)
 
-## Installation
+## Active: client UI modernization
 
-```bash
-# Clone repository with submodules
-git clone --recurse-submodules https://github.com/ls1intum/Artemis-CodeStats.git
+Retiring Bootstrap, ng-bootstrap and PrimeNG from the Artemis client for Tailwind and the TUM UI
+kit. Bootstrap is measured with Artemis's own `no-bootstrap-classes` lint rule and regression-lock
+list; PrimeNG, ng-bootstrap and TUM UI by what each unit uses. Every first-parent commit on
+`develop` since the [TUM UI package adoption on August 4, 2026](https://github.com/ls1intum/Artemis/pull/13323)
+is a full snapshot that can be selected and compared (weekly samples back to the
+[kit pilot on July 17](https://github.com/ls1intum/Artemis/pull/13226)).
+The dashboard shows the trends per dependency, which pull requests moved them, which modules,
+pages and shared components block progress, which directories can be locked now, and which
+Bootstrap classes, PrimeNG and ng-bootstrap usages remain with the TUM UI component that
+replaces them, and who moved the migration: a contributor leaderboard credits every
+integrated commit to its GitHub author.
 
-# Install dependencies
-npm install
-```
+The signals/decoratorless and DTO dashboards are archived under **Archived migrations**.
+Their data is preserved; their collection has stopped.
 
-## Usage
+## Develop and verify
 
-```bash
-# Start development server
+Requires Node 24 and npm. The UI reads committed report artifacts; no Artemis server is needed.
+
+```sh
+npm ci
 npm run dev
-
-# Generate statistics report for current codebase
-npm run report
-
-# Build for production
+npm run lint && npm run format:check && npm run typecheck:report
+npm test
 npm run build
+npx playwright install chromium firefox
+npm run test:e2e -- --workers=2
 ```
 
-## Reporting Features
+`npm run test:e2e` serves the production build at `http://127.0.0.1:4173/Artemis-CodeStats/`.
 
-The report tool analyzes the Angular codebase to uncover technical debt and usage patterns.
+## Refresh reports
 
-### Current State Analysis
-
-To generate reports for the current state of the codebase:
-
-```bash
-npm run report
+```sh
+git submodule update --init artemis
+npm run report:ui              # incremental
+npm run report:ui -- --rebuild # after changing the analyzer
 ```
 
-This generates reports in the `data/client/` directory, organized by report type.
+The analyzer reads committed Artemis trees with `git archive` and never changes the submodule
+working tree. The workflow checks `origin/develop` hourly, commits validated reports with
+`GITHUB_TOKEN`, and deploys that exact commit to Pages; see
+[collection runs](https://github.com/ls1intum/Artemis-CodeStats/actions/workflows/daily-report.yml)
+and the [collection notes](docs/migration-dashboard.md#collection-and-publication).
 
-### Historical Analysis
-
-You can analyze codebase changes over time by specifying a start date or relative time period:
-
-```bash
-# Analyze commits from today back to March 28, 2025
-npm run report -- --start 2025-03-28
-
-# Analyze commits from the last 24 hours
-npm run report -- --relative 24h
-
-# Analyze commits from the last 7 days
-npm run report -- --relative 7d
-
-# Analyze 5 most recent commits since March 28, 2025
-npm run report -- --start 2025-03-28 --commits 5 
-
-# Analyze 5 most recent commits in the last week
-npm run report -- --relative 7d --commits 5
-
-# Analyze every 3rd commit (up to 10 commits total) since March 28, 2025
-npm run report -- --start 2025-03-28 --commits 10 --interval 3
-```
-
-#### Parameters
-
-- `--start` / `-s`: The date in YYYY-MM-DD format from which to start analyzing commits backward
-- `--relative` / `-r`: Relative time period to analyze (e.g., "24h", "7d", "2w", "1m", "1y")
-- `--commits` / `-c`: Maximum number of commits to analyze (default: all commits since start date)
-- `--interval` / `-i`: Interval between commits to analyze (default: 1)
-
-For relative time formats, the following units are supported:
-
-- `h`: hours (e.g., `24h` = last 24 hours)
-- `d`: days (e.g., `7d` = last 7 days)
-- `w`: weeks (e.g., `2w` = last 2 weeks)
-- `m`: months (e.g., `1m` = last month)
-- `y`: years (e.g., `1y` = last year)
-
-Reports are stored in the `data/client/` directory, with filenames containing the commit hash and timestamp.
-
-### Automated Hourly Reports
-
-A GitHub Action runs every hour to generate reports analyzing changes from the past hour and commit them to the repository. This ensures real-time tracking of code metrics with minimal delay.
-
-The workflow uses the `--relative 1h` parameter to focus only on the most recent changes, providing an up-to-date view of code evolution.
-
-These automated reports are accessible through the visualization interface and provide detailed trend data with hourly granularity.
-
-## About
-
-This project provides data visualization for code metrics, usage patterns, and statistics from the Artemis interactive learning platform. Built with React, TypeScript, and ShadCN with Recharts.
+Built with React, TypeScript, Vite, Tailwind, shadcn/ui, TanStack Router, Recharts and Zod.
+The report pipeline uses the TypeScript and Angular compilers.

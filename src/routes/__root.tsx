@@ -1,54 +1,128 @@
+import { Close as PopoverClose } from '@radix-ui/react-popover'
 import { Outlet, Link, useRouterState } from '@tanstack/react-router'
+import { Button } from '@/components/ui/button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Activity, ChevronDown } from 'lucide-react'
+import { Toaster } from '@/components/ui/sonner'
 
 export function RootLayout() {
-  const routerState = useRouterState()
-  const currentPath = routerState.location.pathname
-
-  const isActive = (path: string) => {
-    if (path === '/decoratorless') {
-      return currentPath === '/' || currentPath === '/decoratorless'
-    }
-    return currentPath === path
-  }
-
+  const currentPath = useRouterState().location.pathname
+  const archived = currentPath !== '/'
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      {/* Navigation header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 sm:px-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">Artemis CodeStats</h1>
-              <p className="text-xs text-slate-500">Migration Progress Dashboard</p>
-            </div>
-            <nav className="flex gap-1">
-              <Link
-                to="/decoratorless"
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  isActive('/decoratorless')
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+    <div className="min-h-screen bg-background text-foreground">
+      <a
+        href="#main-content"
+        onClick={(event) => {
+          // Preserve hash-router state when moving focus to the page content.
+          event.preventDefault()
+          document.getElementById('main-content')?.focus()
+        }}
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:p-3"
+      >
+        Skip to content
+      </a>
+      <header className="border-b bg-card px-4 sm:px-8">
+        <div className="mx-auto max-w-[1440px] flex flex-wrap items-center justify-between gap-4 py-4">
+          <Link to="/" className="flex items-center gap-3">
+            <span className="rounded-lg bg-primary p-2 text-primary-foreground">
+              <Activity size={22} />
+            </span>
+            <span>
+              <span className="block font-bold tracking-tight">
+                Artemis CodeStats
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                Artemis client migration reports
+              </span>
+            </span>
+          </Link>
+          <nav
+            aria-label="Main navigation"
+            className="flex flex-wrap gap-1 text-sm"
+          >
+            <Link
+              to="/"
+              aria-current={!archived ? 'page' : undefined}
+              className={`rounded-md px-3 py-2 font-medium ${!archived ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+            >
+              UI modernization
+            </Link>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={
+                    archived
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground'
+                  }
+                >
+                  Archived migrations <ChevronDown aria-hidden="true" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                className="w-60 p-2"
+                aria-label="Archived migrations"
               >
-                Decoratorless API
-              </Link>
-              <Link
-                to="/dto-usage"
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  isActive('/dto-usage')
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                DTO Usage
-              </Link>
-            </nav>
-          </div>
+                <PopoverClose asChild>
+                  <Link
+                    to="/decoratorless"
+                    aria-current={
+                      currentPath === '/decoratorless' ? 'page' : undefined
+                    }
+                    className="block rounded px-3 py-2 hover:bg-accent"
+                  >
+                    Signals / decoratorless APIs
+                  </Link>
+                </PopoverClose>
+                <PopoverClose asChild>
+                  <Link
+                    to="/dto-usage"
+                    aria-current={
+                      currentPath === '/dto-usage' ? 'page' : undefined
+                    }
+                    className="block rounded px-3 py-2 hover:bg-accent"
+                  >
+                    DTO usage
+                  </Link>
+                </PopoverClose>
+              </PopoverContent>
+            </Popover>
+          </nav>
         </div>
       </header>
-
-      {/* Route content renders here */}
+      {archived && (
+        <aside
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto max-w-[1440px] m-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+        >
+          <strong>Archived.</strong> This report is no longer refreshed by the
+          scheduled workflow.{' '}
+          <Link className="underline" to="/">
+            Return to UI modernization
+          </Link>
+          .
+        </aside>
+      )}
       <Outlet />
+      <Toaster />
+      <footer className="border-t bg-card px-6 py-6 text-xs text-muted-foreground">
+        <div className="mx-auto max-w-[1440px] flex flex-wrap justify-between gap-3">
+          <span>Artemis CodeStats</span>
+          <a
+            className="underline underline-offset-4"
+            href="https://github.com/ls1intum/Artemis-CodeStats"
+          >
+            Source ↗
+          </a>
+        </div>
+      </footer>
     </div>
   )
 }

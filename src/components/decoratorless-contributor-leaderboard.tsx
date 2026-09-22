@@ -41,10 +41,10 @@ export function DecoratorlessContributorLeaderboard({
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   
   // Helper function to calculate total decoratorless APIs
-  const calculateDecoratorlessTotal = (data: Record<string, any>) => {
+  const calculateDecoratorlessTotal = (data: DecoratorlessAPIReport['decoratorlessAPI']) => {
     let total = 0;
     
-    Object.values(data).forEach((stats: any) => {
+    Object.values(data).forEach((stats) => {
       total += 
         stats.inputFunction +
         stats.inputRequired +
@@ -66,7 +66,7 @@ export function DecoratorlessContributorLeaderboard({
     if (typeof window === 'undefined') return [];
     
     // Get all available reports
-    const allReports: DecoratorlessAPIReport[] = (window as any).decoratorlessAPIReports || [];
+    const allReports: DecoratorlessAPIReport[] = (window as Window & { decoratorlessAPIReports?: DecoratorlessAPIReport[] }).decoratorlessAPIReports || [];
     if (!allReports || allReports.length === 0) return [];
     
     // Find indices of current and compare reports
