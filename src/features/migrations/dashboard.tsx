@@ -29,6 +29,7 @@ export function MigrationDashboard() {
   })
   const search = useSearch({ from: '/' })
   const navigate = useNavigate({ from: '/' })
+  // The section trigger is looked up by name on close: table rows may re-render meanwhile.
   const opener = useRef<HTMLElement | null>(null)
   const update = (patch: Partial<typeof search>) =>
     void navigate({ search: (previous) => ({ ...previous, ...patch }) })

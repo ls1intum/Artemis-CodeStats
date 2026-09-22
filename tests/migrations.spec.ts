@@ -102,15 +102,35 @@ test('section drawer opens from the table, lives in the URL, lists blockers and 
   await expect(
     page.getByRole('columnheader', { name: 'Last progress' }).first(),
   ).toBeVisible()
+  // Sorting: the default is most Bootstrap hits first; clicking Legacy-free sorts by share.
+  const sections = page.getByRole('table').first()
+  const hitsHeader = sections.getByRole('columnheader', {
+    name: 'Bootstrap hits',
+  })
+  await expect(hitsHeader).toHaveAttribute('aria-sort', 'descending')
+  await sections
+    .getByRole('button', { name: 'Legacy-free', exact: true })
+    .click()
+  await expect(
+    sections.getByRole('columnheader', { name: 'Legacy-free', exact: true }),
+  ).toHaveAttribute('aria-sort', 'descending')
+  await expect(sections.locator('tbody tr').first()).toContainText('100%')
+  await sections
+    .getByRole('button', { name: 'Legacy-free', exact: true })
+    .click()
+  await expect(
+    sections.getByRole('columnheader', { name: 'Legacy-free', exact: true }),
+  ).toHaveAttribute('aria-sort', 'ascending')
   const trigger = page.getByRole('button', { name: 'course', exact: true })
   await trigger.click()
   const dialog = page.getByRole('dialog', { name: 'course' })
   await expect(dialog).toBeVisible()
   await expect(page).toHaveURL(/#\/\?view=sections&section=course/)
   await expect(page).not.toHaveURL(/\?section=course#/)
-  await expect(
-    dialog.getByRole('table').last().locator('tbody tr').first(),
-  ).toBeVisible()
+  const units = dialog
+    .getByRole('table')
+    .filter({ has: page.getByRole('columnheader', { name: 'Stage' }) })
+  await expect(units.locator('tbody tr').first()).toBeVisible()
   await dialog
     .getByRole('radio', { name: 'PrimeNG / ngb', exact: true })
     .click()
@@ -121,6 +141,10 @@ test('section drawer opens from the table, lives in the URL, lists blockers and 
     dialog.locator('tbody').getByText('Bootstrap', { exact: true }),
   ).toHaveCount(0)
   await dialog.getByRole('radio', { name: 'Legacy-free', exact: true }).click()
+  await dialog.getByRole('radio', { name: 'All', exact: true }).click()
+  await dialog.getByLabel('Search units').fill('course-update')
+  await expect(units.locator('tbody tr')).toHaveCount(1)
+  await dialog.getByLabel('Search units').fill('')
   const blocked = dialog.getByRole('button', { name: /^\d[\d,]* in \d+$/ })
   await blocked.first().focus()
   await page.keyboard.press('Enter')

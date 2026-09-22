@@ -1,3 +1,4 @@
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   Card,
   CardContent,
@@ -5,94 +6,150 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { inventoryOf, sourceUrl, type InventoryEntry } from './model'
+import { DataTable } from '@/components/data-table'
+import {
+  inventoryOf,
+  sourceUrl,
+  type InventoryEntry,
+  type StyleFile,
+} from './model'
 import type { DetailView } from './load-report'
 import { number } from './format'
-import { ValueDelta } from './status'
+import { Delta, ValueDelta } from './status'
 import { bootstrapTarget, kitCoverage, kitTarget, ngbTarget } from './targets'
+import { family } from './targets'
+
+type Row = InventoryEntry & {
+  previous?: InventoryEntry
+  gone: boolean
+  target: string
+}
+
+// Current and disappeared entries merged, each with its change since the comparison.
+const merge = (
+  entries: InventoryEntry[],
+  previous: InventoryEntry[],
+  target: (name: string) => string,
+): Row[] => {
+  const before = new Map(previous.map((e) => [e.name, e]))
+  const names = new Set(entries.map((e) => e.name))
+  return [
+    ...entries.map((e) => ({
+      ...e,
+      previous: before.get(e.name),
+      gone: false,
+      target: target(e.name),
+    })),
+    ...previous
+      .filter((e) => !names.has(e.name))
+      .map((e) => ({
+        ...e,
+        occurrences: 0,
+        units: 0,
+        previous: e,
+        gone: true,
+        target: target(e.name),
+      })),
+  ]
+}
 
 function InventoryTable({
-  entries,
-  previous,
-  target,
+  rows,
   targetLabel,
   positive = 'down',
+  kind,
 }: {
-  entries: InventoryEntry[]
-  previous: InventoryEntry[]
-  target?: (name: string) => string
+  rows: Row[]
   targetLabel?: string
   positive?: 'down' | 'up'
+  kind?: boolean
 }) {
-  const before = new Map(previous.map((e) => [e.name, e]))
-  // Entries that disappeared since the comparison are progress worth seeing too.
-  const gone = previous.filter((e) => !entries.some((x) => x.name === e.name))
+  const columns: ColumnDef<Row, unknown>[] = [
+    {
+      id: 'name',
+      header: 'Name',
+      accessorKey: 'name',
+      sortDescFirst: false,
+      cell: ({ row }) => (
+        <code className={row.original.gone ? 'line-through' : undefined}>
+          {row.original.name}
+        </code>
+      ),
+    },
+    ...(kind
+      ? [
+          {
+            id: 'kind',
+            header: 'Kind',
+            accessorFn: (r: Row) => family(r.name),
+            sortDescFirst: false,
+          } satisfies ColumnDef<Row, unknown>,
+        ]
+      : []),
+    {
+      id: 'occurrences',
+      header: 'Occurrences',
+      accessorKey: 'occurrences',
+      meta: { align: 'right' },
+      cell: ({ row }) => (
+        <ValueDelta
+          value={row.original.occurrences}
+          previous={row.original.previous?.occurrences ?? 0}
+          positive={positive}
+        />
+      ),
+    },
+    {
+      id: 'delta',
+      header: 'Δ',
+      accessorFn: (r) => r.occurrences - (r.previous?.occurrences ?? 0),
+      meta: { align: 'right' },
+      sortDescFirst: false,
+      cell: ({ getValue }) =>
+        getValue<number>() !== 0 && (
+          <Delta value={getValue<number>()} positive={positive} />
+        ),
+    },
+    {
+      id: 'units',
+      header: 'Units',
+      accessorKey: 'units',
+      meta: { align: 'right' },
+      cell: ({ row }) => (
+        <ValueDelta
+          value={row.original.units}
+          previous={row.original.previous?.units ?? 0}
+          positive={positive}
+        />
+      ),
+    },
+    ...(targetLabel
+      ? [
+          {
+            id: 'target',
+            header: targetLabel,
+            accessorKey: 'target',
+            sortDescFirst: false,
+            meta: { className: 'text-muted-foreground' },
+            cell: ({ row }) =>
+              row.original.gone ? 'gone since comparison' : row.original.target,
+          } satisfies ColumnDef<Row, unknown>,
+        ]
+      : []),
+  ]
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead className="text-right">Occurrences</TableHead>
-          <TableHead className="text-right">Units</TableHead>
-          {target && <TableHead>{targetLabel}</TableHead>}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {entries.map((e) => (
-          <TableRow key={e.name}>
-            <TableCell>
-              <code>{e.name}</code>
-            </TableCell>
-            <TableCell className="text-right">
-              <ValueDelta
-                value={e.occurrences}
-                previous={before.get(e.name)?.occurrences ?? 0}
-                positive={positive}
-              />
-            </TableCell>
-            <TableCell className="text-right">
-              <ValueDelta
-                value={e.units}
-                previous={before.get(e.name)?.units ?? 0}
-                positive={positive}
-              />
-            </TableCell>
-            {target && (
-              <TableCell className="text-muted-foreground">
-                {target(e.name)}
-              </TableCell>
-            )}
-          </TableRow>
-        ))}
-        {gone.map((e) => (
-          <TableRow key={e.name} className="text-muted-foreground">
-            <TableCell>
-              <code className="line-through">{e.name}</code>
-            </TableCell>
-            <TableCell className="text-right">
-              <ValueDelta
-                value={0}
-                previous={e.occurrences}
-                positive={positive}
-              />
-            </TableCell>
-            <TableCell className="text-right">
-              <ValueDelta value={0} previous={e.units} positive={positive} />
-            </TableCell>
-            {target && <TableCell>gone since comparison</TableCell>}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <DataTable
+      columns={columns}
+      data={rows}
+      initialSorting={[{ id: 'occurrences', desc: true }]}
+      search="Search"
+      maxHeight="max-h-[32rem]"
+      getRowId={(r) => r.name}
+      rowClassName={(r) =>
+        r.original.gone ? 'text-muted-foreground' : undefined
+      }
+    />
   )
 }
 
@@ -156,7 +213,62 @@ export function Inventory({
   const previous = inventories(compare)
   const used = new Set(inventory.tumUi.map((e) => e.name))
   const unused = detail.kit.filter((s) => !used.has(s))
-  const scroll = 'max-h-[32rem] overflow-auto'
+  const previousStyles = new Map(compare.styles.map((f) => [f.path, f]))
+  const styleColumns: ColumnDef<StyleFile, unknown>[] = [
+    {
+      id: 'file',
+      header: 'File',
+      accessorKey: 'path',
+      sortDescFirst: false,
+      meta: { className: 'whitespace-normal' },
+      cell: ({ getValue }) => (
+        <a
+          className="break-all underline underline-offset-4"
+          href={sourceUrl(detail.commit, getValue<string>())}
+        >
+          {getValue<string>()}
+        </a>
+      ),
+    },
+    {
+      id: 'section',
+      header: 'Section',
+      accessorKey: 'section',
+      sortDescFirst: false,
+    },
+    ...(['variables', 'colors', 'imports'] as const).map(
+      (key): ColumnDef<StyleFile, unknown> => ({
+        id: key,
+        header: {
+          variables: '--bs-* vars',
+          colors: 'Raw colors',
+          imports: 'Sass imports',
+        }[key],
+        accessorKey: key,
+        meta: { align: 'right' },
+        cell: ({ row }) => (
+          <ValueDelta
+            value={row.original[key]}
+            previous={previousStyles.get(row.original.path)?.[key] ?? 0}
+          />
+        ),
+      }),
+    ),
+    {
+      id: 'total',
+      header: 'Total',
+      accessorFn: (f) => f.variables + f.colors + f.imports,
+      meta: { align: 'right' },
+      cell: ({ getValue }) => number(getValue<number>()),
+    },
+    {
+      id: 'units',
+      header: 'Used by units',
+      accessorKey: 'units',
+      meta: { align: 'right' },
+      cell: ({ getValue }) => getValue<number>() || '',
+    },
+  ]
   return (
     <Card>
       <CardHeader>
@@ -168,7 +280,8 @@ export function Inventory({
           services still in the client at this snapshot with their change
           against the comparison, and the Tailwind utility or TUM UI component
           that replaces them where the guideline or the kit provides one; plus
-          kit usage and stylesheet residue.
+          kit usage and stylesheet residue. Every column sorts; sort by Δ to see
+          what a change retired.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -191,89 +304,62 @@ export function Inventory({
               Stylesheets ({detail.styles.length})
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="bootstrap" className={scroll}>
+          <TabsContent value="bootstrap">
             <InventoryTable
-              entries={inventory.bootstrap}
-              previous={previous.bootstrap}
-              target={bootstrapTarget}
+              rows={merge(
+                inventory.bootstrap,
+                previous.bootstrap,
+                bootstrapTarget,
+              )}
               targetLabel="Target"
+              kind
             />
           </TabsContent>
-          <TabsContent value="primeng" className={`${scroll} grid gap-3`}>
+          <TabsContent value="primeng" className="grid gap-3">
             <Coverage
               entries={inventory.primeng}
               target={(n) => kitTarget(n, kit)}
               library="PrimeNG"
             />
             <InventoryTable
-              entries={inventory.primeng}
-              previous={previous.primeng}
-              target={(n) => kitTarget(n, kit)}
+              rows={merge(inventory.primeng, previous.primeng, (n) =>
+                kitTarget(n, kit),
+              )}
               targetLabel="Kit component"
             />
           </TabsContent>
-          <TabsContent value="ngBootstrap" className={`${scroll} grid gap-3`}>
+          <TabsContent value="ngBootstrap" className="grid gap-3">
             <Coverage
               entries={inventory.ngBootstrap}
               target={(n) => ngbTarget(n, kit)}
               library="ng-bootstrap"
             />
             <InventoryTable
-              entries={inventory.ngBootstrap}
-              previous={previous.ngBootstrap}
-              target={(n) => ngbTarget(n, kit)}
+              rows={merge(inventory.ngBootstrap, previous.ngBootstrap, (n) =>
+                ngbTarget(n, kit),
+              )}
               targetLabel="Kit component"
             />
           </TabsContent>
-          <TabsContent value="styles" className={`${scroll} grid gap-3`}>
+          <TabsContent value="styles" className="grid gap-3">
             <p className="text-sm text-muted-foreground">
               SCSS files with residue the stylelint lock rejects:{' '}
               <code>--bs-*</code> variables and raw colors, plus Bootstrap Sass
               imports that block removing the dependency. Files under{' '}
               <code>content/scss/themes</code> define the theme palette itself.
             </p>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>File</TableHead>
-                  <TableHead className="text-right">--bs-* vars</TableHead>
-                  <TableHead className="text-right">Raw colors</TableHead>
-                  <TableHead className="text-right">Sass imports</TableHead>
-                  <TableHead className="text-right">Used by units</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {detail.styles.map((f) => (
-                  <TableRow key={f.path}>
-                    <TableCell className="whitespace-normal">
-                      <a
-                        className="break-all underline underline-offset-4"
-                        href={sourceUrl(detail.commit, f.path)}
-                      >
-                        {f.path}
-                      </a>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {f.variables || ''}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {f.colors || ''}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {f.imports || ''}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {f.units || ''}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              columns={styleColumns}
+              data={detail.styles}
+              initialSorting={[{ id: 'total', desc: true }]}
+              search="Search stylesheets"
+              maxHeight="max-h-[32rem]"
+              getRowId={(f) => f.path}
+            />
           </TabsContent>
-          <TabsContent value="tumUi" className={`${scroll} grid gap-4`}>
+          <TabsContent value="tumUi" className="grid gap-4">
             <InventoryTable
-              entries={inventory.tumUi}
-              previous={previous.tumUi}
+              rows={merge(inventory.tumUi, previous.tumUi, () => '')}
               positive="up"
             />
             {unused.length > 0 && (

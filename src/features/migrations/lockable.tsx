@@ -1,14 +1,8 @@
 import { Copy } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { DataTable } from '@/components/data-table'
 import { lockEntries, sourceUrl, type Detail } from './model'
 import { copyText } from './clipboard'
 
@@ -28,6 +22,8 @@ function copyEntries(dirs: string[]) {
   )
 }
 
+type Lockable = Detail['lockable'][number]
+
 export function LockableTable({
   lockable,
   commit,
@@ -38,60 +34,75 @@ export function LockableTable({
   isNew?: (dir: string) => boolean
 }) {
   if (!lockable.length) return null
-  const rows = [...lockable].sort(
-    (a, b) => b.units - a.units || a.dir.localeCompare(b.dir),
-  )
+  const columns: ColumnDef<Lockable, unknown>[] = [
+    {
+      id: 'dir',
+      header: 'Directory',
+      accessorKey: 'dir',
+      sortDescFirst: false,
+      meta: { className: 'whitespace-normal' },
+      cell: ({ row }) => (
+        <>
+          <a
+            className="break-all underline underline-offset-4"
+            href={sourceUrl(commit, row.original.dir)}
+          >
+            {row.original.dir}
+          </a>
+          {isNew?.(row.original.dir) && (
+            <Badge variant="secondary" className="ml-2">
+              new
+            </Badge>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'section',
+      header: 'Section',
+      accessorFn: (l) => l.dir.split('/')[1],
+      sortDescFirst: false,
+    },
+    {
+      id: 'units',
+      header: 'Units',
+      accessorKey: 'units',
+      meta: { align: 'right' },
+    },
+    {
+      id: 'copy',
+      header: () => <span className="sr-only">Copy</span>,
+      enableSorting: false,
+      meta: { className: 'w-10' },
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Copy lock entries for ${row.original.dir}`}
+          onClick={() => copyEntries([row.original.dir])}
+        >
+          <Copy aria-hidden="true" />
+        </Button>
+      ),
+    },
+  ]
   return (
-    <div className="grid gap-3">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Directory</TableHead>
-            <TableHead className="text-right">Units</TableHead>
-            <TableHead className="w-10">
-              <span className="sr-only">Copy</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map(({ dir, units }) => (
-            <TableRow key={dir}>
-              <TableCell>
-                <a
-                  className="underline underline-offset-4 break-all"
-                  href={sourceUrl(commit, dir)}
-                >
-                  {dir}
-                </a>
-                {isNew?.(dir) && (
-                  <Badge variant="secondary" className="ml-2">
-                    new
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">{units}</TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Copy lock entries for ${dir}`}
-                  onClick={() => copyEntries([dir])}
-                >
-                  <Copy aria-hidden="true" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <Button
-        variant="outline"
-        size="sm"
-        className="justify-self-start"
-        onClick={() => copyEntries(rows.map((l) => l.dir))}
-      >
-        <Copy aria-hidden="true" /> Copy all {lockable.length} lock entries
-      </Button>
-    </div>
+    <DataTable
+      columns={columns}
+      data={lockable}
+      initialSorting={[{ id: 'units', desc: true }]}
+      search="Search directories"
+      maxHeight="max-h-[24rem]"
+      getRowId={(l) => l.dir}
+      toolbar={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => copyEntries(lockable.map((l) => l.dir))}
+        >
+          <Copy aria-hidden="true" /> Copy all {lockable.length} lock entries
+        </Button>
+      }
+    />
   )
 }

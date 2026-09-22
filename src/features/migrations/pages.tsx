@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   Card,
   CardContent,
@@ -6,15 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { DataTable } from '@/components/data-table'
 import { sourceUrl, stageOf, type UnitView } from './model'
 import type { DetailView } from './load-report'
 import { hits, number, unitFile } from './format'
@@ -49,8 +43,11 @@ const stateFill: Record<PageState, string> = {
   bootstrap: 'bg-status-dirty',
 }
 const states: PageState[] = ['modern', 'components', 'blocked', 'bootstrap']
+const remaining = (u: UnitView) => hits(u) + u.closureHits + u.routeHits
 
-// Routed pages are what users see; a page is ready when nothing it imports carries Bootstrap.
+type SectionPages = { name: string; pages: UnitView[]; previous: UnitView[] }
+
+// Routed pages are what users see; a page is legacy-free when nothing it renders carries legacy.
 export function Pages({
   detail,
   compare,
@@ -60,30 +57,155 @@ export function Pages({
 }) {
   const [filter, setFilter] = useState<PageState | 'all'>('all')
   const pages = detail.units.filter((u) => u.route !== undefined)
+  const previousPages = compare.units.filter((u) => u.route !== undefined)
   const counts = (list: UnitView[]) =>
     states.map((s) => ({
       label: stateLabel[s],
       value: list.filter((u) => state(u) === s).length,
       className: stateFill[s],
     }))
-  const previousPages = compare.units.filter((u) => u.route !== undefined)
-  const sections = [...new Set(pages.map((u) => u.section))]
-    .map((name) => ({
-      name,
-      pages: pages.filter((u) => u.section === name),
-      previous: previousPages.filter((u) => u.section === name),
-    }))
-    .sort((a, b) => b.pages.length - a.pages.length)
-  const remaining = (u: UnitView) => hits(u) + u.closureHits + u.routeHits
-  const rows = pages
-    .filter((u) => filter === 'all' || state(u) === filter)
-    .sort(
-      (a, b) =>
-        states.indexOf(state(a)) - states.indexOf(state(b)) ||
-        remaining(a) - remaining(b) ||
-        a.route!.localeCompare(b.route!),
-    )
+  const count = (list: UnitView[], s: PageState) =>
+    list.filter((u) => state(u) === s).length
+  const sections: SectionPages[] = [
+    ...new Set(pages.map((u) => u.section)),
+  ].map((name) => ({
+    name,
+    pages: pages.filter((u) => u.section === name),
+    previous: previousPages.filter((u) => u.section === name),
+  }))
   const shell = detail.units.find((u) => u.id === 'app/app.component.ts')
+  const sectionColumns: ColumnDef<SectionPages, unknown>[] = [
+    {
+      id: 'section',
+      header: 'Section',
+      accessorKey: 'name',
+      sortDescFirst: false,
+      cell: ({ getValue }) => (
+        <span className="font-medium">{getValue<string>()}</span>
+      ),
+    },
+    {
+      id: 'pages',
+      header: 'Pages',
+      accessorFn: (r) => r.pages.length,
+      meta: { className: 'w-64' },
+      cell: ({ row }) => <SegmentBar segments={counts(row.original.pages)} />,
+    },
+    ...states.map((s): ColumnDef<SectionPages, unknown> => ({
+      id: s,
+      header: shortLabel[s],
+      accessorFn: (r) => count(r.pages, s),
+      meta: { align: 'right' },
+      cell: ({ row }) => (
+        <ValueDelta
+          value={count(row.original.pages, s)}
+          previous={count(row.original.previous, s)}
+          positive={s === 'modern' ? 'up' : 'down'}
+        />
+      ),
+    })),
+    {
+      id: 'share',
+      header: 'Legacy-free share',
+      accessorFn: (r) =>
+        r.pages.length ? count(r.pages, 'modern') / r.pages.length : 0,
+      meta: { align: 'right' },
+      cell: ({ getValue }) =>
+        getValue<number>().toLocaleString('en-US', {
+          style: 'percent',
+          maximumFractionDigits: 0,
+        }),
+    },
+  ]
+  const pageColumns = useMemo<ColumnDef<UnitView, unknown>[]>(
+    () => [
+      {
+        id: 'route',
+        header: 'Route',
+        accessorKey: 'route',
+        sortDescFirst: false,
+        cell: ({ getValue }) => (
+          <code className="text-xs">{getValue<string>() || '/'}</code>
+        ),
+      },
+      {
+        id: 'page',
+        header: 'Page',
+        accessorFn: (u) => u.selector ?? unitFile(u),
+        sortDescFirst: false,
+        meta: { className: 'whitespace-normal' },
+        cell: ({ row }) => (
+          <a
+            className="underline underline-offset-4"
+            href={sourceUrl(detail.commit, unitFile(row.original))}
+          >
+            {row.original.selector ?? unitFile(row.original)}
+          </a>
+        ),
+      },
+      {
+        id: 'section',
+        header: 'Section',
+        accessorKey: 'section',
+        sortDescFirst: false,
+      },
+      {
+        id: 'state',
+        header: 'State',
+        accessorFn: (u) => states.indexOf(state(u)),
+        sortDescFirst: false,
+        cell: ({ row }) => shortLabel[state(row.original)],
+      },
+      {
+        id: 'own',
+        header: 'Own hits',
+        accessorFn: (u) => hits(u),
+        meta: { align: 'right' },
+        cell: ({ getValue }) => getValue<number>() || '',
+      },
+      {
+        id: 'imported',
+        header: 'Imported hits',
+        accessorKey: 'closureHits',
+        meta: { align: 'right' },
+        cell: ({ getValue }) =>
+          getValue<number>() ? number(getValue<number>()) : '',
+      },
+      {
+        id: 'parents',
+        header: 'Parent route hits',
+        accessorKey: 'routeHits',
+        meta: { align: 'right' },
+        cell: ({ getValue }) =>
+          getValue<number>() ? number(getValue<number>()) : '',
+      },
+      {
+        id: 'toFix',
+        header: 'Units to fix',
+        accessorFn: (u) => u.blockers.length + (hits(u) > 0 ? 1 : 0),
+        meta: { align: 'right' },
+        cell: ({ getValue }) => getValue<number>() || '',
+      },
+      {
+        id: 'components',
+        header: 'Units with PrimeNG / ngb',
+        accessorFn: (u) =>
+          u.closureComponents +
+          u.routeComponents +
+          (stageOf(u) === 'components' ? 1 : 0),
+        meta: { align: 'right' },
+        cell: ({ getValue }) => getValue<number>() || '',
+      },
+      {
+        id: 'remaining',
+        header: 'Remaining',
+        accessorFn: remaining,
+        meta: { align: 'right' },
+        cell: ({ getValue }) => number(getValue<number>()),
+      },
+    ],
+    [detail.commit],
+  )
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
       <Card>
@@ -108,129 +230,57 @@ export function Pages({
             )}
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-5">
+        <CardContent className="grid grid-cols-[minmax(0,1fr)] gap-5">
           <SegmentBar segments={counts(pages)} legend />
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Section</TableHead>
-                <TableHead className="w-64">Pages</TableHead>
-                {states.map((st) => (
-                  <TableHead key={st} className="text-right">
-                    {shortLabel[st]}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sections.map((s) => {
-                const c = counts(s.pages)
-                const p = counts(s.previous)
-                return (
-                  <TableRow key={s.name}>
-                    <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell>
-                      <SegmentBar segments={c} />
-                    </TableCell>
-                    {c.map((x, i) => (
-                      <TableCell key={x.label} className="text-right">
-                        <ValueDelta
-                          value={x.value}
-                          previous={p[i].value}
-                          positive={i === 0 ? 'up' : 'down'}
-                        />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={sectionColumns}
+            data={sections}
+            initialSorting={[{ id: 'pages', desc: true }]}
+            getRowId={(r) => r.name}
+          />
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="grid gap-1.5">
-              <CardTitle asChild>
-                <h2>Pages by remaining work</h2>
-              </CardTitle>
-              <CardDescription>
-                Cheapest first within each state: fewest hits in the page, its
-                imports and its parent routes.
-              </CardDescription>
-            </div>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              size="sm"
-              value={filter}
-              onValueChange={(v) => v && setFilter(v as PageState | 'all')}
-              aria-label="Filter pages by state"
-            >
-              <ToggleGroupItem value="all" className="flex-none px-3">
-                All
-              </ToggleGroupItem>
-              {states.map((s) => (
-                <ToggleGroupItem key={s} value={s} className="flex-none px-3">
-                  {shortLabel[s]}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </div>
+          <CardTitle asChild>
+            <h2>Every page</h2>
+          </CardTitle>
+          <CardDescription>
+            Sorted by state, then by the fewest hits in the page, its imports
+            and its parent routes; search by route, page or section.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="max-h-[40rem] overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Route</TableHead>
-                <TableHead>Page</TableHead>
-                <TableHead>Section</TableHead>
-                <TableHead className="text-right">Own hits</TableHead>
-                <TableHead className="text-right">Imported hits</TableHead>
-                <TableHead className="text-right">Parent route hits</TableHead>
-                <TableHead className="text-right">Units to fix</TableHead>
-                <TableHead className="text-right">
-                  Units with PrimeNG / ngb
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell>
-                    <code className="text-xs">{u.route || '/'}</code>
-                  </TableCell>
-                  <TableCell className="whitespace-normal">
-                    <a
-                      className="underline underline-offset-4"
-                      href={sourceUrl(detail.commit, unitFile(u))}
-                    >
-                      {u.selector ?? unitFile(u)}
-                    </a>
-                  </TableCell>
-                  <TableCell>{u.section}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {hits(u) || ''}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {u.closureHits ? number(u.closureHits) : ''}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {u.routeHits ? number(u.routeHits) : ''}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {u.blockers.length + (hits(u) > 0 ? 1 : 0) || ''}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {u.closureComponents +
-                      u.routeComponents +
-                      (stageOf(u) === 'components' ? 1 : 0) || ''}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <CardContent>
+          <DataTable
+            columns={pageColumns}
+            data={pages.filter((u) => filter === 'all' || state(u) === filter)}
+            initialSorting={[
+              { id: 'state', desc: false },
+              { id: 'remaining', desc: false },
+            ]}
+            search="Search pages"
+            maxHeight="max-h-[40rem]"
+            getRowId={(u) => u.id}
+            toolbar={
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                value={filter}
+                onValueChange={(v) => v && setFilter(v as PageState | 'all')}
+                aria-label="Filter pages by state"
+              >
+                <ToggleGroupItem value="all" className="flex-none px-3">
+                  All
+                </ToggleGroupItem>
+                {states.map((s) => (
+                  <ToggleGroupItem key={s} value={s} className="flex-none px-3">
+                    {shortLabel[s]}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            }
+          />
         </CardContent>
       </Card>
     </div>

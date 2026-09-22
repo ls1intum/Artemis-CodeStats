@@ -1,3 +1,4 @@
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   Card,
   CardContent,
@@ -5,15 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { sourceUrl } from './model'
+import { DataTable } from '@/components/data-table'
+import { sourceUrl, type UnitView } from './model'
 import type { DetailView } from './load-report'
 import { hits, unitFile } from './format'
 import { ValueDelta } from './status'
@@ -26,11 +20,95 @@ export function Blockers({
   compare: DetailView
 }) {
   const before = new Map(compare.units.map((u) => [u.id, u]))
-  const rows = detail.units
-    .filter((u) => u.blocks > 0)
-    .sort((a, b) => b.blocks - a.blocks || hits(a) - hits(b))
-    .slice(0, 10)
+  const rows = detail.units.filter((u) => u.blocks > 0)
   if (!rows.length) return null
+  const columns: ColumnDef<UnitView, unknown>[] = [
+    {
+      id: 'unit',
+      header: 'Unit',
+      accessorFn: (u) => u.selector ?? unitFile(u),
+      sortDescFirst: false,
+      meta: { className: 'whitespace-normal' },
+      cell: ({ row, getValue }) => (
+        <>
+          <a
+            className="break-all underline underline-offset-4"
+            href={sourceUrl(detail.commit, unitFile(row.original))}
+          >
+            {getValue<string>()}
+          </a>
+          {row.original.status === 'locked' && (
+            <span className="ml-2 text-xs text-muted-foreground">
+              locked · hits outside its templates
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'section',
+      header: 'Section',
+      accessorKey: 'section',
+      sortDescFirst: false,
+    },
+    {
+      id: 'blocks',
+      header: 'Blocks',
+      accessorKey: 'blocks',
+      meta: { align: 'right' },
+      cell: ({ row }) => (
+        <ValueDelta
+          value={row.original.blocks}
+          previous={before.get(row.original.id)?.blocks}
+        />
+      ),
+    },
+    {
+      id: 'hits',
+      header: 'Own hits',
+      accessorFn: (u) => hits(u),
+      meta: { align: 'right' },
+      sortDescFirst: false,
+      cell: ({ row }) => (
+        <ValueDelta
+          value={hits(row.original)}
+          previous={
+            before.get(row.original.id) && hits(before.get(row.original.id)!)
+          }
+        />
+      ),
+    },
+    {
+      id: 'leverage',
+      header: 'Units per hit',
+      accessorFn: (u) => u.blocks / Math.max(hits(u), 1),
+      meta: { align: 'right' },
+      cell: ({ getValue }) => getValue<number>().toFixed(1),
+    },
+    {
+      id: 'classes',
+      header: 'Bootstrap classes',
+      accessorFn: (u) => Object.keys(u.tokens).length,
+      meta: { className: 'whitespace-normal' },
+      cell: ({ row }) => (
+        <>
+          {Object.entries(row.original.tokens)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 4)
+            .map(([token]) => (
+              <code key={token} className="mr-1 text-xs">
+                {token}
+              </code>
+            ))}
+          {row.original.styleHits > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {row.original.styleHits} scss
+            </span>
+          )}
+        </>
+      ),
+    },
+  ]
   return (
     <Card>
       <CardHeader>
@@ -38,66 +116,22 @@ export function Blockers({
           <h2>Shared units with Bootstrap that block the most</h2>
         </CardTitle>
         <CardDescription>
-          Units with Bootstrap that Bootstrap-free, unlocked units import. Few
-          hits and many dependants means a cheap fix with a large effect.
+          Units with Bootstrap that Bootstrap-free, unlocked units import. Sort
+          by units per hit for the cheapest fix with the largest effect.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Unit</TableHead>
-              <TableHead>Section</TableHead>
-              <TableHead className="text-right">Blocks</TableHead>
-              <TableHead className="text-right">Own hits</TableHead>
-              <TableHead>Bootstrap classes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell className="max-w-md">
-                  <a
-                    className="underline underline-offset-4 break-all"
-                    href={sourceUrl(detail.commit, unitFile(u))}
-                  >
-                    {u.selector ?? u.id}
-                  </a>
-                  {u.status === 'locked' && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      locked · hits outside its templates
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell>{u.section}</TableCell>
-                <TableCell className="text-right">
-                  <ValueDelta
-                    value={u.blocks}
-                    previous={before.get(u.id)?.blocks}
-                  />
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {hits(u)}
-                </TableCell>
-                <TableCell>
-                  {Object.entries(u.tokens)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 4)
-                    .map(([token]) => (
-                      <code key={token} className="mr-1 text-xs">
-                        {token}
-                      </code>
-                    ))}
-                  {u.styleHits > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      {u.styleHits} scss
-                    </span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <DataTable
+          columns={columns}
+          data={rows}
+          initialSorting={[
+            { id: 'blocks', desc: true },
+            { id: 'hits', desc: false },
+          ]}
+          search="Search blockers"
+          maxHeight="max-h-[28rem]"
+          getRowId={(u) => u.id}
+        />
       </CardContent>
     </Card>
   )
