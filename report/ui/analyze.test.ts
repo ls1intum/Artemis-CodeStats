@@ -32,8 +32,10 @@ after(() => rmSync(root, { recursive: true, force: true }))
 
 const meta = {
   commit: 'a'.repeat(40),
+  parent: 'b'.repeat(40),
   date: '2026-09-21T10:00:00+02:00',
   subject: 'Migrate the list (#1)',
+  author: { name: 'Ada', login: 'ada' },
 }
 
 test('lock globs come from the no-bootstrap-classes block only', () => {
@@ -191,11 +193,12 @@ test('tree analysis derives units, status, closure, lockability and inventories'
       f.units,
     ]),
     [
-      ['page.component.scss', 0, 2, 0, 1],
-      ['global.scss', 1, 1, 0, 0],
       ['list.component.scss', 1, 0, 0, 1],
+      ['page.component.scss', 0, 2, 0, 1],
       ['shared.scss', 0, 0, 1, 1],
+      ['global.scss', 1, 1, 0, 0],
     ],
+    'stylesheets are sorted by path',
   )
   assert.deepEqual(
     page.blockers,

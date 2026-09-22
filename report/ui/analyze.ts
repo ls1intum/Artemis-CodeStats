@@ -553,7 +553,7 @@ export async function loadRule(root: string) {
 
 export async function analyzeTree(
   root: string,
-  meta: { commit: string; date: string; subject: string },
+  meta: Omit<Summary, 'totals' | 'sections' | 'rule'>,
 ): Promise<{ summary: Summary; detail: Detail }> {
   const { rule, sha } = await loadRule(root)
   const kit = readKit(root)
@@ -909,6 +909,7 @@ export async function analyzeTree(
   return {
     summary: {
       ...meta,
+      rule: sha,
       totals,
       sections: Object.fromEntries(
         [...sections.values()].map((s) => [
@@ -950,7 +951,9 @@ export async function analyzeTree(
           imports: rels(u.imports),
           routeParents: u.routeParents && rels(u.routeParents),
         })),
-      styles: styleFiles.map((f) => ({ ...f, path: rel(f.path) })),
+      styles: styleFiles
+        .map((f) => ({ ...f, path: rel(f.path) }))
+        .sort((a, b) => a.path.localeCompare(b.path)),
       files: orphanFiles.map((f) => ({ ...f, path: rel(f.path) })),
       diagnostics: diagnostics.map((d) => ({ ...d, path: rel(d.path) })),
     },

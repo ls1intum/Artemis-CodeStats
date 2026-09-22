@@ -16,7 +16,8 @@ is a full snapshot that can be selected and compared (weekly samples back to the
 The dashboard shows the trends per dependency, which pull requests moved them, which sections,
 pages and shared components block progress, which directories can be locked now, and which
 Bootstrap classes, PrimeNG and ng-bootstrap usages remain with the TUM UI component that
-replaces them.
+replaces them, and who moved the migration: a contributor leaderboard credits every
+integrated commit to its GitHub author.
 
 The signals/decoratorless and DTO dashboards are archived under **Archived migrations**.
 Their data is preserved; their collection has stopped.

@@ -11,13 +11,13 @@ Artemis's [client guideline](https://github.com/ls1intum/Artemis/blob/develop/do
 (section _Styling_) defines the migration in three artifacts that its own
 `rules/migration-source-coverage.spec.mjs` keeps consistent:
 
-| Artifact                                                    | Meaning                                                    | Used for                             |
-| ----------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------ |
-| `rules/no-bootstrap-classes.mjs`                            | The matcher for Bootstrap-only class tokens                | Hits (imported from the analyzed commit) |
-| `eslint.config.mjs`, lock block enabling that rule          | Paths that are done; Bootstrap must not return             | Locked units, lock-list changes      |
-| `.stylelintrc.json` hex/`--bs-` override                    | SCSS residue that a locked path must not contain           | Style hits                           |
-| `src/main/webapp/tailwind.css` `@source` list               | Paths whose Tailwind utilities are generated               | `scanned` flag per unit              |
-| `supporting_scripts/migration/migrate.mjs`                  | `status` (burndown per section) and `check` (ready to lock)| Parity target for hits and lockable  |
+| Artifact                                           | Meaning                                                     | Used for                                 |
+| -------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------- |
+| `rules/no-bootstrap-classes.mjs`                   | The matcher for Bootstrap-only class tokens                 | Hits (imported from the analyzed commit) |
+| `eslint.config.mjs`, lock block enabling that rule | Paths that are done; Bootstrap must not return              | Locked units, lock-list changes          |
+| `.stylelintrc.json` hex/`--bs-` override           | SCSS residue that a locked path must not contain            | Style hits                               |
+| `src/main/webapp/tailwind.css` `@source` list      | Paths whose Tailwind utilities are generated                | `scanned` flag per unit                  |
+| `supporting_scripts/migration/migrate.mjs`         | `status` (burndown per section) and `check` (ready to lock) | Parity target for hits and lockable      |
 
 `migrate.mjs status` and this analyzer agree on template hits to within the forms the
 Artemis script scans with regular expressions (it counts commented-out markup; the analyzer
@@ -87,11 +87,17 @@ parses templates with `@angular/compiler`).
   and attributes (kit selectors are read from the kit sources of the same commit), plus PrimeNG
   and ng-bootstrap imports whose names end in `Service` or `Modal`, which are usage without
   template evidence. Other imports may be types and are not counted.
+- **Contributor** — the author of an integrated commit as git records it (Artemis squash-merges,
+  so this is the pull request author; `Co-authored-by` trailers are not credited), with the GitHub
+  login from a noreply address or the commits API (`GITHUB_TOKEN` in the workflow). A commit's
+  change in the totals counts for its author only when the previous snapshot is its parent, so
+  weekly samples before package adoption are not attributed; a commit that changes the Bootstrap
+  rule is not credited with its hit change; `[bot]` accounts are not listed.
 
 ## Data
 
 `public/migrations/index.json` holds a summary (totals, compact per-section rows, commit
-subject) for the kit-pilot baseline, weekly samples until package adoption, and every
+subject, first parent, author with GitHub login, rule hash) for the kit-pilot baseline, weekly samples until package adoption, and every
 first-parent commit since. `public/migrations/<sha>.json` exists for every one of those
 commits: weekly commits and the two milestones (`bases` in the manifest) hold the full detail
 (units, routed pages, blockers, stylesheets, lockable directories, kit selectors, diagnostics,
@@ -126,13 +132,14 @@ locked / clean / Bootstrap bar are always visible. Every table is a TanStack `Da
 the header), the large ones search across all columns, and the long ones scroll under a sticky
 header. The views are:
 
-| View       | Content                                                                                                     |
-| ---------- | ----------------------------------------------------------------------------------------------------------- |
-| Overview   | Units where legacy grew (only when any); four step-area trends per commit (Bootstrap hits, units using PrimeNG, ng-bootstrap, TUM UI) with lock-list changes; commits that moved the numbers with PR links |
-| Sections   | Sections table (sort by legacy-free share, Δ legacy-free, Δ hits, since adoption, last progress or any library) with stage bar, units per library and locked with their change, last progress (latest commit that reduced hits or made a unit legacy-free, marked after four idle weeks); heatmap of Bootstrap hits per kind of work plus SCSS, PrimeNG and ng-bootstrap occurrences (row-normalised); side sheet per section with units by stage, library usage with kit components, imported units with hits, shared stylesheets and lockable directories |
-| Pages      | Routed pages legacy-free / components remain / blocked / Bootstrap per section, the global shell's hits, and every page with its full route sorted by remaining work |
-| Next steps | Quick wins (units with at most three hits that import nothing with Bootstrap, with the exact changes; sort by section to batch a pull request), lockable directories with copyable lock entries and "new since comparison", shared units with Bootstrap that block the most (with units unblocked per hit), kit gaps (legacy usages no kit component covers), sections closest to legacy-free |
-| Inventory  | Remaining Bootstrap classes with guideline targets, PrimeNG and ng-bootstrap with kit components and coverage (usages a kit component covers, largest gaps), TUM UI kit usage and unused selectors, stylesheets with residue; every row carries its change against the comparison and entries that disappeared are listed struck through |
+| View         | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview     | Units where legacy grew (only when any); four step-area trends per commit (Bootstrap hits, units using PrimeNG, ng-bootstrap, TUM UI) with lock-list changes; commits that moved the numbers with PR links                                                                                                                                                                                                                                                                                                                                                  |
+| Sections     | Sections table (sort by legacy-free share, Δ legacy-free, Δ hits, since adoption, last progress or any library) with stage bar, units per library and locked with their change, last progress (latest commit that reduced hits or made a unit legacy-free, marked after four idle weeks); heatmap of Bootstrap hits per kind of work plus SCSS, PrimeNG and ng-bootstrap occurrences (row-normalised); side sheet per section with units by stage, library usage with kit components, imported units with hits, shared stylesheets and lockable directories |
+| Pages        | Routed pages legacy-free / components remain / blocked / Bootstrap per section, the global shell's hits, and every page with its full route sorted by remaining work                                                                                                                                                                                                                                                                                                                                                                                        |
+| Next steps   | Quick wins (units with at most three hits that import nothing with Bootstrap, with the exact changes; sort by section to batch a pull request), lockable directories with copyable lock entries and "new since comparison", shared units with Bootstrap that block the most (with units unblocked per hit), kit gaps (legacy usages no kit component covers), sections closest to legacy-free                                                                                                                                                               |
+| Contributors | Leaderboard of progress per commit author since package adoption or since the comparison: PRs with progress, Bootstrap hits removed and their share, net legacy-free / PrimeNG / ng-bootstrap / TUM UI units, directories locked, hits added, last progress and active since; top three called out with GitHub avatar and profile; the latest 15 commits with progress                                                                                                                                                                                      |
+| Inventory    | Remaining Bootstrap classes with guideline targets, PrimeNG and ng-bootstrap with kit components and coverage (usages a kit component covers, largest gaps), TUM UI kit usage and unused selectors, stylesheets with residue; every row carries its change against the comparison and entries that disappeared are listed struck through                                                                                                                                                                                                                    |
 
 ## Develop, verify, regenerate
 

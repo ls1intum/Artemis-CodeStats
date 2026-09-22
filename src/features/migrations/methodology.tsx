@@ -111,6 +111,16 @@ export function Methodology({
               checkpoints, milestones and the latest commit. Analysis executes
               the rule module of the analyzed commit.
             </dd>
+            <dt className="font-medium">Contributors</dt>
+            <dd>
+              Each commit's change in the totals is credited to its author as
+              git records it, linked to the GitHub account behind the commit.
+              Artemis squash-merges, so the author is the pull request author;
+              co-authors are not credited. Only commits whose parent is the
+              previous snapshot count (every commit since package adoption); a
+              commit that changes the Bootstrap rule itself is not credited with
+              its hit change; bots are not listed.
+            </dd>
           </dl>
           <p>
             Class names built at runtime are not counted.

@@ -83,8 +83,19 @@ test('generator catches up missed commits, preserves source checkout, is idempot
     const baseline = commit(1, '<div class="btn"></div>')
     const packageAdoption = commit(2, '<div class="flex"></div>')
     const oldHead = commit(3, '<div class="btn"></div>')
-    const options = { repo, output, baseline, packageAdoption }
+    const lookups: string[] = []
+    const options = {
+      repo,
+      output,
+      baseline,
+      packageAdoption,
+      lookupLogin: async (commit: string) => {
+        lookups.push(commit)
+        return commit === oldHead ? 'octocat' : undefined
+      },
+    }
     await generateReports(options)
+    assert.deepEqual(lookups, [baseline, packageAdoption, oldHead])
     const removed = commit(4, '<div class="flex"></div>')
     const head = commit(5, '<div class="btn row"></div>')
     writeFileSync(file, 'uncommitted local work')
@@ -106,6 +117,26 @@ test('generator catches up missed commits, preserves source checkout, is idempot
       [1, 2, 1, 2, 1],
     )
     assert.equal(report.snapshots.at(-1)?.subject, 'day 5 (#5)')
+    assert.deepEqual(
+      report.snapshots.map((s) => s.author),
+      [
+        { name: 'Test' },
+        { name: 'Test' },
+        { name: 'Test', login: 'octocat' },
+        { name: 'Test' },
+        { name: 'Test' },
+      ],
+      'resolved logins are kept, missing ones are looked up again',
+    )
+    assert.deepEqual(
+      report.snapshots.map((s) => s.parent),
+      [undefined, baseline, packageAdoption, oldHead, removed],
+    )
+    assert.equal(
+      lookups.filter((c) => c === oldHead).length,
+      1,
+      'a resolved login is not looked up twice',
+    )
     const stored = (commit: string) =>
       JSON.parse(readFileSync(join(output, `${commit}.json`), 'utf8'))
     assert.equal(

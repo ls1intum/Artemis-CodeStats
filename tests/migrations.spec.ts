@@ -165,6 +165,62 @@ test('section drawer opens from the table, lives in the URL, lists blockers and 
   await expect(page.getByRole('dialog', { name: 'course' })).toBeVisible()
 })
 
+test('contributors are ranked, linked to GitHub and windowed', async ({
+  page,
+}) => {
+  await page.goto('./#/?view=contributors')
+  await loaded(page)
+  const manifest = await (
+    await page.request.get('./migrations/index.json')
+  ).json()
+  const authors = new Set(
+    manifest.snapshots.map(
+      (s: { author: { login?: string } }) => s.author.login,
+    ),
+  )
+  expect(authors.size).toBeGreaterThan(3)
+  const podium = page.getByRole('list', { name: 'Top three' })
+  await expect(podium.getByRole('listitem')).toHaveCount(3)
+  const first = podium.getByRole('listitem').first()
+  await expect(first).toContainText('#1')
+  await expect(first.getByRole('link').first()).toHaveAttribute(
+    'href',
+    /^https:\/\/github\.com\/[\w-]+$/,
+  )
+  await expect(first.locator('img')).toHaveAttribute(
+    'src',
+    /github\.com\/[\w-]+\.png/,
+  )
+  const table = page.getByRole('table').first()
+  await expect(table.getByRole('columnheader', { name: '#' })).toHaveAttribute(
+    'aria-sort',
+    'ascending',
+  )
+  const leader = await first.getByRole('link').first().textContent()
+  await expect(table.locator('tbody tr').first()).toContainText(leader!)
+  // Sorting by legacy-free units keeps the rank numbers, which follow the leaderboard's own order.
+  await table.getByRole('button', { name: 'Legacy-free', exact: true }).click()
+  await expect(
+    table.getByRole('columnheader', { name: 'Legacy-free', exact: true }),
+  ).toHaveAttribute('aria-sort', 'descending')
+  await page.getByRole('radio', { name: /^Since [A-Z][a-z]{2} \d+$/ }).click()
+  await expect(
+    page.getByRole('table').first().locator('tbody tr'),
+  ).not.toHaveCount(0)
+  await expect(
+    page.getByRole('heading', { name: 'Latest progress' }),
+  ).toBeVisible()
+  await expect(
+    page
+      .getByRole('table')
+      .last()
+      .locator('tbody tr')
+      .first()
+      .getByRole('link')
+      .first(),
+  ).toHaveAttribute('href', /github\.com/)
+})
+
 test('pages view and per-commit snapshots resolve through patches', async ({
   page,
 }) => {

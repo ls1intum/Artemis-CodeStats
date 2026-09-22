@@ -8,6 +8,8 @@ const summary = (day: number, hits: number): Summary => ({
   commit: 'a'.repeat(40),
   date: `2026-09-${String(day).padStart(2, '0')}T12:00:00Z`,
   subject: '',
+  author: { name: 'Ada' },
+  rule: 'r',
   totals: {
     units: 1,
     locked: 0,

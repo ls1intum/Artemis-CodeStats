@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { z } from 'zod'
 import {
   existsSync,
   mkdirSync,
@@ -12,18 +13,31 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { analyzeTree } from './analyze'
+import { githubLoginLookup, loginFromEmail, type LoginLookup } from './authors'
 import { planHistory } from './history'
 import {
   analyzerVersion,
   applyPatch,
+  authorSchema,
   detailSchema,
   makePatch,
   manifestSchema,
   storedDetailSchema,
+  summarySchema,
   type Detail,
   type Manifest,
   type Summary,
 } from '../../src/features/migrations/model'
+
+// A cached manifest may predate authorship; git supplies those fields again on every run.
+const cachedSchema = manifestSchema.innerType().extend({
+  snapshots: z.array(
+    summarySchema.extend({
+      author: authorSchema.optional(),
+      rule: z.string().optional(),
+    }),
+  ),
+})
 
 const analyzedPaths = [
   'src/main/webapp/app',
@@ -40,12 +54,17 @@ export async function generateReports({
   baseline,
   packageAdoption,
   rebuild = false,
+  lookupLogin = process.env.GITHUB_TOKEN
+    ? githubLoginLookup(process.env.GITHUB_TOKEN)
+    : undefined,
 }: {
   repo: string
   output: string
   baseline: string
   packageAdoption: string
   rebuild?: boolean
+  // Resolves the GitHub login behind a commit; without one only noreply addresses yield logins.
+  lookupLogin?: LoginLookup
 }): Promise<Manifest> {
   const git = (...args: string[]) =>
     execFileSync('git', ['-C', repo, ...args], {
@@ -59,32 +78,37 @@ export async function generateReports({
   const head = git('rev-parse', 'HEAD')
   git('merge-base', '--is-ancestor', baseline, head)
   git('merge-base', '--is-ancestor', packageAdoption, head)
+  const format = '--format=%H%x1f%P%x1f%cI%x1f%s%x1f%an%x1f%ae'
   const revision = (row: string) => {
-    const [commit, date, subject] = row.split('\x1f')
-    return { commit, date, subject }
+    const [commit, parents, date, subject, name, email] = row.split('\x1f')
+    const login = loginFromEmail(email)
+    return {
+      commit,
+      parent: parents.split(' ')[0] || undefined,
+      date,
+      subject,
+      author: login ? { name, login } : { name },
+    }
   }
   const history = git(
     'log',
     '--first-parent',
     '--reverse',
-    '--format=%H%x1f%cI%x1f%s',
+    format,
     `${baseline}..${head}`,
   )
     .split('\n')
     .filter(Boolean)
     .map(revision)
   const planned = planHistory(
-    [
-      revision(git('show', '-s', '--format=%H%x1f%cI%x1f%s', baseline)),
-      ...history,
-    ],
+    [revision(git('show', '-s', format, baseline)), ...history],
     packageAdoption,
   )
   mkdirSync(output, { recursive: true })
   const cachePath = join(output, 'index.json')
   const cached =
     !rebuild && existsSync(cachePath)
-      ? manifestSchema.safeParse(JSON.parse(readFileSync(cachePath, 'utf8')))
+      ? cachedSchema.safeParse(JSON.parse(readFileSync(cachePath, 'utf8')))
       : undefined
   const manifest: Manifest = {
     schemaVersion: 4,
@@ -111,7 +135,7 @@ export async function generateReports({
     const base = readStored(parsed.data.base)
     return base && applyPatch(base, parsed.data)
   }
-  const consistent = (detail: Detail, summary: Summary) =>
+  const consistent = (detail: Detail, summary: Pick<Summary, 'totals'>) =>
     detail.units.length === summary.totals.units &&
     detail.units.filter((u) => u.status === 'dirty').length ===
       summary.totals.dirty &&
@@ -127,7 +151,17 @@ export async function generateReports({
       throw new Error(
         `Cached detail does not match ${commit}; run with --rebuild`,
       )
-    let summary = prior && detail ? prior : undefined
+    // Authorship comes from git, not from analysis, so a cached summary takes the current values;
+    // a login resolved earlier is kept, a missing one is looked up again.
+    let summary: Summary | undefined =
+      prior && detail
+        ? {
+            ...prior,
+            parent: rev.parent,
+            author: prior.author?.login ? prior.author : rev.author,
+            rule: detail.rule,
+          }
+        : undefined
     if (!summary) {
       const temp = mkdtempSync(join(tmpdir(), 'codestats-ui-'))
       try {
@@ -158,6 +192,10 @@ export async function generateReports({
       } finally {
         rmSync(temp, { recursive: true, force: true })
       }
+    }
+    if (!summary.author.login && lookupLogin) {
+      const login = await lookupLogin(commit)
+      if (login) summary.author = { ...summary.author, login }
     }
     manifest.snapshots.push(summary)
     // Base commits keep the full detail; every other commit stores a patch against the base before it.

@@ -12,6 +12,7 @@ export const views = [
   'pages',
   'next',
   'inventory',
+  'contributors',
 ] as const
 export type View = (typeof views)[number]
 export type Status = (typeof statuses)[number]
@@ -52,10 +53,22 @@ export const sectionRowSchema = z.tuple([
   count,
 ])
 export type SectionRow = z.infer<typeof sectionRowSchema>
+// The commit author as git records it, with the GitHub login when it could be resolved.
+export const authorSchema = z.object({
+  name: z.string(),
+  login: z.string().optional(),
+})
+export type Author = z.infer<typeof authorSchema>
 export const summarySchema = z.object({
   commit: sha,
+  // First parent (none for a root commit); a snapshot is attributable to its author only when
+  // the previous snapshot is its parent.
+  parent: sha.optional(),
   date: z.string().datetime({ offset: true }),
   subject: z.string(),
+  author: authorSchema,
+  // Blob hash of the Bootstrap rule (or 'retired'); hit deltas across a rule change are not migration work.
+  rule: z.string(),
   totals: totalsSchema,
   sections: z.record(z.string(), sectionRowSchema),
 })
@@ -244,7 +257,7 @@ export function applyPatch(base: Detail, patch: Patch): Detail {
       base.styles,
       patch.styles.changed,
       patch.styles.removed,
-    ),
+    ).sort((a, b) => a.path.localeCompare(b.path)),
   }
 }
 export function makePatch(base: Detail, detail: Detail): Patch {
@@ -377,6 +390,9 @@ export const sourceUrl = (commit: string, path: string) =>
     .join('/')}`
 export const commitUrl = (commit: string) =>
   `https://github.com/ls1intum/Artemis/commit/${commit}`
+export const profileUrl = (login: string) => `https://github.com/${login}`
+export const avatarUrl = (login: string, size = 64) =>
+  `https://github.com/${login}.png?size=${size}`
 export const pullRequest = (subject: string) => {
   const match = /^(.*?)\s*\(#(\d+)\)\s*$/.exec(subject)
   return match

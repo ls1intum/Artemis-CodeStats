@@ -13,6 +13,7 @@ import { SectionSheet } from './section-sheet'
 import { Pages } from './pages'
 import { NextSteps } from './next-steps'
 import { Inventory } from './inventory'
+import { Contributors } from './contributors'
 import { Methodology } from './methodology'
 
 const viewLabel: Record<View, string> = {
@@ -21,6 +22,7 @@ const viewLabel: Record<View, string> = {
   pages: 'Pages',
   next: 'Next steps',
   inventory: 'Inventory',
+  contributors: 'Contributors',
 }
 
 export function MigrationDashboard() {
@@ -156,6 +158,9 @@ export function MigrationDashboard() {
         </TabsContent>
         <TabsContent value="inventory">
           <Inventory detail={detail} compare={compareDetail} />
+        </TabsContent>
+        <TabsContent value="contributors">
+          <Contributors series={series} compare={compare} />
         </TabsContent>
       </Tabs>
       <SectionSheet

@@ -40,6 +40,8 @@ jobs:
           git -C artemis checkout --detach origin/develop
       - run: npm run typecheck:report
       - run: npm run report:ui
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: npm test
       - name: Publish validated reports
         id: publish
