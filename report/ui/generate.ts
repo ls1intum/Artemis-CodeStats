@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { analyzeTree } from './analyze'
 import { githubLoginLookup, loginFromEmail, type LoginLookup } from './authors'
+import { creditsOf, fetchPullHeads } from './credits'
 import { planHistory } from './history'
 import {
   analyzerVersion,
@@ -22,6 +23,7 @@ import {
   detailSchema,
   makePatch,
   manifestSchema,
+  pullRequest,
   storedDetailSchema,
   summarySchema,
   type Detail,
@@ -205,6 +207,36 @@ export async function generateReports({
     } else {
       if (!base) throw new Error(`No base detail before ${commit}`)
       atomicWrite(detailPath(commit), makePatch(base, detail!))
+    }
+  }
+  // Credits come from the pull request branches; computed once per attributable commit.
+  const uncredited = manifest.snapshots.filter(
+    (s, i) =>
+      !s.credits &&
+      i > 0 &&
+      s.parent === manifest.snapshots[i - 1].commit &&
+      pullRequest(s.subject).number,
+  )
+  if (uncredited.length) {
+    fetchPullHeads(
+      git,
+      uncredited.map((s) => pullRequest(s.subject).number!),
+    )
+    const logins = new Map<string, string | undefined>()
+    for (const s of uncredited) {
+      const credits = await creditsOf({
+        git,
+        repo,
+        commit: s.commit,
+        parent: s.parent!,
+        number: pullRequest(s.subject).number!,
+        author: s.author,
+        authorEmail: git('show', '-s', '--format=%ae', s.commit),
+        lookupLogin,
+        logins,
+      })
+      if (credits) s.credits = credits
+      else console.warn(`No pull request branch for ${s.commit.slice(0, 8)}`)
     }
   }
   if (

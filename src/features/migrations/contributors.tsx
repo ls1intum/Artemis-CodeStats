@@ -31,8 +31,10 @@ const count = (
   header,
   accessorKey: id,
   meta: { align: 'right' },
-  cell: ({ getValue }) =>
-    hide0 && getValue<number>() === 0 ? '' : number(getValue<number>()),
+  cell: ({ getValue }) => {
+    const value = Math.round(getValue<number>())
+    return hide0 && value === 0 ? '' : number(value)
+  },
 })
 
 const commitLink = (c: Contributor['last']) => {
@@ -87,8 +89,10 @@ const columns: ColumnDef<Row, unknown>[] = [
     accessorKey: 'hitsAdded',
     meta: { align: 'right' },
     cell: ({ getValue }) =>
-      getValue<number>() > 0 && (
-        <span className="text-destructive">{number(getValue<number>())}</span>
+      Math.round(getValue<number>()) > 0 && (
+        <span className="text-destructive">
+          {number(Math.round(getValue<number>()))}
+        </span>
       ),
   },
   {
@@ -120,7 +124,9 @@ const columns: ColumnDef<Row, unknown>[] = [
 
 const stat = (value: number, label: string) => (
   <span className="grid">
-    <span className="text-xl font-semibold tabular-nums">{number(value)}</span>
+    <span className="text-xl font-semibold tabular-nums">
+      {number(Math.round(value))}
+    </span>
     <span className="text-xs text-muted-foreground">{label}</span>
   </span>
 )
@@ -156,13 +162,15 @@ export function Contributors({
             <h2>Contributors</h2>
           </CardTitle>
           <CardDescription>
-            Every integrated commit counts for its author as GitHub records it.
-            Ranked by Bootstrap hits removed, then by units made legacy-free;
-            every column sorts. PRs are commits that made progress on any
-            measure; Share is the part of all hits removed in the window.
-            Legacy-free, PrimeNG, ng-bootstrap and TUM UI are net unit counts
-            (removed, or added for TUM UI), so a commit that adds legacy
-            subtracts. Hits added stays visible next to the progress.
+            Every integrated commit is credited to the people who did the work
+            on its pull request branch, in proportion to the legacy each of them
+            removed there (lines changed when nobody touched legacy). Ranked by
+            Bootstrap hits removed, then by units made legacy-free; every column
+            sorts. PRs are commits with progress the person shared in; Share is
+            the part of all hits removed in the window. Legacy-free, PrimeNG,
+            ng-bootstrap and TUM UI are net unit counts (removed, or added for
+            TUM UI), so a commit that adds legacy subtracts. Hits added stays
+            visible next to the progress.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-[minmax(0,1fr)] gap-5">
@@ -229,8 +237,9 @@ export function Contributors({
             </CardTitle>
             <CardDescription>
               The last {latest.length} commits up to the snapshot that reduced
-              legacy or adopted TUM UI, newest first. Δ hits is Bootstrap hits;
-              the other deltas count units.
+              legacy or adopted TUM UI, newest first, with everyone credited for
+              the work on the branch. Δ hits is Bootstrap hits; the other deltas
+              count units.
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -29,6 +29,7 @@ const snapshot = (
   author: Summary['author'],
   patch: Partial<Totals> = {},
   rule = 'r1',
+  credits?: Summary['credits'],
 ): Summary => ({
   commit: sha(n),
   parent: parent === undefined ? undefined : sha(parent),
@@ -36,6 +37,7 @@ const snapshot = (
   subject: `change ${n} (#${n})`,
   author,
   rule,
+  credits,
   totals: totals(patch),
   sections: {},
 })
@@ -122,4 +124,32 @@ test('ranking prefers hits removed, then legacy-free units; a name without login
       [4, 'bob', 10, 0],
     ],
   )
+})
+
+test('credits split a commit between the people who worked on its branch', () => {
+  const cy = { name: 'Cy', login: 'cy' }
+  const series = [
+    snapshot(1, undefined, ada),
+    snapshot(2, 1, ada, { classHits: 60, legacyFree: 4, tumUi: 3 }, 'r1', [
+      { author: ada, share: 0.75 },
+      { author: cy, share: 0.25 },
+    ]),
+    snapshot(3, 2, cy, { classHits: 50, legacyFree: 4, tumUi: 3 }),
+  ]
+  const board = leaderboard(contributions(series))
+  assert.deepEqual(
+    board.map((r) => [
+      r.rank,
+      r.key,
+      r.prs,
+      r.hitsRemoved,
+      r.legacyFree,
+      r.tumUi,
+    ]),
+    [
+      [1, 'ada', 1, 30, 1.5, 1.5],
+      [2, 'cy', 2, 20, 0.5, 0.5],
+    ],
+  )
+  assert.equal(board[1].last.commit, sha(3))
 })

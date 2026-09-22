@@ -1,4 +1,4 @@
-import type { Author, Summary } from './model'
+import type { Author, Credit, Summary } from './model'
 import { hits } from './format'
 
 // What one integrated commit changed against the snapshot before it.
@@ -8,6 +8,9 @@ export type Contribution = {
   date: string
   subject: string
   author: Author
+  // Who did the work, by share of legacy removed on the pull request branch; the author alone
+  // when the branch was not analyzed.
+  credits: Credit[]
   // Deltas of the totals; negative hits, PrimeNG and ng-bootstrap are progress.
   hits: number
   legacyFree: number
@@ -31,6 +34,7 @@ export function contributions(series: Summary[]): Contribution[] {
       date: s.date,
       subject: s.subject,
       author: s.author,
+      credits: s.credits ?? [{ author: s.author, share: 1 }],
       hits: hits(s.totals) - hits(p.totals),
       legacyFree: s.totals.legacyFree - p.totals.legacyFree,
       primeng: s.totals.primeng - p.totals.primeng,
@@ -79,42 +83,46 @@ export type Contributor = {
   last: Contribution
 }
 
-// Progress per author over attributable commits, ranked by Bootstrap hits removed, then units
-// made legacy-free, then TUM UI adoption. Bots and authors without progress are not listed;
-// legacy an author added alongside progress stays visible.
+// Progress per credited author over attributable commits, each commit's change split by the
+// credit shares, ranked by Bootstrap hits removed, then units made legacy-free, then TUM UI
+// adoption. Bots and authors without progress are not listed; legacy an author added alongside
+// progress stays visible.
 export function leaderboard(list: Contribution[]): Contributor[] {
   const byAuthor = new Map<string, Contributor>()
   for (const c of list) {
-    if (!c.attributable || isBot(c.author) || !moved(c)) continue
-    const key = authorKey(c.author)
-    const row = byAuthor.get(key) ?? {
-      key,
-      author: c.author,
-      rank: 0,
-      prs: 0,
-      hitsRemoved: 0,
-      hitsAdded: 0,
-      legacyFree: 0,
-      primeng: 0,
-      ngBootstrap: 0,
-      tumUi: 0,
-      locks: 0,
-      first: c,
-      last: c,
+    if (!c.attributable || !moved(c)) continue
+    for (const { author, share } of c.credits) {
+      if (isBot(author) || share <= 0) continue
+      const key = authorKey(author)
+      const row = byAuthor.get(key) ?? {
+        key,
+        author,
+        rank: 0,
+        prs: 0,
+        hitsRemoved: 0,
+        hitsAdded: 0,
+        legacyFree: 0,
+        primeng: 0,
+        ngBootstrap: 0,
+        tumUi: 0,
+        locks: 0,
+        first: c,
+        last: c,
+      }
+      if (author.login && !row.author.login) row.author = author
+      if (progressed(c)) row.prs++
+      if (!c.ruleChanged) {
+        if (c.hits < 0) row.hitsRemoved -= c.hits * share
+        else row.hitsAdded += c.hits * share
+      }
+      row.legacyFree += c.legacyFree * share
+      row.primeng -= c.primeng * share
+      row.ngBootstrap -= c.ngBootstrap * share
+      row.tumUi += c.tumUi * share
+      row.locks += c.locks * share
+      if (progressed(c)) row.last = c
+      byAuthor.set(key, row)
     }
-    if (c.author.login && !row.author.login) row.author = c.author
-    if (progressed(c)) row.prs++
-    if (!c.ruleChanged) {
-      if (c.hits < 0) row.hitsRemoved -= c.hits
-      else row.hitsAdded += c.hits
-    }
-    row.legacyFree += c.legacyFree
-    row.primeng -= c.primeng
-    row.ngBootstrap -= c.ngBootstrap
-    row.tumUi += c.tumUi
-    row.locks += c.locks
-    if (progressed(c)) row.last = c
-    byAuthor.set(key, row)
   }
   return [...byAuthor.values()]
     .filter((r) => r.prs > 0)

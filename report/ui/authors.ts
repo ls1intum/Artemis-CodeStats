@@ -5,7 +5,11 @@ export const loginFromEmail = (email: string) =>
     email,
   )?.[1]
 
-export type LoginLookup = (commit: string) => Promise<string | undefined>
+// `unavailable` tells whether lookups have stopped for this run, so callers can defer work
+// that must not be stored with missing logins.
+export type LoginLookup = ((commit: string) => Promise<string | undefined>) & {
+  unavailable?: () => boolean
+}
 
 // Commits the API cannot resolve (author without a linked account) are asked again on every
 // run, so the number of requests per run is bounded; the rest wait for the next run.
@@ -25,7 +29,7 @@ export function githubLoginLookup(
     console.warn(`GitHub login lookup stopped: ${reason}; retried next run`)
     return undefined
   }
-  return async (commit) => {
+  const lookup: LoginLookup = async (commit) => {
     if (stopped) return undefined
     if (requests >= budget) return stop(`budget of ${budget} requests used`)
     requests++
@@ -54,4 +58,6 @@ export function githubLoginLookup(
     const body = (await response.json()) as { author?: { login?: string } }
     return body.author?.login
   }
+  lookup.unavailable = () => stopped
+  return lookup
 }

@@ -2,7 +2,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { commitUrl, pullRequest } from './model'
 import { day } from './format'
 import { Delta } from './status'
-import { AuthorName } from './author'
+import { CreditedAuthors } from './author'
 import type { Contribution } from './contributions'
 
 const delta = (
@@ -40,10 +40,10 @@ export const changeColumns: ColumnDef<Contribution, unknown>[] = [
   {
     id: 'author',
     header: 'Author',
-    accessorFn: (r) => r.author.name,
+    accessorFn: (r) => r.credits.map((c) => c.author.name).join(', '),
     sortDescFirst: false,
     meta: { className: 'whitespace-nowrap' },
-    cell: ({ row }) => <AuthorName author={row.original.author} />,
+    cell: ({ row }) => <CreditedAuthors credits={row.original.credits} />,
   },
   {
     id: 'commit',

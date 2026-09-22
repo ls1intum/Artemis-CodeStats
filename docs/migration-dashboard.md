@@ -87,12 +87,20 @@ parses templates with `@angular/compiler`).
   and attributes (kit selectors are read from the kit sources of the same commit), plus PrimeNG
   and ng-bootstrap imports whose names end in `Service` or `Modal`, which are usage without
   template evidence. Other imports may be types and are not counted.
-- **Contributor** — the author of an integrated commit as git records it (Artemis squash-merges,
-  so this is the pull request author; `Co-authored-by` trailers are not credited), with the GitHub
-  login from a noreply address or the commits API (`GITHUB_TOKEN` in the workflow). A commit's
-  change in the totals counts for its author only when the previous snapshot is its parent, so
-  weekly samples before package adoption are not attributed; a commit that changes the Bootstrap
-  rule is not credited with its hit change; `[bot]` accounts are not listed.
+- **Contributor / credits** — a commit's change in the totals is split between the people who
+  worked on its pull request branch. The generator fetches `refs/pull/<n>/head` (GitHub keeps it
+  after the squash merge), walks the non-merge commits from the merge base and measures every
+  changed client file before and after each commit with the same template, script and style
+  analysis; an author's share is the legacy they removed (Bootstrap hits, PrimeNG and
+  ng-bootstrap occurrences) plus TUM UI usage added, or client lines changed when nobody touched
+  legacy. Shares under 5 % and commits by authors without a GitHub account (unlinked addresses,
+  coding agents such as `Co-authored-by: Claude`) fold into the pull request author. Logins come
+  from noreply addresses or the commits API (`GITHUB_TOKEN`); credits are stored per snapshot
+  (`credits`) once computed, and deferred when a lookup is unavailable. Only commits whose parent
+  is the previous snapshot are attributed, so weekly samples before package adoption are not; a
+  commit that changes the Bootstrap rule is not credited with its hit change; `[bot]` accounts
+  are not listed. `Co-authored-by` trailers are not used: they mostly name coding agents and
+  reviewers whose suggestions were applied, while the branch commits show who did the work.
 
 ## Data
 
@@ -135,10 +143,10 @@ header. The views are:
 | View         | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Overview     | Units where legacy grew (only when any); four step-area trends per commit (Bootstrap hits, units using PrimeNG, ng-bootstrap, TUM UI) with lock-list changes; commits that moved the numbers with PR links                                                                                                                                                                                                                                                                                                                                                  |
+| Contributors | Second view. Leaderboard of progress per credited author (each commit's change split by branch credits) since package adoption or since the comparison: PRs with progress, Bootstrap hits removed and their share, net legacy-free / PrimeNG / ng-bootstrap / TUM UI units, directories locked, hits added, last progress and active since; top three called out with GitHub avatar and profile; the latest 15 commits with progress                                                                                                                        |
 | Sections     | Sections table (sort by legacy-free share, Δ legacy-free, Δ hits, since adoption, last progress or any library) with stage bar, units per library and locked with their change, last progress (latest commit that reduced hits or made a unit legacy-free, marked after four idle weeks); heatmap of Bootstrap hits per kind of work plus SCSS, PrimeNG and ng-bootstrap occurrences (row-normalised); side sheet per section with units by stage, library usage with kit components, imported units with hits, shared stylesheets and lockable directories |
 | Pages        | Routed pages legacy-free / components remain / blocked / Bootstrap per section, the global shell's hits, and every page with its full route sorted by remaining work                                                                                                                                                                                                                                                                                                                                                                                        |
 | Next steps   | Quick wins (units with at most three hits that import nothing with Bootstrap, with the exact changes; sort by section to batch a pull request), lockable directories with copyable lock entries and "new since comparison", shared units with Bootstrap that block the most (with units unblocked per hit), kit gaps (legacy usages no kit component covers), sections closest to legacy-free                                                                                                                                                               |
-| Contributors | Leaderboard of progress per commit author since package adoption or since the comparison: PRs with progress, Bootstrap hits removed and their share, net legacy-free / PrimeNG / ng-bootstrap / TUM UI units, directories locked, hits added, last progress and active since; top three called out with GitHub avatar and profile; the latest 15 commits with progress                                                                                                                                                                                      |
 | Inventory    | Remaining Bootstrap classes with guideline targets, PrimeNG and ng-bootstrap with kit components and coverage (usages a kit component covers, largest gaps), TUM UI kit usage and unused selectors, stylesheets with residue; every row carries its change against the comparison and entries that disappeared are listed struck through                                                                                                                                                                                                                    |
 
 ## Develop, verify, regenerate

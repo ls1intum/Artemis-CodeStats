@@ -8,11 +8,11 @@ const sha = z.string().regex(/^[a-f0-9]{40}$/)
 export const statuses = ['locked', 'clean', 'dirty'] as const
 export const views = [
   'overview',
+  'contributors',
   'sections',
   'pages',
   'next',
   'inventory',
-  'contributors',
 ] as const
 export type View = (typeof views)[number]
 export type Status = (typeof statuses)[number]
@@ -59,6 +59,13 @@ export const authorSchema = z.object({
   login: z.string().optional(),
 })
 export type Author = z.infer<typeof authorSchema>
+// Who did the work behind a squash-merged pull request, by share of legacy removed on its
+// branch; absent when the commit is not attributable or credits were not computed yet.
+export const creditSchema = z.object({
+  author: authorSchema,
+  share: z.number().min(0).max(1),
+})
+export type Credit = z.infer<typeof creditSchema>
 export const summarySchema = z.object({
   commit: sha,
   // First parent (none for a root commit); a snapshot is attributable to its author only when
@@ -69,6 +76,7 @@ export const summarySchema = z.object({
   author: authorSchema,
   // Blob hash of the Bootstrap rule (or 'retired'); hit deltas across a rule change are not migration work.
   rule: z.string(),
+  credits: z.array(creditSchema).optional(),
   totals: totalsSchema,
   sections: z.record(z.string(), sectionRowSchema),
 })

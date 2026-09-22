@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
-import { avatarUrl, profileUrl, type Author } from './model'
+import { avatarUrl, profileUrl, type Author, type Credit } from './model'
+import { percent } from './format'
 
 const initials = (name: string) =>
   name
@@ -51,6 +52,42 @@ export function AuthorName({
           <span className="text-sm text-muted-foreground">@{author.login}</span>
         )}
       </span>
+    </span>
+  )
+}
+
+// The credited authors of one commit: the largest share by name, the others as avatars.
+export function CreditedAuthors({ credits }: { credits: Credit[] }) {
+  const [first, ...rest] = credits
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <AuthorName author={first.author} />
+      {rest.length > 0 && (
+        <span className="text-xs text-muted-foreground">
+          {percent(first.share, 1)}
+        </span>
+      )}
+      {rest.map(({ author, share }) => {
+        const label = `${author.name} · ${percent(share, 1)}`
+        return author.login ? (
+          <a key={author.login} href={profileUrl(author.login)} title={label}>
+            <Avatar className="size-6">
+              <AvatarImage src={avatarUrl(author.login, 48)} alt="" />
+              <AvatarFallback className="text-[0.6rem]">
+                {initials(author.name)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="sr-only">{label}</span>
+          </a>
+        ) : (
+          <Avatar key={author.name} className="size-6" title={label}>
+            <AvatarFallback className="text-[0.6rem]">
+              {initials(author.name)}
+            </AvatarFallback>
+            <span className="sr-only">{label}</span>
+          </Avatar>
+        )
+      })}
     </span>
   )
 }

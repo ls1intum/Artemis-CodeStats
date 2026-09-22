@@ -113,13 +113,18 @@ export function Methodology({
             </dd>
             <dt className="font-medium">Contributors</dt>
             <dd>
-              Each commit's change in the totals is credited to its author as
-              git records it, linked to the GitHub account behind the commit.
-              Artemis squash-merges, so the author is the pull request author;
-              co-authors are not credited. Only commits whose parent is the
-              previous snapshot count (every commit since package adoption); a
-              commit that changes the Bootstrap rule itself is not credited with
-              its hit change; bots are not listed.
+              Each commit's change in the totals is split between the people who
+              worked on its pull request branch, which GitHub keeps after the
+              squash merge. Every commit on that branch is measured: an author's
+              share is the legacy they removed there (Bootstrap hits, PrimeNG
+              and ng-bootstrap occurrences) plus the TUM UI usage they added,
+              or, when nobody touched legacy, their client lines changed. Shares
+              under 5% and work by authors without a GitHub account (unlinked
+              addresses, coding agents) go to the pull request author, who drove
+              that work. Only commits whose parent is the previous snapshot
+              count (every commit since package adoption); a commit that changes
+              the Bootstrap rule itself is not credited with its hit change;
+              bots are not listed.
             </dd>
           </dl>
           <p>
