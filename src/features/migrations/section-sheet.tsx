@@ -115,13 +115,18 @@ function SectionBody({
       {
         id: 'unit',
         header: 'Unit',
-        accessorFn: (u) => unitFile(u).replace(`app/${section}/`, ''),
+        accessorFn: (u) =>
+          u.selector ?? unitFile(u).replace(`app/${section}/`, ''),
         sortDescFirst: false,
-        meta: { className: 'min-w-40 whitespace-normal' },
+        meta: {
+          className: 'min-w-56 whitespace-normal [overflow-wrap:anywhere]',
+          sticky: true,
+        },
         cell: ({ row, getValue }) => (
           <a
-            className="break-all underline underline-offset-4"
+            className="underline underline-offset-4"
             href={sourceUrl(detail.commit, unitFile(row.original))}
+            title={unitFile(row.original)}
           >
             {getValue<string>()}
           </a>
@@ -132,11 +137,14 @@ function SectionBody({
         header: 'Stage',
         accessorFn: (u) => stages.indexOf(stageOf(u)),
         sortDescFirst: false,
-        meta: { className: 'whitespace-nowrap' },
+        meta: { className: 'whitespace-normal [&>*]:my-0.5' },
         cell: ({ row }) => (
           <>
-            <Badge variant={badgeVariant[stageOf(row.original)]}>
-              {stageLabel[stageOf(row.original)]}
+            <Badge
+              variant={badgeVariant[stageOf(row.original)]}
+              title={stageLabel[stageOf(row.original)]}
+            >
+              {filterLabel[stageOf(row.original)]}
             </Badge>
             {row.original.status === 'locked' && (
               <Badge variant="outline" className="ml-1">
@@ -161,10 +169,9 @@ function SectionBody({
                 previous={previous.get(u.id) && hits(previous.get(u.id)!)}
               />
               {u.styleHits > 0 && (
-                <span className="text-muted-foreground">
-                  {' '}
-                  ({u.styleHits} scss
-                  {shared && `, shared by ${styleOwners.get(shared)}`})
+                <span className="block text-xs text-muted-foreground">
+                  {u.styleHits} scss
+                  {shared && `, shared by ${styleOwners.get(shared)}`}
                 </span>
               )}
             </>
@@ -173,7 +180,7 @@ function SectionBody({
       },
       {
         id: 'imported',
-        header: 'Imports with hits',
+        header: 'Imported hits',
         accessorKey: 'closureHits',
         meta: { align: 'right' },
         cell: ({ row }) => {
@@ -206,7 +213,7 @@ function SectionBody({
         id: 'classes',
         header: 'Bootstrap classes',
         accessorFn: (u) => Object.keys(u.tokens).length,
-        meta: { className: 'min-w-40 whitespace-normal' },
+        meta: { className: 'min-w-56 whitespace-normal' },
         cell: ({ row }) => {
           const tokens = Object.entries(row.original.tokens).sort(
             (a, b) => b[1] - a[1],
@@ -290,10 +297,12 @@ function SectionBody({
       header: 'Stylesheet',
       accessorKey: 'path',
       sortDescFirst: false,
-      meta: { className: 'whitespace-normal' },
+      meta: {
+        className: 'min-w-48 whitespace-normal [overflow-wrap:anywhere]',
+      },
       cell: ({ getValue }) => (
         <a
-          className="break-all underline underline-offset-4"
+          className="underline underline-offset-4"
           href={sourceUrl(detail.commit, getValue<string>())}
         >
           {getValue<string>().replace(`app/${section}/`, '')}
@@ -445,7 +454,7 @@ export function SectionSheet({
   return (
     <Sheet open={!!section} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
-        className="w-full gap-0 sm:max-w-5xl"
+        className="w-full gap-0 sm:max-w-6xl"
         onOpenAutoFocus={(event) => {
           event.preventDefault()
           body.current?.focus()

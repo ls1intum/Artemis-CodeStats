@@ -40,11 +40,13 @@ export function LockableTable({
       header: 'Directory',
       accessorKey: 'dir',
       sortDescFirst: false,
-      meta: { className: 'whitespace-normal' },
+      meta: {
+        className: 'min-w-48 whitespace-normal [overflow-wrap:anywhere]',
+      },
       cell: ({ row }) => (
         <>
           <a
-            className="break-all underline underline-offset-4"
+            className="underline underline-offset-4"
             href={sourceUrl(commit, row.original.dir)}
           >
             {row.original.dir}

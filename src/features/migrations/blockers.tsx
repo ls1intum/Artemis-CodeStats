@@ -28,11 +28,13 @@ export function Blockers({
       header: 'Unit',
       accessorFn: (u) => u.selector ?? unitFile(u),
       sortDescFirst: false,
-      meta: { className: 'whitespace-normal' },
+      meta: {
+        className: 'min-w-48 whitespace-normal [overflow-wrap:anywhere]',
+      },
       cell: ({ row, getValue }) => (
         <>
           <a
-            className="break-all underline underline-offset-4"
+            className="underline underline-offset-4"
             href={sourceUrl(detail.commit, unitFile(row.original))}
           >
             {getValue<string>()}
@@ -89,7 +91,7 @@ export function Blockers({
       id: 'classes',
       header: 'Bootstrap classes',
       accessorFn: (u) => Object.keys(u.tokens).length,
-      meta: { className: 'whitespace-normal' },
+      meta: { className: 'min-w-56 whitespace-normal' },
       cell: ({ row }) => (
         <>
           {Object.entries(row.original.tokens)

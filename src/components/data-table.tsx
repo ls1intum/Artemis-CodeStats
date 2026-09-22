@@ -28,11 +28,16 @@ declare module '@tanstack/react-table' {
   interface ColumnMeta<TData extends RowData, TValue> {
     align?: 'left' | 'right'
     className?: string
+    // The column that identifies the row; it stays in view while a wide table scrolls sideways.
+    sticky?: boolean
   }
 }
 
 // The shadcn data-table recipe over TanStack Table: sortable headers, an optional search box,
-// a sticky header inside a scroll box, and row-level styling hooks.
+// a sticky header inside a scroll box, and row-level styling hooks. Right-aligned (numeric)
+// columns shrink to their content so the text columns take the remaining width; a text column
+// opts into wrapping through meta.className. The sort indicator sits in the cell gutter and
+// appears on hover, focus or when sorted, so a header is never wider than its label.
 export function DataTable<T>({
   columns,
   data,
@@ -113,7 +118,10 @@ export function DataTable<T>({
                               : undefined
                       }
                       className={cn(
-                        align === 'right' && 'text-right',
+                        'relative',
+                        header.column.columnDef.meta?.sticky &&
+                          'sticky left-0 z-[1] bg-card',
+                        align === 'right' && 'w-[1%] text-right',
                         header.column.columnDef.meta?.className,
                       )}
                     >
@@ -121,26 +129,27 @@ export function DataTable<T>({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={cn(
-                            '-mx-2 h-7 gap-1 px-2 font-medium',
-                            align === 'right' && 'flex-row-reverse',
-                          )}
+                          className="group relative -mx-2 h-7 px-2 font-medium"
                           onClick={header.column.getToggleSortingHandler()}
                         >
                           {label}
-                          {sorted === 'asc' ? (
-                            <ArrowUp aria-hidden="true" className="size-3.5" />
-                          ) : sorted === 'desc' ? (
-                            <ArrowDown
-                              aria-hidden="true"
-                              className="size-3.5"
-                            />
-                          ) : (
-                            <ArrowUpDown
-                              aria-hidden="true"
-                              className="size-3.5 opacity-40"
-                            />
-                          )}
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              'absolute top-1/2 -translate-y-1/2',
+                              align === 'right' ? '-left-2.5' : '-right-2.5',
+                              !sorted &&
+                                'opacity-0 group-hover:opacity-40 group-focus-visible:opacity-40',
+                            )}
+                          >
+                            {sorted === 'asc' ? (
+                              <ArrowUp className="size-3.5" />
+                            ) : sorted === 'desc' ? (
+                              <ArrowDown className="size-3.5" />
+                            ) : (
+                              <ArrowUpDown className="size-3.5" />
+                            )}
+                          </span>
                         </Button>
                       ) : (
                         label
@@ -154,14 +163,20 @@ export function DataTable<T>({
           <TableBody>
             {rows.length ? (
               rows.map((row) => (
-                <TableRow key={row.id} className={rowClassName?.(row)}>
+                <TableRow
+                  key={row.id}
+                  className={cn('group/row', rowClassName?.(row))}
+                >
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta
                     return (
                       <TableCell
                         key={cell.id}
                         className={cn(
-                          meta?.align === 'right' && 'text-right tabular-nums',
+                          meta?.sticky &&
+                            'sticky left-0 bg-card group-hover/row:bg-muted',
+                          meta?.align === 'right' &&
+                            'w-[1%] text-right tabular-nums',
                           meta?.className,
                         )}
                       >

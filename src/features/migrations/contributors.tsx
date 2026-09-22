@@ -63,7 +63,7 @@ const columns: ColumnDef<Row, unknown>[] = [
     header: 'Contributor',
     accessorFn: (r) => r.author.name,
     sortDescFirst: false,
-    meta: { className: 'whitespace-nowrap' },
+    meta: { className: 'whitespace-nowrap', sticky: true },
     cell: ({ row }) => <AuthorName author={row.original.author} />,
   },
   count('prs', 'PRs'),
@@ -229,7 +229,8 @@ export function Contributors({
             </CardTitle>
             <CardDescription>
               The last {latest.length} commits up to the snapshot that reduced
-              legacy or adopted TUM UI, newest first.
+              legacy or adopted TUM UI, newest first. Δ hits is Bootstrap hits;
+              the other deltas count units.
             </CardDescription>
           </CardHeader>
           <CardContent>

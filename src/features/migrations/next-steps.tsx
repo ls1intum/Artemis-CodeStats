@@ -50,10 +50,12 @@ function QuickWins({ detail }: { detail: DetailView }) {
       header: 'Unit',
       accessorFn: (u) => u.selector ?? unitFile(u),
       sortDescFirst: false,
-      meta: { className: 'whitespace-normal' },
+      meta: {
+        className: 'min-w-40 whitespace-normal [overflow-wrap:anywhere]',
+      },
       cell: ({ row, getValue }) => (
         <a
-          className="break-all underline underline-offset-4"
+          className="underline underline-offset-4"
           href={sourceUrl(detail.commit, unitFile(row.original))}
         >
           {getValue<string>()}
@@ -79,7 +81,7 @@ function QuickWins({ detail }: { detail: DetailView }) {
       header: 'Changes',
       accessorFn: (u) => steps(u).length,
       sortDescFirst: false,
-      meta: { className: 'whitespace-normal text-xs' },
+      meta: { className: 'min-w-72 whitespace-normal text-xs' },
       cell: ({ row }) => {
         const list = steps(row.original)
         return (
@@ -100,6 +102,9 @@ function QuickWins({ detail }: { detail: DetailView }) {
       id: 'page',
       header: 'Routed page',
       accessorFn: (u) => (u.route !== undefined ? 1 : 0),
+      meta: {
+        className: 'max-w-56 whitespace-normal [overflow-wrap:anywhere]',
+      },
       cell: ({ row }) =>
         row.original.route !== undefined && (
           <code className="text-xs">{row.original.route}</code>

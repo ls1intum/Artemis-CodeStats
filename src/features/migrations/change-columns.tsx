@@ -50,7 +50,7 @@ export const changeColumns: ColumnDef<Contribution, unknown>[] = [
     header: 'Commit',
     accessorFn: (r) => pullRequest(r.subject).title,
     sortDescFirst: false,
-    meta: { className: 'max-w-md whitespace-normal' },
+    meta: { className: 'min-w-56 whitespace-normal', sticky: true },
     cell: ({ row }) => {
       const c = row.original
       const pr = pullRequest(c.subject)
@@ -83,9 +83,9 @@ export const changeColumns: ColumnDef<Contribution, unknown>[] = [
       )
     },
   },
-  delta('hits', 'Δ Bootstrap hits', 'down'),
-  delta('legacyFree', 'Δ legacy-free units', 'up'),
-  delta('primeng', 'Δ PrimeNG units', 'down'),
-  delta('ngBootstrap', 'Δ ng-bootstrap units', 'down'),
-  delta('tumUi', 'Δ TUM UI units', 'up'),
+  delta('hits', 'Δ hits', 'down'),
+  delta('legacyFree', 'Δ legacy-free', 'up'),
+  delta('primeng', 'Δ PrimeNG', 'down'),
+  delta('ngBootstrap', 'Δ ng-bootstrap', 'down'),
+  delta('tumUi', 'Δ TUM UI', 'up'),
 ]

@@ -135,7 +135,7 @@ test('section drawer opens from the table, lives in the URL, lists blockers and 
     .getByRole('radio', { name: 'PrimeNG / ngb', exact: true })
     .click()
   await expect(
-    dialog.locator('tbody').getByText('PrimeNG or ng-bootstrap remain').first(),
+    dialog.locator('tbody').getByText('PrimeNG / ngb', { exact: true }).first(),
   ).toBeVisible()
   await expect(
     dialog.locator('tbody').getByText('Bootstrap', { exact: true }),
@@ -163,6 +163,33 @@ test('section drawer opens from the table, lives in the URL, lists blockers and 
   await expect(trigger).toBeFocused()
   await page.goto('./#/?view=sections&section=course')
   await expect(page.getByRole('dialog', { name: 'course' })).toBeVisible()
+})
+
+test('every table fits a desktop viewport without sideways scrolling', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  for (const view of [
+    'overview',
+    'sections',
+    'pages',
+    'next',
+    'inventory',
+    'contributors',
+  ]) {
+    await page.goto(`./#/?view=${view}`)
+    await loaded(page)
+    await expect(page.getByRole('table').first()).toBeVisible()
+    const overflowing = await page.evaluate(() =>
+      [...document.querySelectorAll('table')]
+        .filter((t) => t.scrollWidth > t.parentElement!.clientWidth + 1)
+        .map(
+          (t) =>
+            t.closest('[data-slot=card]')?.querySelector('h2')?.textContent,
+        ),
+    )
+    expect(overflowing, view).toEqual([])
+  }
 })
 
 test('contributors are ranked, linked to GitHub and windowed', async ({

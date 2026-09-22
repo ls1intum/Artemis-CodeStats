@@ -131,7 +131,9 @@ function InventoryTable({
             header: targetLabel,
             accessorKey: 'target',
             sortDescFirst: false,
-            meta: { className: 'text-muted-foreground' },
+            meta: {
+              className: 'min-w-56 whitespace-normal text-muted-foreground',
+            },
             cell: ({ row }) =>
               row.original.gone ? 'gone since comparison' : row.original.target,
           } satisfies ColumnDef<Row, unknown>,
@@ -220,10 +222,12 @@ export function Inventory({
       header: 'File',
       accessorKey: 'path',
       sortDescFirst: false,
-      meta: { className: 'whitespace-normal' },
+      meta: {
+        className: 'min-w-48 whitespace-normal [overflow-wrap:anywhere]',
+      },
       cell: ({ getValue }) => (
         <a
-          className="break-all underline underline-offset-4"
+          className="underline underline-offset-4"
           href={sourceUrl(detail.commit, getValue<string>())}
         >
           {getValue<string>()}

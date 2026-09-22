@@ -66,6 +66,7 @@ export function Sections({
       header: 'Section',
       accessorFn: (r) => r.section.name,
       sortDescFirst: false,
+      meta: { sticky: true },
       cell: ({ row }) => (
         <button
           type="button"
@@ -295,6 +296,7 @@ export function FamilyHeatmap({ detail }: { detail: DetailView }) {
       header: 'Section',
       accessorKey: 'name',
       sortDescFirst: false,
+      meta: { sticky: true },
       cell: ({ getValue }) => (
         <span className="font-medium">{getValue<string>()}</span>
       ),

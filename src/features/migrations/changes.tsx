@@ -35,7 +35,7 @@ export function Changes({
         <CardDescription>
           Every commit between {day(compare.date)} and {day(snapshot.date)} that
           changed a total, largest Bootstrap change first; search by title or
-          author.
+          author. Δ hits is Bootstrap hits; the other deltas count units.
         </CardDescription>
       </CardHeader>
       <CardContent>

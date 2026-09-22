@@ -124,6 +124,10 @@ export function Pages({
         header: 'Route',
         accessorKey: 'route',
         sortDescFirst: false,
+        meta: {
+          className: 'min-w-48 whitespace-normal [overflow-wrap:anywhere]',
+          sticky: true,
+        },
         cell: ({ getValue }) => (
           <code className="text-xs">{getValue<string>() || '/'}</code>
         ),
@@ -133,7 +137,9 @@ export function Pages({
         header: 'Page',
         accessorFn: (u) => u.selector ?? unitFile(u),
         sortDescFirst: false,
-        meta: { className: 'whitespace-normal' },
+        meta: {
+          className: 'min-w-40 whitespace-normal [overflow-wrap:anywhere]',
+        },
         cell: ({ row }) => (
           <a
             className="underline underline-offset-4"
@@ -173,7 +179,7 @@ export function Pages({
       },
       {
         id: 'parents',
-        header: 'Parent route hits',
+        header: 'Parent hits',
         accessorKey: 'routeHits',
         meta: { align: 'right' },
         cell: ({ getValue }) =>
@@ -188,7 +194,7 @@ export function Pages({
       },
       {
         id: 'components',
-        header: 'Units with PrimeNG / ngb',
+        header: 'PrimeNG / ngb',
         accessorFn: (u) =>
           u.closureComponents +
           u.routeComponents +
@@ -247,7 +253,10 @@ export function Pages({
           </CardTitle>
           <CardDescription>
             Sorted by state, then by the fewest hits in the page, its imports
-            and its parent routes; search by route, page or section.
+            and its parent routes; search by route, page or section. Hits are
+            Bootstrap hits in the page itself, in what it imports and in the
+            route components it renders inside; PrimeNG / ngb counts the units
+            among those that still use PrimeNG or ng-bootstrap.
           </CardDescription>
         </CardHeader>
         <CardContent>
