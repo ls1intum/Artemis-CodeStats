@@ -12,7 +12,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { analyzeTree } from './analyze'
+import { analyzeTree, kitSourceDirs, ruleSourcePaths } from './analyze'
 import { githubLoginLookup, loginFromEmail, type LoginLookup } from './authors'
 import { creditsOf, fetchPullHeads } from './credits'
 import { planHistory } from './history'
@@ -45,9 +45,9 @@ const analyzedPaths = [
   'src/main/webapp/app',
   'src/main/webapp/content',
   'src/main/webapp/tailwind.css',
-  'rules/no-bootstrap-classes.mjs',
+  ...ruleSourcePaths,
   'eslint.config.mjs',
-  'packages/tum-ui/src/lib',
+  ...kitSourceDirs,
 ]
 
 export async function generateReports({

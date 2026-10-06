@@ -6,8 +6,10 @@ import {
   analyzeScript,
   analyzeStyles,
   analyzeTemplate,
+  kitSourceDirs,
   loadRule,
   readKit,
+  ruleSourcePaths,
   styleHits,
   type Kit,
   type Rule,
@@ -166,9 +168,8 @@ export async function creditsOf({
       '--name-only',
       commit,
       '--',
-      'rules/no-bootstrap-classes.mjs',
-      'packages/tum-ui/src/lib',
-      'src/main/webapp/app/shared-ui/tum-ui',
+      ...ruleSourcePaths,
+      ...kitSourceDirs,
     )
       .split('\n')
       .filter(Boolean)

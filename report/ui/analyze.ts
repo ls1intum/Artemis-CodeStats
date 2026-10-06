@@ -29,7 +29,7 @@ import {
   type Unit,
 } from '../../src/features/migrations/model'
 
-// The exports of rules/no-bootstrap-classes.mjs, Artemis's own regression-lock matcher.
+// The exports of no-bootstrap-classes.mjs, Artemis's own regression-lock matcher.
 export type Rule = {
   isBanned(token: string): boolean
   bannedClassesInBindingExpression(source: string): string[]
@@ -76,7 +76,17 @@ export type RouteNode = {
   loadChildren?: Reference
 }
 
-const kitSourceDirs = ['packages/tum-ui/src/lib', `${appRoot}/shared-ui/tum-ui`]
+// Newest location first. Artemis renamed packages/tum-ui to packages/tum-aet-ui (#13981); older revisions keep the old paths.
+export const ruleSourcePaths = [
+  'config/eslint/rules/no-bootstrap-classes.mjs',
+  'rules/no-bootstrap-classes.mjs',
+]
+
+export const kitSourceDirs = [
+  'packages/tum-aet-ui/src/lib',
+  'packages/tum-ui/src/lib',
+  `${appRoot}/shared-ui/tum-ui`,
+]
 // Bootstrap's spacing scale keeps its class names under Tailwind but changes value; it is not banned.
 const spacingClass = /^(?:[mp][tbsexy]?-(?:[0-5]|auto)|gap-[0-5])$/
 // Utilities that exist only in Tailwind, as evidence that a template already uses it.
@@ -526,8 +536,19 @@ function listFiles(root: string, directory: string): string[] {
 // Once Artemis deletes the rule, Bootstrap is retired: nothing is banned and nothing is locked.
 export const retiredRule = 'retired'
 export async function loadRule(root: string) {
-  const path = join(root, 'rules/no-bootstrap-classes.mjs')
-  if (!existsSync(path))
+  const path = ruleSourcePaths
+    .map((p) => join(root, p))
+    .find((p) => existsSync(p))
+  if (!path) {
+    const config = join(root, 'eslint.config.mjs')
+    // A rule that is gone while the lint config still names it was moved, not retired; reporting zero would be wrong.
+    if (
+      existsSync(config) &&
+      readFileSync(config, 'utf8').includes('no-bootstrap-classes')
+    )
+      throw new Error(
+        'no-bootstrap-classes.mjs not found, but eslint.config.mjs still references it',
+      )
     return {
       rule: {
         isBanned: () => false,
@@ -535,6 +556,7 @@ export async function loadRule(root: string) {
       } satisfies Rule,
       sha: retiredRule,
     }
+  }
   const source = readFileSync(path)
   const rule = (await import(pathToFileURL(path).href)) as Partial<Rule>
   if (
