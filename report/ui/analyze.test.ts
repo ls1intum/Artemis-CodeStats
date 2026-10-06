@@ -302,6 +302,48 @@ test('tree analysis derives units, status, closure, lockability and inventories'
   assert.match(detail.rule, /^[a-f0-9]{40}$/)
 })
 
+test('the kit and the rule are found at their post-rename Artemis paths', async () => {
+  const renamed = mkdtempSync(join(tmpdir(), 'codestats-renamed-'))
+  try {
+    writeFixture(
+      renamed,
+      Object.fromEntries(
+        Object.entries(files).map(([path, text]) => [
+          path
+            .replace('packages/tum-ui/', 'packages/tum-aet-ui/')
+            .replace('rules/', 'config/eslint/rules/'),
+          text.replaceAll('packages/tum-ui/', 'packages/tum-aet-ui/'),
+        ]),
+      ),
+    )
+    const before = await analyzeTree(root, meta)
+    const after = await analyzeTree(renamed, meta)
+    assert.deepEqual(after.summary.totals, before.summary.totals)
+    assert.deepEqual(after.detail.kit, before.detail.kit)
+    assert.equal(after.detail.rule, before.detail.rule)
+  } finally {
+    rmSync(renamed, { recursive: true, force: true })
+  }
+})
+
+test('a rule that is missing but still referenced by the lint config is an error, not retirement', async () => {
+  const moved = mkdtempSync(join(tmpdir(), 'codestats-moved-'))
+  try {
+    writeFixture(
+      moved,
+      Object.fromEntries(
+        Object.entries(files).filter(([path]) => !/^rules\//.test(path)),
+      ),
+    )
+    await assert.rejects(
+      analyzeTree(moved, meta),
+      /enables no-bootstrap-classes/,
+    )
+  } finally {
+    rmSync(moved, { recursive: true, force: true })
+  }
+})
+
 test('a deleted Bootstrap rule means Bootstrap is retired, not an error', async () => {
   const retired = mkdtempSync(join(tmpdir(), 'codestats-retired-'))
   try {
