@@ -142,7 +142,8 @@ export function Pages({
   ]
   const pageColumns = useMemo<ColumnDef<UnitView, unknown>[]>(() => {
     const unitById = new Map(all.units.map((u) => [u.id, u]))
-    // Every unit that still stands between this page and legacy-free, with its hits.
+    // Every unit with Bootstrap that this page renders, each once: the page, what it imports,
+    // and the layouts it renders inside with what they import.
     const toFix = (u: UnitView) => {
       const items: { unit: UnitView; role: string }[] = []
       if (hits(u) > 0) items.push({ unit: u, role: 'the page' })
@@ -150,15 +151,15 @@ export function Pages({
         const b = unitById.get(id)
         if (b) items.push({ unit: b, role: 'imported' })
       }
-      for (const id of u.routeParents ?? []) {
-        const p = unitById.get(id)
-        if (!p) continue
-        if (hits(p) > 0) items.push({ unit: p, role: 'layout' })
-        for (const b of p.blockers) {
-          const pb = unitById.get(b)
-          if (pb && !items.some((i) => i.unit.id === pb.id))
-            items.push({ unit: pb, role: 'imported by a layout' })
-        }
+      for (const id of u.routeBlockers) {
+        const b = unitById.get(id)
+        if (b)
+          items.push({
+            unit: b,
+            role: u.routeParents?.includes(id)
+              ? 'layout'
+              : 'imported by a layout',
+          })
       }
       return items.sort((a, b) => hits(b.unit) - hits(a.unit))
     }

@@ -44,7 +44,7 @@ const measures = [
   },
   {
     key: 'tumUi',
-    title: 'Units using TUM UI',
+    title: 'Units using TUM AET UI',
     read: (t: Totals) => t.tumUi,
     color: 'var(--color-status-locked)',
   },
@@ -59,10 +59,10 @@ export function Trends({
   snapshot: Summary
   latest: boolean
 }) {
-  const data = series.map((s, i) => ({
+  const data = series.map((s) => ({
     time: Date.parse(s.date),
     subject: s.subject,
-    locks: i === 0 ? 0 : s.totals.lockedDirs - series[i - 1].totals.lockedDirs,
+    locks: s.flow?.locked ?? 0,
     ...Object.fromEntries(measures.map((m) => [m.key, m.read(s.totals)])),
   }))
   return (
@@ -73,7 +73,8 @@ export function Trends({
         </CardTitle>
         <CardDescription>
           Every first-parent commit on develop since package adoption. Dashed
-          lines mark commits that changed the Bootstrap lock list.
+          lines mark commits that put existing units under the Bootstrap lock
+          list.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6 md:grid-cols-2">

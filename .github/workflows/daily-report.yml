@@ -68,3 +68,32 @@ jobs:
     uses: ./.github/workflows/deploy-github-pages.yml
     with:
       ref: ${{ needs.generate-report.outputs.commit }}
+
+  # A failing collection must not go unnoticed: one open issue tracks it, with a comment per
+  # failed run, and the next successful run closes it.
+  alert:
+    needs: [generate-report, deploy]
+    if: always() && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TITLE: UI migration collection is failing
+      RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      FAILED: ${{ needs.generate-report.result == 'failure' || needs.deploy.result == 'failure' }}
+    steps:
+      - name: Open, update or close the tracking issue
+        run: |
+          issue=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number // empty')
+          if [ "$FAILED" = "true" ]; then
+            if [ -n "$issue" ]; then
+              gh issue comment "$issue" --body "Still failing: $RUN"
+            else
+              gh issue create --title "$TITLE" --body "The hourly UI migration collection failed and the dashboard is no longer updated. First failing run: $RUN. Read the failed step's log; the issue closes itself after the next successful run."
+            fi
+          elif [ -n "$issue" ]; then
+            gh issue close "$issue" --comment "Recovered: $RUN"
+          fi

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -156,7 +155,6 @@ export function Controls({
   })
   const earlier = all.slice(0, all.indexOf(snapshot))
   const week = weekBefore(earlier, snapshot)
-  const stale = Date.now() - Date.parse(latest.date) > 7 * 86_400_000
   return (
     <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
       <CommitPicker
@@ -213,11 +211,6 @@ export function Controls({
         </a>{' '}
         · {day(snapshot.date, true)}
         {snapshot === latest && ` · collected ${dayTime(manifest.generatedAt)}`}
-        {stale && (
-          <Badge variant="outline" className="ml-2">
-            stale
-          </Badge>
-        )}
       </p>
     </div>
   )

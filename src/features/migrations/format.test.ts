@@ -2,10 +2,16 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { lockEntries, pullRequest, unitPath, type Summary } from './model'
 import { day, percent, velocity } from './format'
-import { bootstrapTarget, kitCoverage, kitTarget, ngbTarget } from './targets'
+import {
+  bootstrapTarget,
+  kitCoverage,
+  kitTarget,
+  ngbTarget,
+  partOfHost,
+} from './targets'
 
 const summary = (day: number, hits: number): Summary => ({
-  commit: 'a'.repeat(40),
+  commit: String(day).padStart(40, '0'),
   date: `2026-09-${String(day).padStart(2, '0')}T12:00:00Z`,
   subject: '',
   author: { name: 'Ada' },
@@ -27,6 +33,7 @@ const summary = (day: number, hits: number): Summary => ({
     pages: 0,
     pagesClean: 0,
     legacyFree: 0,
+    bootstrapUnits: 0,
   },
   sections: {},
 })
@@ -67,34 +74,47 @@ test('formatting', () => {
 })
 
 test('targets come from the guideline table, not from prefixes', () => {
-  assert.equal(bootstrapTarget('btn-primary'), 'tum-ui-button / tumUiButton')
-  assert.equal(bootstrapTarget('nav-tabs'), 'tum-ui-tabs')
+  assert.equal(
+    bootstrapTarget('btn-primary'),
+    'tumaet-ui-button / tumAetUiButton',
+  )
+  assert.equal(bootstrapTarget('nav-tabs'), 'tumaet-ui-tabs')
   assert.equal(bootstrapTarget('d-md-inline'), 'md:inline')
   assert.equal(bootstrapTarget('col-lg-9'), 'lg:col-span-9')
   assert.equal(bootstrapTarget('justify-content-between'), 'justify-between')
   assert.equal(bootstrapTarget('text-danger'), 'text-state-danger')
-  assert.equal(bootstrapTarget('form-control-label'), 'tum-ui-form-field')
+  assert.equal(bootstrapTarget('form-control-label'), 'tumaet-ui-form-field')
   assert.equal(
     bootstrapTarget('card-resizable'),
     'custom class: rename (banned by prefix only)',
   )
-  assert.equal(bootstrapTarget('card-body'), 'tum-ui-card / tum-ui-panel')
+  assert.equal(bootstrapTarget('card-body'), 'tumaet-ui-card / tumaet-ui-panel')
   const kit = new Set([
-    'tum-ui-dialog',
-    'tum-ui-progress-bar',
-    'tumUiTooltip',
-    'tumUiInput',
+    'tumaet-ui-dialog',
+    'tumaet-ui-progress-bar',
+    'tumAetUiTooltip',
+    'tumAetUiInput',
   ])
-  assert.equal(kitTarget('p-dialog', kit), 'tum-ui-dialog')
-  assert.equal(kitTarget('DialogService', kit), 'tum-ui-dialog')
-  assert.equal(kitTarget('pInputText', kit), 'tumUiInput')
-  assert.equal(kitTarget('p-progressbar', kit), 'tum-ui-progress-bar')
-  assert.equal(kitTarget('pTooltip', kit), 'tumUiTooltip')
+  assert.equal(kitTarget('p-dialog', kit), 'tumaet-ui-dialog')
+  assert.equal(kitTarget('DialogService', kit), 'tumaet-ui-dialog')
+  assert.equal(kitTarget('pInputText', kit), 'tumAetUiInput')
+  assert.equal(kitTarget('p-progressbar', kit), 'tumaet-ui-progress-bar')
+  assert.equal(kitTarget('pTooltip', kit), 'tumAetUiTooltip')
   assert.equal(kitTarget('p-table', kit), '', 'not in this kit yet')
   assert.equal(kitTarget('p-skeleton', kit), 'no kit component yet')
-  assert.equal(kitTarget('pTemplate', kit), '')
-  assert.equal(ngbTarget('ngbTooltip', kit), 'tumUiTooltip')
-  assert.equal(ngbTarget('NgbModal', kit), 'tum-ui-dialog')
+  assert.equal(kitTarget('pTemplate', kit), partOfHost)
+  // Case and hyphen variants are one component; parts go with their host.
+  assert.equal(
+    kitTarget('p-confirmDialog', kit),
+    kitTarget('p-confirmdialog', kit),
+  )
+  assert.equal(kitTarget('p-progress-bar', kit), 'tumaet-ui-progress-bar')
+  assert.equal(kitTarget('p-accordion-header', kit), partOfHost)
+  assert.equal(kitTarget('DynamicDialogRef', kit), 'tumaet-ui-dialog')
+  assert.equal(ngbTarget('ngb-highlight', kit), partOfHost)
+  assert.equal(ngbTarget('NgbPopover', kit), '', 'no popover in this kit')
+  assert.equal(ngbTarget('ngbTooltip', kit), 'tumAetUiTooltip')
+  assert.equal(ngbTarget('NgbModal', kit), 'tumaet-ui-dialog')
   assert.equal(ngbTarget('ngb-rating', kit), 'no kit component yet')
   assert.deepEqual(
     kitCoverage(
@@ -102,9 +122,11 @@ test('targets come from the guideline table, not from prefixes', () => {
         { name: 'p-dialog', occurrences: 3 },
         { name: 'p-skeleton', occurrences: 2 },
         { name: 'p-table', occurrences: 1 },
+        { name: 'pTemplate', occurrences: 4 },
       ],
       (n) => kitTarget(n, kit),
     ),
     [3, 6],
+    'parts count with their host, not on their own',
   )
 })

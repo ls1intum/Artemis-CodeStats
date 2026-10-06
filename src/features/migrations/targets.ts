@@ -87,39 +87,39 @@ const exact: [RegExp, (m: RegExpExecArray) => string][] = [
     /^text-(muted|body(-.+)?|secondary|light|dark)$/,
     () => '--text-body-secondary',
   ],
-  [/^table(-.+)?$/, () => 'tum-ui-table / tumUiTable'],
-  [/^btn-group(-.+)?$/, () => 'tum-ui-button-group'],
-  [/^(close|btn-close(-white)?)$/, () => 'tum-ui-button'],
-  [/^btn(-.+)?$/, () => 'tum-ui-button / tumUiButton'],
-  [/^badge$/, () => 'tum-ui-tag'],
-  [/^alert(-.+)?$/, () => 'tum-ui-message'],
-  [/^card(-.+)?$/, () => 'tum-ui-card / tum-ui-panel'],
-  [/^form-check(-.+)?$/, () => 'tum-ui-checkbox / tum-ui-radio-button'],
-  [/^form-select(-.+)?$/, () => 'tum-ui-select'],
-  [/^form-control-label$/, () => 'tum-ui-form-field'],
-  [/^form-control(-plaintext|-color)?$/, () => 'tumUiInput'],
-  [/^form-control-(sm|lg)$/, () => 'tumUiInput size'],
-  [/^form-range$/, () => 'tumUiInput type=range'],
+  [/^table(-.+)?$/, () => 'tumaet-ui-table / tumAetUiTable'],
+  [/^btn-group(-.+)?$/, () => 'tumaet-ui-button-group'],
+  [/^(close|btn-close(-white)?)$/, () => 'tumaet-ui-button'],
+  [/^btn(-.+)?$/, () => 'tumaet-ui-button / tumAetUiButton'],
+  [/^badge$/, () => 'tumaet-ui-tag'],
+  [/^alert(-.+)?$/, () => 'tumaet-ui-message'],
+  [/^card(-.+)?$/, () => 'tumaet-ui-card / tumaet-ui-panel'],
+  [/^form-check(-.+)?$/, () => 'tumaet-ui-checkbox / tumaet-ui-radio-button'],
+  [/^form-select(-.+)?$/, () => 'tumaet-ui-select'],
+  [/^form-control-label$/, () => 'tumaet-ui-form-field'],
+  [/^form-control(-plaintext|-color)?$/, () => 'tumAetUiInput'],
+  [/^form-control-(sm|lg)$/, () => 'tumAetUiInput size'],
+  [/^form-range$/, () => 'tumAetUiInput type=range'],
   [
     /^(form-(group|label|text|floating)|col-form-label(-.+)?|(valid|invalid)-feedback)$/,
-    () => 'tum-ui-form-field',
+    () => 'tumaet-ui-form-field',
   ],
-  [/^input-group(-.+)?$/, () => 'tum-ui-input-group'],
-  [/^(modal|offcanvas)(-.+)?$/, () => 'tum-ui-dialog'],
-  [/^dropdown(-.+)?$/, () => 'tum-ui-menu'],
+  [/^input-group(-.+)?$/, () => 'tumaet-ui-input-group'],
+  [/^(modal|offcanvas)(-.+)?$/, () => 'tumaet-ui-dialog'],
+  [/^dropdown(-.+)?$/, () => 'tumaet-ui-menu'],
   [
     /^nav(-(link|item|tabs|pills|fill|justified|underline))?$/,
-    () => 'tum-ui-tabs',
+    () => 'tumaet-ui-tabs',
   ],
   [/^navbar(-.+)?$/, () => 'application shell (no kit component)'],
-  [/^(pagination|page-link|page-item)$/, () => 'tum-ui-paginator'],
-  [/^spinner-(border|grow)(-sm)?$/, () => 'tum-ui-progress-spinner'],
-  [/^popover(-.+)?$/, () => 'tum-ui-popover'],
-  [/^toast(-.+)?$/, () => 'tum-ui-message'],
-  [/^list-group(-.+)?$/, () => 'tum-ui-list'],
+  [/^(pagination|page-link|page-item)$/, () => 'tumaet-ui-paginator'],
+  [/^spinner-(border|grow)(-sm)?$/, () => 'tumaet-ui-progress-spinner'],
+  [/^popover(-.+)?$/, () => 'tumaet-ui-popover'],
+  [/^toast(-.+)?$/, () => 'tumaet-ui-message'],
+  [/^list-group(-.+)?$/, () => 'tumaet-ui-list'],
   [
     /^(accordion(-.+)?|collapse|collapsing|collapse-horizontal)$/,
-    () => 'tum-ui-panel',
+    () => 'tumaet-ui-panel',
   ],
   [/^breadcrumb(-.+)?$/, () => 'plain markup with Tailwind'],
   [/^carousel(-.+)?$/, () => 'no kit component yet'],
@@ -135,84 +135,85 @@ export const bootstrapTarget = (token: string) => {
   return ''
 }
 
-// PrimeNG elements, directives and services map to the kit component that covers the same job,
-// only when the kit of the analyzed commit ships that selector.
+// PrimeNG and ng-bootstrap usages map to the kit component that covers the same job, only when
+// the kit of the analyzed commit ships it. Names are compared case- and hyphen-insensitively
+// (`p-confirmDialog`, `p-confirmdialog`, `p-confirm-dialog` are one component). Parts of a
+// component (templates, sub-elements, icons) go away with their host and are not gaps of their own.
+export const partOfHost = 'part of its host component'
+const noKit = 'no kit component yet'
+const key = (name: string) => name.toLowerCase().replace(/-/g, '')
 const primengKit: [RegExp, string][] = [
+  [/^(pinputtext|pinputtextarea|ptextarea)$/, 'tumAetUiInput'],
   [
-    /^(pInputText|p-inputtext|pInputTextarea|pTextarea|p-textarea)$/,
-    'tumUiInput',
+    /^(dialogservice|dynamicdialogref|dynamicdialogconfig|pdialog|pdynamicdialog)$/,
+    'tumaet-ui-dialog',
   ],
   [
-    /^(DialogService|DynamicDialogRef|DynamicDialogConfig|p-dialog|p-dynamicdialog)$/,
-    'tum-ui-dialog',
+    /^(confirmationservice|pconfirmdialog|pconfirmpopup)$/,
+    'tumaet-ui-confirm-dialog',
+  ],
+  [/^(messageservice|ptoast|pmessage|pmessages)$/, 'tumaet-ui-message'],
+  [/^(pbadge|ptag)$/, 'tumaet-ui-tag'],
+  [/^(pdropdown|pselect|pmultiselect|plistbox)$/, 'tumaet-ui-select'],
+  [/^(pinputswitch|ptoggleswitch)$/, 'tumaet-ui-toggle-switch'],
+  [/^pprogressbar$/, 'tumaet-ui-progress-bar'],
+  [/^pprogressspinner$/, 'tumaet-ui-progress-spinner'],
+  [
+    /^(ptabs|ptablist|ptab|ptabpanels|ptabpanel|ptabview|ptabmenu)$/,
+    'tumaet-ui-tabs',
+  ],
+  [/^(pmenu|ptieredmenu|pcontextmenu|pmenubar)$/, 'tumaet-ui-menu'],
+  [/^(pselectbutton|ptogglebutton)$/, 'tumaet-ui-select-button'],
+  [/^pautocomplete$/, 'tumaet-ui-autocomplete'],
+  [/^(pcalendar|pdatepicker)$/, 'tumaet-ui-date-picker'],
+  [/^(piconfield|pinputicon)$/, 'tumaet-ui-icon-field'],
+  [/^(pinputgroup|pinputgroupaddon)$/, 'tumaet-ui-input-group'],
+  [/^pinputnumber$/, 'tumaet-ui-input-number'],
+  [/^pradiobutton$/, 'tumaet-ui-radio-button'],
+  [/^pcheckbox$/, 'tumaet-ui-checkbox'],
+  [/^ppaginator$/, 'tumaet-ui-paginator'],
+  [/^(ppanel|pfieldset|paccordion)$/, 'tumaet-ui-panel'],
+  [/^pcard$/, 'tumaet-ui-card'],
+  [/^(ppopover|poverlaypanel)$/, 'tumaet-ui-popover'],
+  [/^ptooltip$/, 'tumAetUiTooltip'],
+  [/^(pbutton|pbuttondirective)$/, 'tumaet-ui-button'],
+  [/^pbuttongroup$/, 'tumaet-ui-button-group'],
+  [/^(ptable|ptreetable|pscroller)$/, 'tumaet-ui-table'],
+  [/^(psortablecolumn|psorticon)$/, 'tumAetUiSortableColumn'],
+  [/^pchip$/, 'tumaet-ui-chip'],
+  [/^pchart$/, 'tumaet-ui-bar-chart'],
+  [
+    /^(ptemplate|pbuttonicon|pbuttonlabel|psize|pfrozencolumn|paccordion(panel|header|content|tab)|pcolumnfilter|ptable(header)?checkbox|pautofocus|pripple|pstyleclass)$/,
+    partOfHost,
   ],
   [
-    /^(ConfirmationService|p-confirmdialog|p-confirmpopup)$/,
-    'tum-ui-confirm-dialog',
-  ],
-  [/^(MessageService|p-toast|p-message|p-messages)$/, 'tum-ui-message'],
-  [/^(p-badge|pBadge|p-tag)$/, 'tum-ui-tag'],
-  [/^(p-dropdown|p-select|p-multiselect|p-listbox)$/, 'tum-ui-select'],
-  [/^(p-inputswitch|p-toggleswitch)$/, 'tum-ui-toggle-switch'],
-  [/^(p-progressbar)$/, 'tum-ui-progress-bar'],
-  [/^(p-progressspinner)$/, 'tum-ui-progress-spinner'],
-  [
-    /^(p-tabs|p-tablist|p-tab|p-tabpanels|p-tabpanel|p-tabview|p-tabmenu)$/,
-    'tum-ui-tabs',
-  ],
-  [/^(p-menu|p-tieredmenu|p-contextmenu|p-menubar)$/, 'tum-ui-menu'],
-  [/^(p-selectbutton|p-togglebutton)$/, 'tum-ui-select-button'],
-  [/^(p-autocomplete)$/, 'tum-ui-autocomplete'],
-  [/^(p-calendar|p-datepicker)$/, 'tum-ui-date-picker'],
-  [/^(p-iconfield|p-inputicon)$/, 'tum-ui-icon-field'],
-  [/^(p-inputgroup|p-inputgroupaddon)$/, 'tum-ui-input-group'],
-  [/^(p-inputnumber)$/, 'tum-ui-input-number'],
-  [/^(p-radiobutton)$/, 'tum-ui-radio-button'],
-  [/^(p-checkbox)$/, 'tum-ui-checkbox'],
-  [/^(p-paginator)$/, 'tum-ui-paginator'],
-  [/^(p-panel|p-fieldset|p-accordion|p-accordion-panel)$/, 'tum-ui-panel'],
-  [/^(p-card)$/, 'tum-ui-card'],
-  [/^(p-popover|p-overlaypanel)$/, 'tum-ui-popover'],
-  [/^(pTooltip)$/, 'tumUiTooltip'],
-  [/^(pButton|p-button)$/, 'tum-ui-button'],
-  [/^(p-buttongroup)$/, 'tum-ui-button-group'],
-  [/^(p-table|p-treetable|p-scroller)$/, 'tum-ui-table'],
-  [/^(pSortableColumn|p-sorticon)$/, 'tumUiSortableColumn'],
-  [/^(p-chip)$/, 'tum-ui-chip'],
-  [/^(p-chart)$/, 'tum-ui-bar-chart'],
-  [
-    /^(p-skeleton|p-divider|p-splitter|p-splitterpanel|p-avatar|p-rating|p-slider|p-knob|p-tree|p-steps|p-stepper|p-editor|p-fileupload|p-galleria|p-image|p-carousel|p-timeline|p-orderlist|p-picklist|p-colorpicker|p-inputmask|p-password|p-floatlabel)$/,
-    'no kit component yet',
+    /^(pskeleton|pdivider|psplitter|psplitterpanel|pavatar|prating|pslider|pknob|ptree|psteps|pstepper|peditor|pfileupload|pgalleria|pimage|pcarousel|ptimeline|porderlist|ppicklist|pcolorpicker|pinputmask|ppassword|pfloatlabel)$/,
+    noKit,
   ],
 ]
-export const kitTarget = (name: string, kit: Set<string>) => {
-  const target = primengKit.find(([re]) => re.test(name))?.[1]
-  if (target) return target.startsWith('no ') || kit.has(target) ? target : ''
-  // Attribute directives such as pRipple or pTemplate belong to their host component.
-  return ''
-}
-
-// ng-bootstrap components and directives map to the kit component that covers the same job.
 const ngbKit: [RegExp, string][] = [
-  [/^(ngbTooltip|NgbTooltip)/, 'tumUiTooltip'],
-  [/^(ngb-popover|ngbPopover)/, 'tum-ui-popover'],
-  [/^(NgbModal|NgbActiveModal|ngb-modal)/, 'tum-ui-dialog'],
-  [/^ngbDropdown/, 'tum-ui-menu'],
-  [/^ngb-pagination/, 'tum-ui-paginator'],
-  [/^(ngbNav|ngb-nav)/, 'tum-ui-tabs'],
-  [/^(ngb-datepicker|ngbDatepicker)/, 'tum-ui-date-picker'],
-  [/^(ngbCollapse|ngb-accordion|ngbAccordion)/, 'tum-ui-panel'],
-  [/^(ngbTypeahead|ngb-typeahead)/, 'tum-ui-autocomplete'],
-  [/^ngb-progressbar/, 'tum-ui-progress-bar'],
-  [/^ngb-alert/, 'tum-ui-message'],
-  [/^ngb-carousel/, 'no kit component yet'],
-  [/^ngb-rating/, 'no kit component yet'],
-  [/^ngb-timepicker/, 'no kit component yet'],
+  [/^ngbtooltip$/, 'tumAetUiTooltip'],
+  [/^(ngbpopover)$/, 'tumaet-ui-popover'],
+  [/^(ngbmodal|ngbactivemodal|ngbmodalref)$/, 'tumaet-ui-dialog'],
+  [/^ngbdropdown/, 'tumaet-ui-menu'],
+  [/^ngbpagination$/, 'tumaet-ui-paginator'],
+  [/^ngbnav/, 'tumaet-ui-tabs'],
+  [/^(ngbdatepicker|ngbinputdatepicker)$/, 'tumaet-ui-date-picker'],
+  [/^(ngbcollapse|ngbaccordion)/, 'tumaet-ui-panel'],
+  [/^ngbtypeahead$/, 'tumaet-ui-autocomplete'],
+  [/^ngbprogressbar$/, 'tumaet-ui-progress-bar'],
+  [/^ngbalert$/, 'tumaet-ui-message'],
+  [/^(ngbhighlight|ngbautofocus)$/, partOfHost],
+  [/^(ngbcarousel|ngbslide|ngbrating|ngbtimepicker)/, noKit],
 ]
-export const ngbTarget = (name: string, kit: Set<string>) => {
-  const target = ngbKit.find(([re]) => re.test(name))?.[1] ?? ''
-  return target.startsWith('no ') || kit.has(target) ? target : ''
+const target = (table: [RegExp, string][], name: string, kit: Set<string>) => {
+  const found = table.find(([re]) => re.test(key(name)))?.[1] ?? ''
+  return found === partOfHost || found === noKit || kit.has(found) ? found : ''
 }
+export const kitTarget = (name: string, kit: Set<string>) =>
+  target(primengKit, name, kit)
+export const ngbTarget = (name: string, kit: Set<string>) =>
+  target(ngbKit, name, kit)
 
 // Families group the remaining classes by the kind of work they need.
 export const families = [
@@ -237,16 +238,20 @@ const familyPatterns: [RegExp, Family][] = [
 export const family = (token: string): Family =>
   familyPatterns.find(([re]) => re.test(token))?.[1] ?? 'Components'
 
-// Occurrences a kit component already covers, versus all occurrences of the library.
+// Occurrences a kit component already covers, versus all occurrences of the library; parts of a
+// component count with their host, not on their own.
 export const kitCoverage = (
   entries: { name: string; occurrences: number }[],
   target: (name: string) => string,
-): [number, number] => [
-  entries
-    .filter((e) => {
-      const t = target(e.name)
-      return t && !t.startsWith('no ')
-    })
-    .reduce((n, e) => n + e.occurrences, 0),
-  entries.reduce((n, e) => n + e.occurrences, 0),
-]
+): [number, number] => {
+  const counted = entries.filter((e) => target(e.name) !== partOfHost)
+  return [
+    counted
+      .filter((e) => {
+        const t = target(e.name)
+        return t && t !== noKit
+      })
+      .reduce((n, e) => n + e.occurrences, 0),
+    counted.reduce((n, e) => n + e.occurrences, 0),
+  ]
+}

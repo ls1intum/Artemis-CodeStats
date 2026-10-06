@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table'
 import { commitUrl, pullRequest } from './model'
-import { day } from './format'
+import { day, number } from './format'
 import { Delta } from './status'
 import { CreditedAuthors } from './author'
 import type { Contribution } from './contributions'
@@ -43,7 +43,12 @@ export const changeColumns: ColumnDef<Contribution, unknown>[] = [
     accessorFn: (r) => r.credits.map((c) => c.author.name).join(', '),
     sortDescFirst: false,
     meta: { className: 'whitespace-nowrap' },
-    cell: ({ row }) => <CreditedAuthors credits={row.original.credits} />,
+    cell: ({ row }) =>
+      row.original.credits.length ? (
+        <CreditedAuthors credits={row.original.credits} />
+      ) : (
+        <span className="text-xs text-muted-foreground">several commits</span>
+      ),
   },
   {
     id: 'commit',
@@ -63,10 +68,10 @@ export const changeColumns: ColumnDef<Contribution, unknown>[] = [
             {pr.number ? `#${pr.number}` : c.commit.slice(0, 8)}
           </a>{' '}
           <span className="text-muted-foreground">{pr.title}</span>
-          {c.locks !== 0 && (
+          {c.locked !== 0 && (
             <span className="ml-2 text-xs text-muted-foreground">
-              {c.locks > 0 ? '+' : ''}
-              {c.locks} lock entr{Math.abs(c.locks) === 1 ? 'y' : 'ies'}
+              {c.locked > 0 ? '+' : ''}
+              {c.locked} unit{Math.abs(c.locked) === 1 ? '' : 's'} locked
             </span>
           )}
           {!c.attributable && (
@@ -83,9 +88,29 @@ export const changeColumns: ColumnDef<Contribution, unknown>[] = [
       )
     },
   },
-  delta('hits', 'Δ hits', 'down'),
+  {
+    ...delta('hits', 'Δ hits', 'down'),
+    // Net change, with the gross flow when the commit both removed and added hits.
+    cell: ({ row }) => {
+      const c = row.original
+      if (!c.hits && !c.hitsRemoved && !c.hitsAdded) return null
+      return (
+        <span className="inline-flex flex-col items-end">
+          <Delta
+            value={c.hits}
+            className={c.ruleChanged ? 'line-through opacity-60' : undefined}
+          />
+          {c.hitsRemoved > 0 && c.hitsAdded > 0 && (
+            <span className="text-xs text-muted-foreground">
+              −{number(c.hitsRemoved)} +{number(c.hitsAdded)}
+            </span>
+          )}
+        </span>
+      )
+    },
+  },
   delta('legacyFree', 'Δ legacy-free', 'up'),
   delta('primeng', 'Δ PrimeNG', 'down'),
   delta('ngBootstrap', 'Δ ng-bootstrap', 'down'),
-  delta('tumUi', 'Δ TUM UI', 'up'),
+  delta('tumUi', 'Δ TUM AET UI', 'up'),
 ]

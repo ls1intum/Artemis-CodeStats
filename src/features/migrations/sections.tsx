@@ -9,22 +9,11 @@ import {
 import { TableCell, TableFooter, TableRow } from '@/components/ui/table'
 import { DataTable } from '@/components/data-table'
 import type { Section, Summary } from './model'
+import { lastProgress } from './contributions'
 import type { DetailView } from './load-report'
 import { day, hits, number, percent } from './format'
 import { Delta, StageBar, ValueDelta } from './status'
 import { families, family, type Family } from './targets'
-
-// Latest commit that reduced a section's hits or made one of its units legacy-free.
-const lastProgress = (series: Summary[], name: string) =>
-  series.findLast((x, i) => {
-    const row = x.sections[name]
-    const prev = series[i - 1]?.sections[name]
-    return (
-      !!row &&
-      !!prev &&
-      (row[4] + row[5] < prev[4] + prev[5] || row[6] > prev[6])
-    )
-  })
 
 type SectionRow = {
   section: Section
@@ -97,23 +86,20 @@ export function Sections({
               className="w-24"
               counts={{
                 modern: s.legacyFree,
-                components: s.units - s.legacyFree - s.dirty,
-                bootstrap: s.dirty,
+                components: s.units - s.legacyFree - s.bootstrapUnits,
+                bootstrap: s.bootstrapUnits,
               }}
             />
-            <ValueDelta
-              value={s.legacyFree}
-              previous={row.original.before?.legacyFree}
-              positive="up"
-              format={(v) => percent(v, s.units)}
-            />
+            <span className="tabular-nums">
+              {percent(s.legacyFree, s.units)}
+            </span>
           </span>
         ) : null
       },
     },
     {
       id: 'progress',
-      header: 'Δ legacy-free',
+      header: 'Δ legacy-free units',
       accessorFn: (r) =>
         r.before ? r.section.legacyFree - r.before.legacyFree : 0,
       meta: { align: 'right' },
@@ -174,7 +160,7 @@ export function Sections({
     },
     {
       id: 'tumUi',
-      header: 'TUM UI',
+      header: 'TUM AET UI',
       accessorFn: (r) => r.section.tumUi,
       meta: { align: 'right' },
       cell: ({ row }) => (
@@ -335,8 +321,8 @@ export function FamilyHeatmap({ detail }: { detail: DetailView }) {
           and PrimeNG and ng-bootstrap occurrences; shading is the share within
           the module, and every column sorts. Layout and grid classes convert
           mechanically to Tailwind utilities; buttons, forms, tables,
-          components, PrimeNG and ng-bootstrap need TUM UI kit components; SCSS
-          residue needs semantic tokens.
+          components, PrimeNG and ng-bootstrap need TUM AET UI kit components;
+          SCSS residue needs semantic tokens.
         </CardDescription>
       </CardHeader>
       <CardContent>

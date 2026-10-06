@@ -19,30 +19,41 @@ import {
 import type { DetailView } from './load-report'
 import { day, hits, number, unitFile } from './format'
 import { ValueDelta } from './status'
+import { lastProgress } from './contributions'
 import { Blockers } from './blockers'
 import { LockableTable } from './lockable'
-import { bootstrapTarget, kitTarget, ngbTarget } from './targets'
+import { bootstrapTarget, kitTarget, ngbTarget, partOfHost } from './targets'
 
-// Units one small change away from legacy-free: few hits, nothing imported with Bootstrap.
+// Units a few known changes away from legacy-free: at most three Bootstrap hits and three
+// PrimeNG or ng-bootstrap usages, every one with a replacement, nothing imported with Bootstrap.
 function QuickWins({ detail }: { detail: DetailView }) {
   const kit = new Set(detail.kit)
+  const libraries = (u: UnitView) =>
+    [
+      ...Object.entries(u.primeng).map(
+        ([n, c]) => [n, c, kitTarget(n, kit)] as const,
+      ),
+      ...Object.entries(u.ngBootstrap).map(
+        ([n, c]) => [n, c, ngbTarget(n, kit)] as const,
+      ),
+    ].filter(([, , t]) => t !== partOfHost)
   const steps = (u: UnitView) => [
     ...Object.keys(u.tokens).map((t) => `${t} → ${bootstrapTarget(t) || '?'}`),
-    ...(u.styleHits ? [`${u.styleHits} SCSS residue`] : []),
-    ...Object.keys(u.primeng)
-      .filter((n) => /^p(?:-|[A-Z])/.test(n))
-      .map((n) => `${n} → ${kitTarget(n, kit) || '?'}`),
-    ...Object.keys(u.ngBootstrap).map(
-      (n) => `${n} → ${ngbTarget(n, kit) || '?'}`,
-    ),
+    ...(u.styleHits ? [`${u.styleHits} SCSS residue → semantic tokens`] : []),
+    ...libraries(u).map(([n, , t]) => `${n} → ${t || '?'}`),
   ]
-  const rows = detail.units.filter(
-    (u) =>
+  const rows = detail.units.filter((u) => {
+    const used = libraries(u)
+    return (
       stageOf(u) !== 'modern' &&
-      hits(u) <= 3 &&
+      u.status !== 'locked' &&
       u.closureHits === 0 &&
-      u.status !== 'locked',
-  )
+      hits(u) <= 3 &&
+      used.reduce((n, [, c]) => n + c, 0) <= 3 &&
+      Object.keys(u.tokens).every((t) => bootstrapTarget(t)) &&
+      used.every(([, , t]) => t && t !== 'no kit component yet')
+    )
+  })
   if (!rows.length) return null
   const columns: ColumnDef<UnitView, unknown>[] = [
     {
@@ -118,10 +129,11 @@ function QuickWins({ detail }: { detail: DetailView }) {
           <h2>Quick wins</h2>
         </CardTitle>
         <CardDescription>
-          {number(rows.length)} units with at most three Bootstrap hits that
-          import nothing with Bootstrap. Each becomes legacy-free with one small
-          change; a directory of them can be locked right after. Sort by module
-          to batch them into one pull request.
+          {number(rows.length)} units with at most three Bootstrap hits and at
+          most three PrimeNG or ng-bootstrap usages, each with a known
+          replacement, that import nothing with Bootstrap. Each becomes
+          legacy-free with the listed changes; a directory of them can be locked
+          right after. Sort by module to batch them into one pull request.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -224,9 +236,9 @@ function KitGaps({
           <h2>Kit gaps</h2>
         </CardTitle>
         <CardDescription>
-          Legacy components still in use that no TUM UI component covers at this
-          commit. Units that use them cannot become legacy-free until the kit
-          grows or the usage is redesigned.
+          Legacy components still in use that no TUM AET UI component covers at
+          this commit. Units that use them cannot become legacy-free until the
+          kit grows or the usage is redesigned.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -264,15 +276,7 @@ function ClosestSections({
     .map((section) => ({
       section,
       before: compare.sections.find((c) => c.name === section.name),
-      progress: series.findLast((x, i) => {
-        const row = x.sections[section.name]
-        const prev = series[i - 1]?.sections[section.name]
-        return (
-          !!row &&
-          !!prev &&
-          (row[4] + row[5] < prev[4] + prev[5] || row[6] > prev[6])
-        )
-      })?.date,
+      progress: lastProgress(series, section.name)?.date,
     }))
   if (!rows.length) return null
   const columns: ColumnDef<Closest, unknown>[] = [
@@ -402,9 +406,12 @@ export function NextSteps({
               <h2>Lockable directories</h2>
             </CardTitle>
             <CardDescription>
-              Nothing under these directories, nor anything they import, has
-              Bootstrap left. Locking them is a configuration-only change to the
-              three lists; the copied entries are ready to paste.
+              Nothing under these directories has Bootstrap of its own, which is
+              what <code>migrate.mjs check</code> and the locks test. Locking
+              them is a configuration-only change to the three lists; the copied
+              entries are ready to paste. <em>Import Bootstrap</em> counts units
+              that still render it from components elsewhere; they look the same
+              until those are migrated.
               {newLockable > 0 && (
                 <Badge variant="secondary" className="ml-2">
                   {newLockable} new since comparison

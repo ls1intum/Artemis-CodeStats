@@ -11,7 +11,7 @@ function copyEntries(dirs: string[]) {
   const text = [
     '// eslint.config.mjs · no-bootstrap-classes files',
     ...entries.map((e) => e.eslint),
-    '// .stylelintrc.json · hex / --bs- override files',
+    '// config/stylelint/stylelint.config.json · hex / --bs- override files',
     ...entries.map((e) => e.stylelint),
     '// src/main/webapp/tailwind.css',
     ...entries.map((e) => e.tailwind),
@@ -70,6 +70,20 @@ export function LockableTable({
       header: 'Units',
       accessorKey: 'units',
       meta: { align: 'right' },
+    },
+    {
+      id: 'blocked',
+      header: 'Import Bootstrap',
+      accessorKey: 'blocked',
+      meta: { align: 'right' },
+      cell: ({ getValue }) =>
+        getValue<number>() ? (
+          <span title="Units here that still render Bootstrap from units outside the directory">
+            {getValue<number>()}
+          </span>
+        ) : (
+          ''
+        ),
     },
     {
       id: 'copy',

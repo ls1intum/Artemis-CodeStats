@@ -3,18 +3,18 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
+  analyzedPaths,
   analyzeScript,
   analyzeStyles,
   analyzeTemplate,
-  kitSourceDirs,
   loadRule,
   readKit,
-  ruleSourcePaths,
   styleHits,
   type Kit,
   type Rule,
 } from './analyze'
 import { loginFromEmail, type LoginLookup } from './authors'
+import { authorKey } from '../../src/features/migrations/contributions'
 import type { Author, Credit } from '../../src/features/migrations/model'
 
 // Who did the work behind a squash-merged pull request: the commits on the pull request
@@ -96,21 +96,23 @@ export function fetchPullHeads(git: Git, numbers: string[]) {
       return true
     }
   })
-  for (let i = 0; i < missing.length; i += 50)
+  const refspec = (n: string) => `+refs/pull/${n}/head:refs/remotes/pr/${n}`
+  const message = (error: unknown) =>
+    error instanceof Error ? error.message.split('\n')[0] : String(error)
+  for (let i = 0; i < missing.length; i += 50) {
+    const batch = missing.slice(i, i + 50)
     try {
-      git(
-        'fetch',
-        '-q',
-        'origin',
-        ...missing
-          .slice(i, i + 50)
-          .map((n) => `+refs/pull/${n}/head:refs/remotes/pr/${n}`),
-      )
-    } catch (error) {
-      console.warn(
-        `Pull request heads could not be fetched: ${error instanceof Error ? error.message.split('\n')[0] : error}`,
-      )
+      git('fetch', '-q', 'origin', ...batch.map(refspec))
+    } catch {
+      // One missing ref fails the whole batch; fetch the rest one by one.
+      for (const n of batch)
+        try {
+          git('fetch', '-q', 'origin', refspec(n))
+        } catch (error) {
+          console.warn(`Pull request #${n} head unavailable: ${message(error)}`)
+        }
     }
+  }
 }
 
 export async function creditsOf({
@@ -163,16 +165,7 @@ export async function creditsOf({
     { author: Author; weight: number; lines: number }
   >()
   try {
-    const present = git(
-      'ls-tree',
-      '--name-only',
-      commit,
-      '--',
-      ...ruleSourcePaths,
-      ...kitSourceDirs,
-    )
-      .split('\n')
-      .filter(Boolean)
+    const present = analyzedPaths(git, commit, false)
     execFileSync('tar', ['-x', '-C', temp], {
       input: execFileSync(
         'git',
@@ -254,14 +247,21 @@ export async function creditsOf({
   const shares = rows
     .map((r) => ({ author: r.author, share: r[weighted] / total }))
     .sort((a, b) => b.share - a.share)
-  // Small shares fold into the largest one.
-  const kept = shares.filter((c) => c.share >= minimumShare)
-  const credits = kept.length ? kept : shares.slice(0, 1)
-  credits[0].share += shares
+  // Small shares fold into the pull request author, who drove the branch.
+  const isAuthor = (a: Author) => authorKey(a) === authorKey(author)
+  const credits = shares.filter(
+    (c) => c.share >= minimumShare || isAuthor(c.author),
+  )
+  if (!credits.some((c) => isAuthor(c.author)))
+    credits.push({ author, share: 0 })
+  credits.find((c) => isAuthor(c.author))!.share += shares
     .filter((c) => !credits.includes(c))
     .reduce((n, c) => n + c.share, 0)
+  const folded = credits
+    .filter((c) => c.share > 0)
+    .sort((a, b) => b.share - a.share)
   // Three decimals that still sum to one.
-  const rounded = credits.map((c) => ({
+  const rounded = folded.map((c) => ({
     ...c,
     share: Math.round(c.share * 1000) / 1000,
   }))

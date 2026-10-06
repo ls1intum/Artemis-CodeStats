@@ -174,7 +174,7 @@ function Coverage({
     .slice(0, 8)
   return (
     <p className="text-sm text-muted-foreground">
-      {number(covered)} of {number(total)} {library} usages have a TUM UI
+      {number(covered)} of {number(total)} {library} usages have a TUM AET UI
       component to move to.
       {gaps.length > 0 && (
         <>
@@ -282,10 +282,10 @@ export function Inventory({
         <CardDescription>
           Bootstrap classes, PrimeNG and ng-bootstrap elements, directives and
           services still in the client at this snapshot with their change
-          against the comparison, and the Tailwind utility or TUM UI component
-          that replaces them where the guideline or the kit provides one; plus
-          kit usage and stylesheet residue. Every column sorts; sort by Δ to see
-          what a change retired.
+          against the comparison, and the Tailwind utility or TUM AET UI
+          component that replaces them where the guideline or the kit provides
+          one; plus kit usage and stylesheet residue. Every column sorts; sort
+          by Δ to see what a change retired.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -301,7 +301,7 @@ export function Inventory({
               ng-bootstrap ({inventory.ngBootstrap.length})
             </TabsTrigger>
             <TabsTrigger value="tumUi">
-              TUM UI kit ({detail.kit.length - unused.length} of{' '}
+              TUM AET UI kit ({detail.kit.length - unused.length} of{' '}
               {detail.kit.length} selectors used)
             </TabsTrigger>
             <TabsTrigger value="styles">
