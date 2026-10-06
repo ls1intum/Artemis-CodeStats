@@ -49,7 +49,8 @@ export function DecoratorlessDashboard() {
     for (let i = decoratorlessAPIReports.length - 1; i >= 0; i--) {
       const commitDate = decoratorlessAPIReports[i].metadata.artemis.commitDate;
       if (commitDate < lastMonday) {
-        return i + 1; // Return the next report after the last Monday
+        // The report is archived: when even the newest one predates last Monday there is no next report, so compare against the newest.
+        return Math.min(i + 1, decoratorlessAPIReports.length - 1); // The next report after the last Monday
       }
     }
     return decoratorlessAPIReports.length - 1;
