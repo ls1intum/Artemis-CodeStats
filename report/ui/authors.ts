@@ -54,6 +54,8 @@ export function githubLoginLookup(
       return stop(
         `HTTP ${response.status}, ${response.headers.get('x-ratelimit-remaining') ?? '?'} requests left until ${response.headers.get('x-ratelimit-reset') ?? '?'}`,
       )
+    // Server errors say nothing about the account; only a successful answer does.
+    if (response.status >= 500) return stop(`HTTP ${response.status}`)
     if (!response.ok) return undefined
     const body = (await response.json()) as { author?: { login?: string } }
     return body.author?.login

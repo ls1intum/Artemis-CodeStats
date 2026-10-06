@@ -241,9 +241,11 @@ test('contributors are ranked, linked to GitHub and windowed', async ({
   const leader = await first.getByRole('link').first().textContent()
   await expect(table.locator('tbody tr').first()).toContainText(leader!)
   // Sorting by legacy-free units keeps the rank numbers, which follow the leaderboard's own order.
-  await table.getByRole('button', { name: 'Legacy-free', exact: true }).click()
+  await table
+    .getByRole('button', { name: 'Units converted', exact: true })
+    .click()
   await expect(
-    table.getByRole('columnheader', { name: 'Legacy-free', exact: true }),
+    table.getByRole('columnheader', { name: 'Units converted', exact: true }),
   ).toHaveAttribute('aria-sort', 'descending')
   await page.getByRole('radio', { name: /^Since [A-Z][a-z]{2} \d+$/ }).click()
   await expect(
@@ -309,6 +311,23 @@ test('pages view and per-commit snapshots resolve through patches', async ({
       'en-US',
     ),
   )
+})
+
+test('a collection that stopped is announced instead of showing old numbers as current', async ({
+  page,
+}) => {
+  const manifest = await (
+    await page.request.get('./migrations/index.json')
+  ).json()
+  const latest = Date.parse(manifest.snapshots.at(-1).date)
+  await page.clock.setFixedTime(latest + 2 * 86_400_000)
+  await page.goto('./')
+  await loaded(page)
+  await expect(page.getByText(/^No new data since/)).toHaveCount(0)
+  await page.clock.setFixedTime(latest + 4 * 86_400_000)
+  await page.reload()
+  await loaded(page)
+  await expect(page.getByText(/^No new data since/)).toBeVisible()
 })
 
 test('requests for unknown commits fall back visibly', async ({ page }) => {
@@ -381,6 +400,8 @@ test('active dashboard has no automated WCAG A/AA violations', async ({
 })
 
 test('historical dashboards still render as archives', async ({ page }) => {
+  // Archives are frozen; they must keep rendering however long ago their last report was.
+  await page.clock.setFixedTime(Date.now() + 365 * 86_400_000)
   await page.goto('./#/decoratorless')
   await expect(page.getByText('Archived.', { exact: true })).toBeVisible()
   await expect(

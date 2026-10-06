@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const analyzerVersion = 4
+export const analyzerVersion = 5
 
 const count = z.number().int().nonnegative()
 const sha = z.string().regex(/^[a-f0-9]{40}$/)
@@ -35,11 +35,13 @@ export const totalsSchema = z.object({
   pagesClean: count,
   // Units with no Bootstrap hits and no PrimeNG or ng-bootstrap usage: the modernization target.
   legacyFree: count,
+  // Units with Bootstrap hits of their own, locked or not: the `bootstrap` stage.
+  bootstrapUnits: count,
 })
 export type Totals = z.infer<typeof totalsSchema>
 
-// Per-section rows are compact tuples:
-// units, locked, clean, dirty, classHits, styleHits, legacyFree, primeng, ngBootstrap, tumUi.
+// Per-section rows are compact tuples: units, locked, clean, dirty, classHits, styleHits,
+// legacyFree, primeng, ngBootstrap, tumUi, lockEntries, bootstrapUnits.
 export const sectionRowSchema = z.tuple([
   count,
   count,
@@ -51,7 +53,36 @@ export const sectionRowSchema = z.tuple([
   count,
   count,
   count,
+  count,
+  count,
 ])
+export const row = {
+  units: 0,
+  locked: 1,
+  clean: 2,
+  dirty: 3,
+  classHits: 4,
+  styleHits: 5,
+  legacyFree: 6,
+  primeng: 7,
+  ngBootstrap: 8,
+  tumUi: 9,
+  lockEntries: 10,
+  bootstrapUnits: 11,
+} as const
+// What one commit changed against the snapshot before it, unit by unit, with moved files
+// matched to their old location: Bootstrap hits removed and added, units converted to
+// legacy-free and units that lost it, and existing units newly under the lock list. Per section
+// as [removed, added, converted, regressed, locked].
+export const flowSchema = z.object({
+  hitsRemoved: count,
+  hitsAdded: count,
+  converted: count,
+  regressed: count,
+  locked: count,
+  sections: z.record(z.string(), z.tuple([count, count, count, count, count])),
+})
+export type Flow = z.infer<typeof flowSchema>
 export type SectionRow = z.infer<typeof sectionRowSchema>
 // The commit author as git records it, with the GitHub login when it could be resolved.
 export const authorSchema = z.object({
@@ -77,6 +108,8 @@ export const summarySchema = z.object({
   // Blob hash of the Bootstrap rule (or 'retired'); hit deltas across a rule change are not migration work.
   rule: z.string(),
   credits: z.array(creditSchema).optional(),
+  // Absent for the first snapshot and for weekly samples that span several commits.
+  flow: flowSchema.optional(),
   totals: totalsSchema,
   sections: z.record(z.string(), sectionRowSchema),
 })
@@ -84,7 +117,7 @@ export type Summary = z.infer<typeof summarySchema>
 
 export const manifestSchema = z
   .object({
-    schemaVersion: z.literal(4),
+    schemaVersion: z.literal(5),
     analyzerVersion: z.literal(analyzerVersion),
     generatedAt: z.string().datetime(),
     baseline: sha,
@@ -154,6 +187,8 @@ export const sectionSchema = z.object({
   lockableDirs: count,
   blockers: count,
   legacyFree: count,
+  // Units with Bootstrap hits of their own, locked or not.
+  bootstrapUnits: count,
   primeng: count,
   ngBootstrap: count,
   tumUi: count,
@@ -192,9 +227,14 @@ const detailBase = z.object({
   commit: sha,
   // Blob hash of rules/no-bootstrap-classes.mjs, or 'retired' once Artemis has deleted it.
   rule: z.string(),
+  // Where the rule lives at this commit (Artemis moved it to config/eslint/rules on Oct 5, 2026).
+  rulePath: z.string().optional(),
   kit: z.array(z.string()),
   lockGlobs: z.array(z.string()),
-  lockable: z.array(z.object({ dir: z.string(), units: count })),
+  // `blocked`: units in the directory that still import Bootstrap from outside it.
+  lockable: z.array(
+    z.object({ dir: z.string(), units: count, blocked: count }),
+  ),
   sections: z.array(sectionSchema),
   files: z.array(
     z.object({
@@ -248,6 +288,7 @@ export function applyPatch(base: Detail, patch: Patch): Detail {
     analyzerVersion: patch.analyzerVersion,
     commit: patch.commit,
     rule: patch.rule,
+    rulePath: patch.rulePath,
     kit: patch.kit,
     lockGlobs: patch.lockGlobs,
     lockable: patch.lockable,
@@ -300,7 +341,10 @@ export type Derived = {
   closureHits: number
   blockers: string[]
   blocks: number
+  // Hits in the route components a page renders inside and what they import, not counting
+  // units already in the page or its own closure, so page + closure + route counts each unit once.
   routeHits: number
+  routeBlockers: string[]
   // Units in the import closure, and in the parent routes, that still use PrimeNG or ng-bootstrap.
   closureComponents: number
   routeComponents: number
@@ -334,21 +378,34 @@ export function deriveClosures(units: Unit[]): Map<string, Derived> {
         .sort(),
       blocks: 0,
       routeHits: 0,
+      routeBlockers: [],
       closureComponents: closure.reduce((n, o) => n + components(o), 0),
       routeComponents: 0,
     })
+  }
+  const closures = new Map<string, Set<string>>()
+  const closureOf = (id: string) => {
+    if (!closures.has(id)) closures.set(id, reach(id))
+    return closures.get(id)!
   }
   for (const u of units) {
     const d = derived.get(u.id)!
     if (u.status === 'clean' && own(u) === 0)
       for (const id of d.blockers) derived.get(id)!.blocks++
-    for (const id of u.routeParents ?? []) {
-      const parent = byId.get(id)
-      if (!parent) continue
-      d.routeHits += own(parent) + derived.get(id)!.closureHits
-      d.routeComponents +=
-        components(parent) + derived.get(id)!.closureComponents
-    }
+    if (!u.routeParents?.length) continue
+    const inPage = new Set([u.id, ...closureOf(u.id)])
+    const layout = new Set<string>()
+    for (const id of u.routeParents)
+      if (byId.has(id))
+        for (const member of [id, ...closureOf(id)])
+          if (!inPage.has(member)) layout.add(member)
+    const members = [...layout].map((id) => byId.get(id)!)
+    d.routeHits = members.reduce((n, o) => n + own(o), 0)
+    d.routeBlockers = members
+      .filter((o) => own(o) > 0)
+      .map((o) => o.id)
+      .sort()
+    d.routeComponents = members.reduce((n, o) => n + components(o), 0)
   }
   return derived
 }
@@ -396,6 +453,9 @@ export const sourceUrl = (commit: string, path: string) =>
     .split('/')
     .map(encodeURIComponent)
     .join('/')}`
+// A file at the repository root, e.g. the rule or eslint.config.mjs.
+export const repoUrl = (commit: string, path: string) =>
+  `https://github.com/ls1intum/Artemis/blob/${commit}/${path.split('/').map(encodeURIComponent).join('/')}`
 export const commitUrl = (commit: string) =>
   `https://github.com/ls1intum/Artemis/commit/${commit}`
 export const profileUrl = (login: string) => `https://github.com/${login}`
@@ -418,3 +478,118 @@ export const lockEntries = (dir: string) => ({
   stylelint: `"${webapp}${dir}/**/*.scss",`,
   tailwind: `@source './${dir}';`,
 })
+
+// Pairs units of two snapshots: by id, then a removed unit with an added one of the same file
+// name and selector, which is a move rather than a deletion and a new unit.
+export function matchUnits<T extends Pick<Unit, 'id' | 'selector'>>(
+  before: T[],
+  after: T[],
+) {
+  const previous = new Map(before.map((u) => [u.id, u]))
+  const pairs: [T | undefined, T | undefined][] = []
+  const added: T[] = []
+  for (const u of after) {
+    const old = previous.get(u.id)
+    if (old) {
+      pairs.push([old, u])
+      previous.delete(u.id)
+    } else added.push(u)
+  }
+  const key = (u: T) => `${unitPath(u.id).split('/').pop()}#${u.selector ?? ''}`
+  const removed = new Map<string, T[]>()
+  for (const u of previous.values())
+    removed.set(key(u), [...(removed.get(key(u)) ?? []), u])
+  for (const u of added) {
+    const candidates = removed.get(key(u))
+    if (candidates?.length === 1) {
+      pairs.push([candidates[0], u])
+      removed.delete(key(u))
+    } else pairs.push([undefined, u])
+  }
+  for (const list of removed.values())
+    for (const u of list) pairs.push([u, undefined])
+  return pairs
+}
+
+// Gross change between two details. Hits are counted per template or script (a template shared
+// by several units once) plus files outside units and stylesheets, so removed − added equals the
+// change of the totals.
+export function flowOf(before: Detail, after: Detail): Flow {
+  const flow: Flow = {
+    hitsRemoved: 0,
+    hitsAdded: 0,
+    converted: 0,
+    regressed: 0,
+    locked: 0,
+    sections: {},
+  }
+  const add = (
+    section: string,
+    removed: number,
+    added: number,
+    converted = 0,
+    regressed = 0,
+    locked = 0,
+  ) => {
+    if (!removed && !added && !converted && !regressed && !locked) return
+    const entry = (flow.sections[section] ??= [0, 0, 0, 0, 0])
+    entry[0] += removed
+    entry[1] += added
+    entry[2] += converted
+    entry[3] += regressed
+    entry[4] += locked
+    flow.hitsRemoved += removed
+    flow.hitsAdded += added
+    flow.converted += converted
+    flow.regressed += regressed
+    flow.locked += locked
+  }
+  const diff = (section: string, old: number, now: number) =>
+    add(section, Math.max(0, old - now), Math.max(0, now - old))
+  // Class hits of units, keyed by the template they render (or their script when inline).
+  const classKey = (u: Unit) => u.template ?? u.id
+  const seen = new Set<string>()
+  for (const [old, now] of matchUnits(before.units, after.units)) {
+    const section = (now ?? old)!.section
+    const oldKey = old && `b:${classKey(old)}`
+    const nowKey = now && `a:${classKey(now)}`
+    const oldHits = old && !seen.has(oldKey!) ? old.classHits : 0
+    const nowHits = now && !seen.has(nowKey!) ? now.classHits : 0
+    if (oldKey) seen.add(oldKey)
+    if (nowKey) seen.add(nowKey)
+    diff(section, oldHits, nowHits)
+    if (old && now) {
+      const wasFree = stageOf(old) === 'modern'
+      const isFree = stageOf(now) === 'modern'
+      if (!wasFree && isFree) add(section, 0, 0, 1, 0)
+      if (wasFree && !isFree) add(section, 0, 0, 0, 1)
+      if (old.status !== 'locked' && now.status === 'locked')
+        add(section, 0, 0, 0, 0, 1)
+    }
+  }
+  const byPath = <T extends { path: string; section: string }>(
+    a: T[],
+    b: T[],
+    hits: (x: T) => number,
+  ) => {
+    const old = new Map(a.map((x) => [x.path, x]))
+    const nowByPath = new Map(b.map((x) => [x.path, x]))
+    const name = (p: string) => p.split('/').pop()!
+    const gone = [...old.values()].filter((x) => !nowByPath.has(x.path))
+    for (const x of b) {
+      let previous = old.get(x.path)
+      if (!previous) {
+        const moved = gone.filter((g) => name(g.path) === name(x.path))
+        if (moved.length === 1) {
+          previous = moved[0]
+          gone.splice(gone.indexOf(previous), 1)
+        }
+      }
+      diff(x.section, previous ? hits(previous) : 0, hits(x))
+    }
+    for (const x of gone) diff(x.section, hits(x), 0)
+  }
+  byPath(before.files, after.files, (f) => f.classHits)
+  byPath(before.styles, after.styles, (f) => f.variables + f.colors + f.imports)
+  return flow
+}

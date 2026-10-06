@@ -23,7 +23,10 @@ import { DecoratorlessContributorLeaderboard } from "@/components/decoratorless-
 export function DecoratorlessDashboard() {
   // Helper function to find the first commit from last Monday
   const findFirstCommitFromLastMonday = () => {
-    const now = new Date();
+    // The archive no longer grows: measure from its last report, not from today.
+    const now = new Date(
+      decoratorlessAPIReports.at(-1)?.metadata.artemis.commitDate ?? Date.now(),
+    );
     const lastMonday = new Date(now);
 
     // Calculate last Monday - always 7 days ago if today is Monday, otherwise previous Monday
@@ -49,7 +52,7 @@ export function DecoratorlessDashboard() {
     for (let i = decoratorlessAPIReports.length - 1; i >= 0; i--) {
       const commitDate = decoratorlessAPIReports[i].metadata.artemis.commitDate;
       if (commitDate < lastMonday) {
-        return i + 1; // Return the next report after the last Monday
+        return Math.min(i + 1, decoratorlessAPIReports.length - 1); // Return the next report after the last Monday
       }
     }
     return decoratorlessAPIReports.length - 1;

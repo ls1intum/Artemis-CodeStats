@@ -12,7 +12,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { analyzeTree } from './analyze'
+import { analyzedPaths, analyzeTree } from './analyze'
 import { githubLoginLookup, loginFromEmail, type LoginLookup } from './authors'
 import { creditsOf, fetchPullHeads } from './credits'
 import { planHistory } from './history'
@@ -21,11 +21,13 @@ import {
   applyPatch,
   authorSchema,
   detailSchema,
+  flowOf,
   makePatch,
   manifestSchema,
   pullRequest,
   storedDetailSchema,
   summarySchema,
+  type Credit,
   type Detail,
   type Manifest,
   type Summary,
@@ -40,15 +42,6 @@ const cachedSchema = manifestSchema.innerType().extend({
     }),
   ),
 })
-
-const analyzedPaths = [
-  'src/main/webapp/app',
-  'src/main/webapp/content',
-  'src/main/webapp/tailwind.css',
-  'rules/no-bootstrap-classes.mjs',
-  'eslint.config.mjs',
-  'packages/tum-ui/src/lib',
-]
 
 export async function generateReports({
   repo,
@@ -81,8 +74,11 @@ export async function generateReports({
   git('merge-base', '--is-ancestor', baseline, head)
   git('merge-base', '--is-ancestor', packageAdoption, head)
   const format = '--format=%H%x1f%P%x1f%cI%x1f%s%x1f%an%x1f%ae'
+  // Author addresses stay in memory: they resolve logins and are never written out.
+  const emails = new Map<string, string>()
   const revision = (row: string) => {
     const [commit, parents, date, subject, name, email] = row.split('\x1f')
+    emails.set(commit, email)
     const login = loginFromEmail(email)
     return {
       commit,
@@ -113,7 +109,7 @@ export async function generateReports({
       ? cachedSchema.safeParse(JSON.parse(readFileSync(cachePath, 'utf8')))
       : undefined
   const manifest: Manifest = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     analyzerVersion,
     generatedAt: new Date().toISOString(),
     baseline,
@@ -138,11 +134,15 @@ export async function generateReports({
     return base && applyPatch(base, parsed.data)
   }
   const consistent = (detail: Detail, summary: Pick<Summary, 'totals'>) =>
+    (detail.rule === 'retired' || !!detail.rulePath) &&
     detail.units.length === summary.totals.units &&
     detail.units.filter((u) => u.status === 'dirty').length ===
       summary.totals.dirty &&
     detail.lockable.length === summary.totals.lockableDirs
+  // Login per author address, shared by author resolution and credits within a run.
+  const logins = new Map<string, string | undefined>()
   let base: Detail | undefined
+  let previous: { commit: string; detail: Detail; hits: number } | undefined
   for (const rev of planned.snapshots) {
     const { commit, date } = rev
     const isBase = planned.bases.includes(commit)
@@ -168,22 +168,20 @@ export async function generateReports({
       const temp = mkdtempSync(join(tmpdir(), 'codestats-ui-'))
       try {
         // Read committed trees without checkout or mutation of the Artemis submodule.
-        const present = git(
-          'ls-tree',
-          '--name-only',
-          commit,
-          '--',
-          ...analyzedPaths,
-        )
-          .split('\n')
-          .filter(Boolean)
+        const present = analyzedPaths(git, commit)
         const archive = execFileSync(
           'git',
           ['-C', repo, 'archive', commit, '--', ...present],
           { maxBuffer: 256 * 1024 * 1024 },
         )
         execFileSync('tar', ['-x', '-C', temp], { input: archive })
-        const analyzed = await analyzeTree(temp, rev)
+        const analyzed = await analyzeTree(temp, {
+          commit: rev.commit,
+          parent: rev.parent,
+          date: rev.date,
+          subject: rev.subject,
+          author: rev.author,
+        })
         summary = analyzed.summary
         // Normalize key order through the schema so patches compare stored and fresh details alike.
         detail = detailSchema.parse(analyzed.detail)
@@ -196,9 +194,28 @@ export async function generateReports({
       }
     }
     if (!summary.author.login && lookupLogin) {
-      const login = await lookupLogin(commit)
+      // One lookup per address and run; a failed lookup is not remembered as "no account".
+      const email = emails.get(commit)!
+      if (!logins.has(email)) {
+        const login = await lookupLogin(commit)
+        if (!lookupLogin.unavailable?.()) logins.set(email, login)
+      }
+      const login = logins.get(email)
       if (login) summary.author = { ...summary.author, login }
     }
+    // Gross change against the previous snapshot when that is this commit's parent.
+    const hits = summary.totals.classHits + summary.totals.styleHits
+    if (previous && rev.parent === previous.commit) {
+      const flow = flowOf(previous.detail, detail!)
+      if (flow.hitsRemoved - flow.hitsAdded !== previous.hits - hits)
+        throw new Error(
+          `Flow of ${commit} (−${flow.hitsRemoved} +${flow.hitsAdded}) does not match the change of the totals (${hits - previous.hits})`,
+        )
+      summary = { ...summary, flow }
+    } else {
+      summary = { ...summary, flow: undefined }
+    }
+    previous = { commit, detail: detail!, hits }
     manifest.snapshots.push(summary)
     // Base commits keep the full detail; every other commit stores a patch against the base before it.
     if (isBase) {
@@ -209,6 +226,22 @@ export async function generateReports({
       atomicWrite(detailPath(commit), makePatch(base, detail!))
     }
   }
+  // Credits computed before the author's login was known name the author without it; they are
+  // the same person, so such entries take the author's login (merging a duplicate share).
+  for (const s of manifest.snapshots)
+    if (s.credits && s.author.login) {
+      const merged = new Map<string, Credit>()
+      for (const c of s.credits) {
+        const author =
+          !c.author.login && c.author.name === s.author.name
+            ? s.author
+            : c.author
+        const key = author.login ?? author.name
+        const share = (merged.get(key)?.share ?? 0) + c.share
+        merged.set(key, { author, share: Math.round(share * 1000) / 1000 })
+      }
+      s.credits = [...merged.values()].sort((a, b) => b.share - a.share)
+    }
   // Credits come from the pull request branches; computed once per attributable commit.
   const uncredited = manifest.snapshots.filter(
     (s, i) =>
@@ -222,7 +255,6 @@ export async function generateReports({
       git,
       uncredited.map((s) => pullRequest(s.subject).number!),
     )
-    const logins = new Map<string, string | undefined>()
     for (const s of uncredited) {
       const credits = await creditsOf({
         git,
@@ -231,24 +263,32 @@ export async function generateReports({
         parent: s.parent!,
         number: pullRequest(s.subject).number!,
         author: s.author,
-        authorEmail: git('show', '-s', '--format=%ae', s.commit),
+        authorEmail: emails.get(s.commit)!,
         lookupLogin,
         logins,
       })
       if (credits) s.credits = credits
-      else console.warn(`No pull request branch for ${s.commit.slice(0, 8)}`)
+      else
+        console.warn(
+          lookupLogin?.unavailable?.()
+            ? `Credits for ${s.commit.slice(0, 8)} deferred to the next run: login lookups unavailable`
+            : `No pull request branch for ${s.commit.slice(0, 8)}`,
+        )
     }
   }
+  // Compare in schema key order: an unchanged history keeps its timestamp and file.
+  const normalized = manifestSchema.parse(manifest)
   if (
     cached?.success &&
-    JSON.stringify(cached.data.snapshots) === JSON.stringify(manifest.snapshots)
+    JSON.stringify(cached.data.snapshots) ===
+      JSON.stringify(normalized.snapshots)
   )
-    manifest.generatedAt = cached.data.generatedAt
-  atomicWrite(cachePath, manifestSchema.parse(manifest))
+    normalized.generatedAt = cached.data.generatedAt
+  atomicWrite(cachePath, normalized)
   const retained = new Set(manifest.snapshots.map((s) => `${s.commit}.json`))
   for (const file of readdirSync(output))
     if (/^[a-f0-9]{40}\.json$/.test(file) && !retained.has(file))
       rmSync(join(output, file))
   console.log(`Published ${manifest.snapshots.length} snapshots to ${output}`)
-  return manifest
+  return normalized
 }

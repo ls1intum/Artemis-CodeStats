@@ -49,17 +49,22 @@ export const statusLabel: Record<Status, string> = {
   dirty: 'Bootstrap',
 }
 
-// Hits per week between the first commit inside the window and the snapshot.
+// Hits per week between the first commit inside the window and the snapshot. Steps where the
+// Bootstrap rule itself changed are left out: they change what counts, not the client.
 export function velocity(series: Summary[], snapshot: Summary, days: number) {
   const end = Date.parse(snapshot.date)
-  const start = series.find(
+  const from = series.findIndex(
     (s) => Date.parse(s.date) >= end - days * 86_400_000,
   )
-  if (!start) return undefined
+  const to = series.findIndex((s) => s.commit === snapshot.commit)
+  if (from < 0) return undefined
+  const start = series[from]
   const weeks = (end - Date.parse(start.date)) / (7 * 86_400_000)
   if (weeks < 1) return undefined
-  return {
-    perWeek: (hits(snapshot.totals) - hits(start.totals)) / weeks,
-    weeks,
-  }
+  const steps = to < 0 ? series.slice(from) : series.slice(from, to + 1)
+  let change = 0
+  for (let i = 1; i < steps.length; i++)
+    if (steps[i].rule === steps[i - 1].rule)
+      change += hits(steps[i].totals) - hits(steps[i - 1].totals)
+  return { perWeek: change / weeks, weeks }
 }

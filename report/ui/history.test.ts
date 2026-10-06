@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { planHistory } from './history'
 import { generateReports } from './generate'
+import type { LoginLookup } from './authors'
 import { fixtureFiles, writeFixture } from './fixture'
 
 const revision = (commit: string, day: number) => ({
@@ -83,7 +84,23 @@ test('generator catches up missed commits, preserves source checkout, is idempot
     const baseline = commit(1, '<div class="btn"></div>')
     const packageAdoption = commit(2, '<div class="flex"></div>')
     const oldHead = commit(3, '<div class="btn"></div>')
+    // First run: the lookup is rate-limited, so nothing is resolved and nothing is remembered.
     const lookups: string[] = []
+    const limited: LoginLookup = async (commit) => {
+      lookups.push(commit)
+      return undefined
+    }
+    limited.unavailable = () => true
+    await generateReports({
+      repo,
+      output,
+      baseline,
+      packageAdoption,
+      lookupLogin: limited,
+    })
+    assert.deepEqual(lookups, [baseline, packageAdoption, oldHead])
+    // Later runs: one lookup per author address resolves every commit of that author.
+    lookups.length = 0
     const options = {
       repo,
       output,
@@ -91,11 +108,9 @@ test('generator catches up missed commits, preserves source checkout, is idempot
       packageAdoption,
       lookupLogin: async (commit: string) => {
         lookups.push(commit)
-        return commit === oldHead ? 'octocat' : undefined
+        return 'octocat'
       },
     }
-    await generateReports(options)
-    assert.deepEqual(lookups, [baseline, packageAdoption, oldHead])
     const removed = commit(4, '<div class="flex"></div>')
     const head = commit(5, '<div class="btn row"></div>')
     writeFileSync(file, 'uncommitted local work')
@@ -114,29 +129,26 @@ test('generator catches up missed commits, preserves source checkout, is idempot
     )
     assert.deepEqual(
       report.snapshots.map((s) => s.totals.lockableDirs),
-      [1, 2, 1, 2, 1],
+      [2, 3, 2, 3, 2],
+    )
+    assert.deepEqual(
+      report.snapshots.map(
+        (s) => s.flow && [s.flow.hitsRemoved, s.flow.hitsAdded],
+      ),
+      [undefined, [1, 0], [0, 1], [1, 0], [0, 2]],
+      'gross flows per commit, none for the first snapshot',
     )
     assert.equal(report.snapshots.at(-1)?.subject, 'day 5 (#5)')
     assert.deepEqual(
-      report.snapshots.map((s) => s.author),
-      [
-        { name: 'Test' },
-        { name: 'Test' },
-        { name: 'Test', login: 'octocat' },
-        { name: 'Test' },
-        { name: 'Test' },
-      ],
-      'resolved logins are kept, missing ones are looked up again',
+      report.snapshots.map((s) => s.author.login),
+      ['octocat', 'octocat', 'octocat', 'octocat', 'octocat'],
+      'missing logins are looked up again, once per author address',
     )
     assert.deepEqual(
       report.snapshots.map((s) => s.parent),
       [undefined, baseline, packageAdoption, oldHead, removed],
     )
-    assert.equal(
-      lookups.filter((c) => c === oldHead).length,
-      1,
-      'a resolved login is not looked up twice',
-    )
+    assert.deepEqual(lookups, [baseline], 'one lookup for the shared address')
     const stored = (commit: string) =>
       JSON.parse(readFileSync(join(output, `${commit}.json`), 'utf8'))
     assert.equal(

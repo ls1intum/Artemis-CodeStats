@@ -1,7 +1,7 @@
 # Client UI modernization dashboard
 
 Tracks the Artemis client migration from Bootstrap, ng-bootstrap and PrimeNG to Tailwind and
-the TUM UI kit (`@tumaet/ui-angular`). Bootstrap is measured with Artemis's own definition of the
+the TUM AET UI kit (`@tumaet/ui-angular`, called TUM UI until 0.2.0). Bootstrap is measured with Artemis's own definition of the
 migration (lint rule, lock list); PrimeNG, ng-bootstrap and TUM UI by what each unit uses and
 imports, matched against the kit's selectors at the same commit.
 
@@ -9,13 +9,15 @@ imports, matched against the kit's selectors at the same commit.
 
 Artemis's [client guideline](https://github.com/ls1intum/Artemis/blob/develop/documentation/docs/developer/guidelines/client-development.mdx)
 (section _Styling_) defines the migration in three artifacts that its own
-`rules/migration-source-coverage.spec.mjs` keeps consistent:
+`config/eslint/rules/migration-source-coverage.spec.mjs` keeps consistent (the rules lived in
+`rules/` until Artemis #14054 on Oct 5, 2026; the analyzer reads either location and fails if
+the config enables the rule but neither file exists):
 
 | Artifact                                           | Meaning                                                     | Used for                                 |
 | -------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------- |
-| `rules/no-bootstrap-classes.mjs`                   | The matcher for Bootstrap-only class tokens                 | Hits (imported from the analyzed commit) |
+| `config/eslint/rules/no-bootstrap-classes.mjs`     | The matcher for Bootstrap-only class tokens                 | Hits (imported from the analyzed commit) |
 | `eslint.config.mjs`, lock block enabling that rule | Paths that are done; Bootstrap must not return              | Locked units, lock-list changes          |
-| `.stylelintrc.json` hex/`--bs-` override           | SCSS residue that a locked path must not contain            | Style hits                               |
+| `config/stylelint/stylelint.config.json` override  | SCSS residue that a locked path must not contain            | Style hits                               |
 | `src/main/webapp/tailwind.css` `@source` list      | Paths whose Tailwind utilities are generated                | `scanned` flag per unit                  |
 | `supporting_scripts/migration/migrate.mjs`         | `status` (burndown per section) and `check` (ready to lock) | Parity target for hits and lockable      |
 
@@ -35,7 +37,8 @@ parses templates with `@angular/compiler`).
   members, signals, method returns) are not counted; neither Artemis gate sees them either.
   In SCSS a hit is `var(--bs-*)`, a hex color, `rgb()`/`hsl()` or a Bootstrap Sass import,
   with comments removed.
-- **Unit** — one `@Component` or `@Directive` declaration: its `templateUrl`, `styleUrl(s)`
+- **Unit** — one `@Component` or `@Directive` declaration of a class that is not `abstract`
+  (abstract bases are never rendered on their own): its `templateUrl`, `styleUrl(s)`
   and, for the first declaration in a file, the file's TypeScript hits. Further declarations
   in the same file get ids `path#1`, `path#2`. A structural directive's implicit template is
   counted once. Files that no unit owns (shared partials, helpers, `content/scss`) are reported
@@ -44,10 +47,18 @@ parses templates with `@angular/compiler`).
 - **Stage** — `legacy-free` when a unit has no Bootstrap hits and uses neither PrimeNG nor
   ng-bootstrap; `PrimeNG or ng-bootstrap remain` when it is Bootstrap-free but uses one of them;
   `Bootstrap` otherwise. `totals.legacyFree` and the per-section rows carry the counts.
-- **Kit component** — the TUM UI selector that covers a PrimeNG usage (`p-dialog` →
-  `tum-ui-dialog`, `pTooltip` → `tumUiTooltip`) or an ng-bootstrap usage (`ngbTooltip` →
-  `tumUiTooltip`, `NgbModal` → `tum-ui-dialog`, `ngbDropdown` → `tum-ui-menu`, …), only when the
-  kit of the same commit ships that selector. Usages without one are kit gaps.
+- **Kit** — the workspace package named `@tumaet/ui-angular` (`packages/tum-ui` until 0.2.0,
+  `packages/tum-aet-ui` since; earlier the in-app `shared-ui/tum-ui`), limited to the classes
+  its `src/public-api.ts` exports. The rename to TUM AET UI (Artemis #13981) changed selectors
+  from `tum-ui-*` / `tumUi*` to `tumaet-ui-*` / `tumAetUi*`; the analyzer records every commit
+  under the new names, so usage and inventories are continuous across the rename.
+- **Kit component** — the kit selector that covers a PrimeNG usage (`p-dialog` →
+  `tumaet-ui-dialog`, `pTooltip` → `tumAetUiTooltip`) or an ng-bootstrap usage (`ngbTooltip` →
+  `tumAetUiTooltip`, `NgbModal` → `tumaet-ui-dialog`, `ngbDropdown` → `tumaet-ui-menu`, …), only
+  when the kit of the same commit ships that selector; names match case- and
+  hyphen-insensitively. Parts of a component (`pTemplate`, accordion headers, table checkboxes,
+  `ngb-highlight`) go away with their host and are neither gaps nor counted in coverage. Usages
+  without a kit component are kit gaps.
 - **Status** — `locked` when the template path (or the `.html` sibling of a directive or
   inline-template component) matches a lock glob; otherwise `dirty` when the unit has hits,
   `clean` when it has none. Hits inside locked units are reported as _locked residue_: they
@@ -62,8 +73,9 @@ parses templates with `@angular/compiler`).
   closure contains it. `blockers` lists the imported units with hits for every unit.
 - **Lockable** — a directory under `src/main/webapp/app` that is not locked, contains at
   least one unlocked unit and at least one external template, and in which every unit and
-  orphan file has zero hits and zero closure hits. Only maximal directories are listed, with
-  the three entries to add.
+  orphan file has zero Bootstrap hits of its own — what `migrate.mjs check` tests and the locks
+  enforce. `blocked` counts units in it that still import Bootstrap from outside (they render
+  it until those are migrated). Only maximal directories are listed, with the three entries.
 - **Module** — the first directory below `src/main/webapp/app` (course, exam, …); `app` for root
   files and `content` for global styles. Stored as `section` in the data. Selecting a module
   (`?module=`) scopes every view: headline, trends, contributors and commit tables come from the
@@ -86,18 +98,29 @@ parses templates with `@angular/compiler`).
   (hex, `rgb()`, `hsl()`) and Bootstrap Sass imports, with the number of units that reference
   it. Theme palette files under `content/scss/themes` define the palette itself and appear
   under the `content` module.
-- **Inventories** — PrimeNG, ng-bootstrap and TUM UI usage is counted from template elements
-  and attributes (kit selectors are read from the kit sources of the same commit), plus PrimeNG
-  and ng-bootstrap imports whose names end in `Service` or `Modal`, which are usage without
-  template evidence. Other imports may be types and are not counted.
+- **Inventories** — PrimeNG, ng-bootstrap and kit usage is counted from template elements and
+  attributes (kit selectors are read from the kit sources of the same commit), plus library
+  classes a unit depends on in code: injected (`inject(X)` or a constructor parameter),
+  provided, or extended — e.g. `DialogService`, `DynamicDialogRef` in dialog content components,
+  `NgbModal`, `class X extends NgbPopover`, `TumAetUiConfirmationService`. Imports into a
+  component's `imports` array, view queries and type annotations alone are not usage.
+- **Flow** — per commit, the gross change against its parent, unit by unit: Bootstrap hits
+  removed and added (per template, script, file outside a unit and stylesheet, so removed −
+  added equals the change of the totals; the generator fails otherwise), units converted to
+  legacy-free and units that lost it, and existing units newly under the lock list. A unit that
+  disappears and one with the same file name and selector that appears are a move, not a
+  removal and a new unit. Stored in `flow`, per module in `flow.sections`.
 - **Contributor / credits** — a commit's change in the totals is split between the people who
   worked on its pull request branch. The generator fetches `refs/pull/<n>/head` (GitHub keeps it
   after the squash merge), walks the non-merge commits from the merge base and measures every
   changed client file before and after each commit with the same template, script and style
   analysis; an author's share is the legacy they removed (Bootstrap hits, PrimeNG and
-  ng-bootstrap occurrences) plus TUM UI usage added, or client lines changed when nobody touched
+  ng-bootstrap occurrences) plus kit usage added, or client lines changed when nobody touched
   legacy. Shares under 5 % and commits by authors without a GitHub account (unlinked addresses,
-  coding agents such as `Co-authored-by: Claude`) fold into the pull request author. Logins come
+  coding agents such as `Co-authored-by: Claude`) fold into the pull request author. The
+  leaderboard credits each commit's flow by these shares: hits removed and added, units
+  converted, existing units locked, and the net change of units using PrimeNG, ng-bootstrap and
+  the kit. Commits that change the Bootstrap rule are left out of credit, pace and last progress. Logins come
   from noreply addresses or the commits API (`GITHUB_TOKEN`); credits are stored per snapshot
   (`credits`) once computed, and deferred when a lookup is unavailable. Only commits whose parent
   is the previous snapshot are attributed, so weekly samples before package adoption are not; a
@@ -125,9 +148,10 @@ lockable counts disagree with the manifest.
 
 Every view derives from the selected snapshot and comparison, so all of them move with each
 collected commit; nothing is hand-maintained except the kit mapping tables in `targets.ts`.
-Once Artemis deletes `rules/no-bootstrap-classes.mjs`, the analyzer records the rule as
-`retired`: Bootstrap hits and locks become zero while SCSS residue, PrimeNG, ng-bootstrap and
-TUM UI keep being measured.
+Once `eslint.config.mjs` no longer enables `no-bootstrap-classes`, the analyzer records the rule
+as `retired`: Bootstrap hits and locks become zero while SCSS residue, PrimeNG, ng-bootstrap and
+the kit keep being measured. A rule that is still enabled but not found is an error, not a
+retirement.
 
 The analyzer executes the rule module of the analyzed commit (`git archive`, no checkout).
 That is code from the Artemis repository running in the collection workflow; the rule is
@@ -182,6 +206,10 @@ npm run report:ui             # incremental; --rebuild after changing the analyz
   deployment. Concurrent `main` updates reject the push; the next run catches up. A remote-HEAD
   guard skips deployments overtaken by a newer default-branch revision and fails closed when
   the lookup fails.
+- A failed run opens the issue "UI migration collection is failing" (or comments on it) and the
+  next successful run closes it. The dashboard shows a red banner once the newest collected
+  Artemis commit is more than three days old. Both exist because the collector failed silently
+  from Sep 25 to Oct 6, 2026 after Artemis renamed the kit and moved the rule.
 - GitHub may delay or drop scheduled runs; `generatedAt` is the analysis time, not the last
   successful check. See the
   [collection runs](https://github.com/ls1intum/Artemis-CodeStats/actions/workflows/daily-report.yml).

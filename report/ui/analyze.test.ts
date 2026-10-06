@@ -1,6 +1,6 @@
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import {
@@ -104,6 +104,16 @@ test('template hits match the lint forms and add the forms it cannot see', async
     { btn: 1 },
     'structural directive hosts are counted once',
   )
+  assert.deepEqual(
+    analyzeTemplate(
+      `<p-tag *ngIf="x" pTooltip="y"></p-tag>`,
+      'x.html',
+      rule,
+      kit,
+    ).primeng,
+    { 'p-tag': 1, pTooltip: 1 },
+    'and so are library elements on them',
+  )
 })
 
 test('tree analysis derives units, status, closure, lockability and inventories', async () => {
@@ -120,7 +130,7 @@ test('tree analysis derives units, status, closure, lockability and inventories'
     styleHits: 6,
     lockedResidue: 2,
     lockedDirs: 2,
-    lockableDirs: 2,
+    lockableDirs: 3,
     primeng: 2,
     ngBootstrap: 1,
     tumUi: 1,
@@ -128,14 +138,24 @@ test('tree analysis derives units, status, closure, lockability and inventories'
     pages: 4,
     pagesClean: 1,
     legacyFree: 5,
+    bootstrapUnits: 6,
   })
-  assert.deepEqual(summary.sections.exam, [7, 0, 3, 4, 9, 3, 3, 1, 1, 0])
+  assert.deepEqual(summary.sections.exam, [7, 0, 3, 4, 9, 3, 3, 1, 1, 0, 0, 4])
+  assert.deepEqual(
+    summary.sections.admin.slice(10),
+    [1, 1],
+    'admin has one lock entry and one unit with Bootstrap of its own',
+  )
   const unit = (id: string) => detail.units.find((u) => u.id.endsWith(id))!
   const list = unit('list.component.ts')
   assert.equal(list.status, 'locked')
   assert.deepEqual(list.tokens, { row: 1 })
   assert.equal(list.styleHits, 1)
-  assert.deepEqual(list.tumUi, { 'tum-ui-button': 1, tumUiButton: 1 })
+  assert.deepEqual(
+    list.tumUi,
+    { 'tumaet-ui-button': 1, tumAetUiButton: 1 },
+    'kit selectors are recorded under their current TUM AET UI names',
+  )
   assert.deepEqual(list.primeng, { pButton: 1 })
   const alert = unit('alert.component.ts')
   assert.equal(alert.status, 'locked')
@@ -226,10 +246,15 @@ test('tree analysis derives units, status, closure, lockability and inventories'
     'every declaration is a unit; a shared template counts once in totals',
   )
   assert.equal(unit('app.component.ts').section, 'app')
-  assert.deepEqual(detail.lockable, [
-    { dir: 'app/exam/manage/dialog', units: 1 },
-    { dir: 'app/exam/manage/enum-only', units: 1 },
-  ])
+  assert.deepEqual(
+    detail.lockable,
+    [
+      { dir: 'app/exam/manage/clean', units: 1, blocked: 1 },
+      { dir: 'app/exam/manage/dialog', units: 1, blocked: 0 },
+      { dir: 'app/exam/manage/enum-only', units: 1, blocked: 0 },
+    ],
+    'lockable follows migrate.mjs check (no Bootstrap of its own); importing it from outside is reported',
+  )
   assert.deepEqual(
     detail.files.map((f) => [f.path, f.classHits, f.styleHits]),
     [['content/scss/global.scss', 0, 2]],
@@ -244,7 +269,7 @@ test('tree analysis derives units, status, closure, lockability and inventories'
       s.lockableDirs,
     ]),
     [
-      ['exam', 7, 9, 3, 1, 2],
+      ['exam', 7, 9, 3, 1, 3],
       ['admin', 1, 1, 1, 0, 0],
       ['content', 0, 0, 2, 0, 0],
       ['shared-ui', 1, 2, 0, 0, 0],
@@ -320,8 +345,59 @@ test('missing Angular units fail loudly instead of reporting success', async () 
     mkdirSync(join(empty, app), { recursive: true })
     mkdirSync(join(empty, 'src/main/webapp/content'), { recursive: true })
     mkdirSync(join(empty, 'packages/tum-ui/src/lib'), { recursive: true })
+    writeFileSync(
+      join(empty, 'packages/tum-ui/package.json'),
+      files['packages/tum-ui/package.json'],
+    )
     await assert.rejects(analyzeTree(empty, meta), /No Angular units/)
   } finally {
     rmSync(empty, { recursive: true, force: true })
+  }
+})
+
+// Artemis moved the rule to config/eslint/rules (#14054) and renamed the kit to TUM AET UI with
+// tumaet-ui-* selectors (#13981); the same client must measure the same before and after.
+test('moved rule and renamed kit give the same numbers as the original layout', async () => {
+  const moved = mkdtempSync(join(tmpdir(), 'codestats-moved-'))
+  const rename = (text: string) =>
+    text
+      .replaceAll('tum-ui-', 'tumaet-ui-')
+      .replaceAll('tumUi', 'tumAetUi')
+      .replaceAll('TumUi', 'TumAetUi')
+  try {
+    writeFixture(
+      moved,
+      Object.fromEntries(
+        Object.entries(files).map(([path, text]) => [
+          path === 'rules/no-bootstrap-classes.mjs'
+            ? 'config/eslint/rules/no-bootstrap-classes.mjs'
+            : path
+                .replace('packages/tum-ui/', 'packages/tum-aet-ui/')
+                .replace(/tum-ui-/g, 'tumaet-ui-'),
+          path.startsWith('rules/') ? text : rename(text),
+        ]),
+      ),
+    )
+    const original = await analyzeTree(root, meta)
+    const renamed = await analyzeTree(moved, meta)
+    assert.deepEqual(renamed.summary.totals, original.summary.totals)
+    assert.equal(renamed.detail.rule, original.detail.rule)
+    assert.deepEqual(renamed.detail.kit, original.detail.kit)
+    assert.deepEqual(renamed.detail.lockGlobs, original.detail.lockGlobs)
+
+    // A rule the config still enables but that is not where we look is an error, not a retirement.
+    rmSync(join(moved, 'config/eslint/rules/no-bootstrap-classes.mjs'))
+    await assert.rejects(
+      analyzeTree(moved, meta),
+      /enables no-bootstrap-classes/,
+    )
+    rmSync(join(moved, 'packages/tum-aet-ui/package.json'))
+    writeFileSync(
+      join(moved, 'config/eslint/rules/no-bootstrap-classes.mjs'),
+      files['rules/no-bootstrap-classes.mjs'],
+    )
+    await assert.rejects(analyzeTree(moved, meta), /Kit sources not found/)
+  } finally {
+    rmSync(moved, { recursive: true, force: true })
   }
 })

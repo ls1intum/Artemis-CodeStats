@@ -29,6 +29,7 @@ export default [
   },
 ]`,
   'src/main/webapp/tailwind.css': `@source './app/admin';\n@source './app/exam/manage';\n@source not './app/x';\n@source inline("sr-only");\n`,
+  'packages/tum-ui/package.json': '{ "name": "@tumaet/ui-angular" }',
   'packages/tum-ui/src/lib/button/tum-ui-button.component.ts': `import { Component, Directive } from '@angular/core'
 @Component({ selector: 'tum-ui-button', template: '' }) export class TumUiButtonComponent {}
 @Directive({ selector: 'a[tumUiButton], button[tumUiButton]' }) export class TumUiButtonDirective {}`,

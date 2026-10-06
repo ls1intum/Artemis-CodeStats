@@ -45,7 +45,7 @@ export function Headline({
   const c = compare.totals
   const recent = velocity(series, snapshot, 28)
   const overall = velocity(series, snapshot, Infinity)
-  const components = t.units - t.legacyFree - t.dirty
+  const components = t.units - t.legacyFree - t.bootstrapUnits
   return (
     <div className="grid gap-4">
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
@@ -56,6 +56,8 @@ export function Headline({
           comparison
         </Tile>
         <Tile title="Bootstrap hits" value={number(hits(t))}>
+          {number(t.classHits)} class tokens (what Artemis's lint counts) +{' '}
+          {number(t.styleHits)} SCSS values ·{' '}
           <Delta value={hits(t) - hits(c)} /> vs. comparison
           {recent &&
             ` · ${pace(recent)} over ${Math.round(recent.weeks)} weeks`}
@@ -73,13 +75,17 @@ export function Headline({
           {percent(replaceable.ngBootstrap[0], replaceable.ngBootstrap[1])} of
           its usages have a kit component
         </Tile>
-        <Tile title="Units using TUM UI" value={number(t.tumUi)}>
+        <Tile title="Units using TUM AET UI" value={number(t.tumUi)}>
           <Delta value={t.tumUi - c.tumUi} positive="up" /> vs. comparison ·{' '}
           {t.kit} kit components
         </Tile>
       </div>
       <StageBar
-        counts={{ modern: t.legacyFree, components, bootstrap: t.dirty }}
+        counts={{
+          modern: t.legacyFree,
+          components,
+          bootstrap: t.bootstrapUnits,
+        }}
         legend
       />
       <p className="text-sm text-muted-foreground">

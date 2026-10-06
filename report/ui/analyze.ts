@@ -49,6 +49,8 @@ type TemplateResult = Record<Library | 'tokens', Usage> & {
 type Declaration = {
   kind: 'component' | 'directive'
   className?: string
+  // Abstract base classes carry a decorator for inheritance but are never rendered themselves.
+  abstract?: boolean
   selector?: string
   templateUrl?: string
   template?: string
@@ -60,8 +62,12 @@ type ScriptResult = {
   dependencies: { base: string; names?: string[] }[]
   // Route definitions found in this file, keyed by the array that holds them.
   routes: Map<string, RouteNode[]>
-  services: Record<'primeng' | 'ngBootstrap', Usage>
+  services: Record<Library, Usage>
   tokens: Usage
+  // String enums declared here: enum name → member → value (route paths use them).
+  enums: Map<string, Map<string, string>>
+  // Imported names with the module they come from, to follow route arrays and enums across files.
+  imports: Map<string, { base: string; name: string }>
 }
 export type StyleResult = { variables: number; colors: number; imports: number }
 type Reference = { base: string; name?: string }
@@ -72,11 +78,70 @@ export type RouteNode = {
   component?: Reference
   children: RouteNode[]
   // `children: someArray` in the same file, or `loadChildren` into another file.
+  // `children: name` (an array here or imported) and `...name` inside a routes array.
   childrenRef?: string
+  spreads?: string[]
+  // `path: Enum.MEMBER`, resolved once all files are read.
+  pathRef?: { enumName: string; member: string }
   loadChildren?: Reference
 }
 
-const kitSourceDirs = ['packages/tum-ui/src/lib', `${appRoot}/shared-ui/tum-ui`]
+// Where Artemis has kept its rule and its kit over time; the newest location comes first. A move
+// that is not listed here fails the analysis instead of silently changing the numbers.
+export const rulePaths = [
+  'config/eslint/rules/no-bootstrap-classes.mjs',
+  'rules/no-bootstrap-classes.mjs',
+]
+const kitPackage = '@tumaet/ui-angular'
+const legacyKitDir = `${appRoot}/shared-ui/tum-ui`
+
+// The kit was renamed from TUM UI to TUM AET UI (Artemis #13981): `tum-ui-button` became
+// `tumaet-ui-button` and `tumUiTooltip` became `tumAetUiTooltip`. Selectors are recorded under
+// the current names so usage, inventories and kit targets stay continuous across the rename.
+export const kitName = (selector: string) =>
+  selector
+    .replace(/^tum-ui-/, 'tumaet-ui-')
+    .replace(/^tumUi(?=[A-Z])/, 'tumAetUi')
+    .replace(/^TumUi(?=[A-Z])/, 'TumAetUi')
+
+const libraryOf = (pkg: string): Library | undefined =>
+  /^primeng(?:\/|$)/.test(pkg)
+    ? 'primeng'
+    : /^@ng-bootstrap\//.test(pkg)
+      ? 'ngBootstrap'
+      : pkg === kitPackage
+        ? 'tumUi'
+        : undefined
+
+// A library class used as a dependency rather than in the template: injected with inject() or
+// a constructor parameter, provided, or extended. Imports into a component's `imports` array,
+// view queries and type annotations are not usage on their own.
+const libraryUse = (identifier: ts.Identifier) => {
+  let node: ts.Node = identifier
+  while (ts.isPropertyAccessExpression(node.parent)) node = node.parent
+  const parent = node.parent
+  if (ts.isCallExpression(parent) && parent.arguments[0] === node)
+    return (
+      ts.isIdentifier(parent.expression) && parent.expression.text === 'inject'
+    )
+  if (ts.isExpressionWithTypeArguments(parent))
+    return (
+      ts.isHeritageClause(parent.parent) &&
+      parent.parent.token === ts.SyntaxKind.ExtendsKeyword
+    )
+  if (ts.isTypeReferenceNode(parent))
+    return (
+      ts.isParameter(parent.parent) &&
+      parent.parent.type === parent &&
+      ts.isConstructorDeclaration(parent.parent.parent)
+    )
+  if (ts.isArrayLiteralExpression(parent))
+    return (
+      ts.isPropertyAssignment(parent.parent) &&
+      propertyName(parent.parent.name) === 'providers'
+    )
+  return false
+}
 // Bootstrap's spacing scale keeps its class names under Tailwind but changes value; it is not banned.
 const spacingClass = /^(?:[mp][tbsexy]?-(?:[0-5]|auto)|gap-[0-5])$/
 // Utilities that exist only in Tailwind, as evidence that a template already uses it.
@@ -152,22 +217,99 @@ export function parseTailwindSources(tailwindCss: string): string[] {
   )
 }
 
+// The kit's sources: the workspace package published as @tumaet/ui-angular, or the in-app copy
+// it started as.
+export function kitDir(root: string) {
+  const packages = join(root, 'packages')
+  if (existsSync(packages))
+    for (const entry of readdirSync(packages, { withFileTypes: true })) {
+      const manifest = join(packages, entry.name, 'package.json')
+      if (
+        entry.isDirectory() &&
+        existsSync(manifest) &&
+        JSON.parse(readFileSync(manifest, 'utf8')).name === kitPackage
+      )
+        return `packages/${entry.name}/src/lib`
+    }
+  if (existsSync(join(root, legacyKitDir))) return legacyKitDir
+  throw new Error(
+    `Kit sources not found: no packages/*/package.json named ${kitPackage}`,
+  )
+}
+
+// The paths of a commit the analysis reads: the client, the lint configuration with the rule,
+// and each workspace package's manifest and library sources (one of them is the kit).
+export function analyzedPaths(
+  git: (...args: string[]) => string,
+  commit: string,
+  client = true,
+) {
+  const packages = git('ls-tree', '-d', '--name-only', commit, 'packages/')
+    .split('\n')
+    .filter(Boolean)
+    .flatMap((p) => [
+      `${p}/package.json`,
+      `${p}/src/lib`,
+      `${p}/src/public-api.ts`,
+    ])
+  return git(
+    'ls-tree',
+    '--name-only',
+    commit,
+    '--',
+    ...(client
+      ? ['src/main/webapp/app', 'src/main/webapp/content']
+      : [legacyKitDir]),
+    'src/main/webapp/tailwind.css',
+    'eslint.config.mjs',
+    ...rulePaths,
+    ...packages,
+  )
+    .split('\n')
+    .filter(Boolean)
+}
+
+// The class names the package exports from src/public-api.ts; undefined when it has none.
+function publicApi(root: string, dir: string) {
+  const path = join(root, dirname(dir), 'public-api.ts')
+  if (!existsSync(path)) return undefined
+  const file = ts.createSourceFile(
+    path,
+    readFileSync(path, 'utf8'),
+    ts.ScriptTarget.Latest,
+  )
+  const names = new Set<string>()
+  for (const statement of file.statements)
+    if (
+      ts.isExportDeclaration(statement) &&
+      !statement.isTypeOnly &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause)
+    )
+      for (const element of statement.exportClause.elements)
+        if (!element.isTypeOnly) names.add(element.name.text)
+  return names.size ? names : undefined
+}
+
 export function readKit(root: string): Kit {
   const kit: Kit = { elements: new Set(), attributes: new Set(), components: 0 }
-  const dir = kitSourceDirs.find((d) => existsSync(join(root, d)))
-  if (!dir) throw new Error('TUM UI kit sources not found')
+  const dir = kitDir(root)
+  const exported = publicApi(root, dir)
   for (const path of listFiles(root, dir).filter(
     (p) => p.endsWith('.ts') && !/\.(spec|stories|d)\.ts$/.test(p),
   ))
-    for (const { kind, selector } of analyzeScript(
+    for (const { kind, selector, className } of analyzeScript(
       path,
       readFileSync(join(root, path), 'utf8'),
     ).declarations) {
+      // Internal building blocks (chart axes, tooltip content) are not part of the kit.
+      if (exported && !(className && exported.has(className))) continue
       if (kind === 'component') kit.components++
       for (const part of selector?.split(',') ?? []) {
         const attribute = /\[(\w+)\]/.exec(part)?.[1]
-        if (attribute) kit.attributes.add(attribute)
-        else if (/^[\w-]+$/.test(part.trim())) kit.elements.add(part.trim())
+        if (attribute) kit.attributes.add(kitName(attribute))
+        else if (/^[\w-]+$/.test(part.trim()))
+          kit.elements.add(kitName(part.trim()))
       }
     }
   return kit
@@ -197,11 +339,11 @@ export function analyzeTemplate(
     }
   }
   const inspect = (node: TmplAstElement | TmplAstTemplate) => {
-    const name =
-      node instanceof TmplAstElement ? node.name : (node.tagName ?? '')
+    // `<p-x *ngIf>` is an implicit template around the element, which is visited itself.
+    const name = node instanceof TmplAstElement ? node.name : ''
     if (name.startsWith('p-')) bump(result.primeng, name)
     if (name.startsWith('ngb-')) bump(result.ngBootstrap, name)
-    if (kit.elements.has(name)) bump(result.tumUi, name)
+    if (kit.elements.has(kitName(name))) bump(result.tumUi, kitName(name))
     // A structural directive's implicit template repeats the host element's attributes.
     const attrs =
       node instanceof TmplAstTemplate && node.tagName !== 'ng-template'
@@ -210,7 +352,8 @@ export function analyzeTemplate(
     for (const attr of attrs) {
       if (/^p[A-Z]\w*$/.test(attr.name)) bump(result.primeng, attr.name)
       if (/^ngb[A-Z]\w*$/.test(attr.name)) bump(result.ngBootstrap, attr.name)
-      if (kit.attributes.has(attr.name)) bump(result.tumUi, attr.name)
+      if (kit.attributes.has(kitName(attr.name)))
+        bump(result.tumUi, kitName(attr.name))
       if (!('value' in attr)) continue
       if (typeof attr.value === 'string') {
         if (isClassList(attr.name)) classes(attr.value)
@@ -251,12 +394,16 @@ export function analyzeScript(path: string, source: string): ScriptResult {
     declarations: [],
     dependencies: [],
     routes: new Map(),
-    services: { primeng: {}, ngBootstrap: {} },
+    services: { primeng: {}, ngBootstrap: {}, tumUi: {} },
     tokens: {},
+    enums: new Map(),
+    imports: new Map(),
   }
   const angular = new Map<string, string>()
   const namespaces = new Set<string>()
   const localImports = new Map<string, { specifier: string; name: string }>()
+  // Library classes this file imports; used as values they are usage without template evidence.
+  const libraryNames = new Map<string, { library: Library; name: string }>()
   const resolveBase = (specifier: string) =>
     specifier.startsWith('.')
       ? posix.join(dirname(path), specifier)
@@ -292,15 +439,14 @@ export function analyzeScript(path: string, source: string): ScriptResult {
     }
     for (const { local, exported } of names)
       localImports.set(local, { specifier: pkg, name: exported })
-    // Services and modal handles are usage without template evidence; other names may be types.
-    const library = /^primeng(?:\/|$)/.test(pkg)
-      ? result.services.primeng
-      : /^@ng-bootstrap\//.test(pkg)
-        ? result.services.ngBootstrap
-        : undefined
+    const library = libraryOf(pkg)
     if (library)
-      for (const { exported } of names)
-        if (/(?:Service|Modal)$/.test(exported)) bump(library, exported)
+      for (const { local, exported } of names)
+        libraryNames.set(local, { library, name: kitName(exported) })
+    const base = resolveBase(pkg)
+    if (base)
+      for (const { local, exported } of names)
+        result.imports.set(local, { base, name: exported })
     dependency(
       pkg,
       bindings && ts.isNamespaceImport(bindings)
@@ -405,6 +551,15 @@ export function analyzeScript(path: string, source: string): ScriptResult {
       switch (propertyName(property.name)) {
         case 'path':
           node.path = stringText(value)
+          if (
+            node.path === undefined &&
+            ts.isPropertyAccessExpression(value) &&
+            ts.isIdentifier(value.expression)
+          )
+            node.pathRef = {
+              enumName: value.expression.text,
+              member: value.name.text,
+            }
           break
         case 'outlet':
           node.outlet = true
@@ -430,15 +585,26 @@ export function analyzeScript(path: string, source: string): ScriptResult {
     }
     return node
   }
+  // Route objects with a path, plus `...name` spreads of route arrays defined elsewhere, which
+  // contribute siblings at the same level.
   const routeNodes = (array: ts.ArrayLiteralExpression): RouteNode[] =>
-    array.elements
-      .filter(ts.isObjectLiteralExpression)
-      .filter((literal) =>
-        literal.properties.some(
+    array.elements.flatMap((element): RouteNode[] => {
+      if (ts.isSpreadElement(element) && ts.isIdentifier(element.expression))
+        return [
+          {
+            path: '',
+            outlet: false,
+            children: [],
+            spreads: [element.expression.text],
+          },
+        ]
+      return ts.isObjectLiteralExpression(element) &&
+        element.properties.some(
           (p) => ts.isPropertyAssignment(p) && propertyName(p.name) === 'path',
-        ),
-      )
-      .map(routeNode)
+        )
+        ? [routeNode(element)]
+        : []
+    })
   // Every array of route objects declared at the top level, by variable name.
   for (const statement of file.statements)
     if (ts.isVariableStatement(statement))
@@ -459,6 +625,15 @@ export function analyzeScript(path: string, source: string): ScriptResult {
       const specifier = node.arguments[0] && stringText(node.arguments[0])
       if (specifier) dependency(specifier)
     }
+    if (
+      ts.isIdentifier(node) &&
+      libraryNames.has(node.text) &&
+      !ts.isImportSpecifier(node.parent) &&
+      libraryUse(node)
+    ) {
+      const { library, name } = libraryNames.get(node.text)!
+      used.add(`${library}\0${name}`)
+    }
     if (ts.isDecorator(node)) {
       const name = decoratorName(node)
       if (name === 'Component' || name === 'Directive') {
@@ -467,6 +642,11 @@ export function analyzeScript(path: string, source: string): ScriptResult {
           className: ts.isClassDeclaration(node.parent)
             ? node.parent.name?.text
             : undefined,
+          abstract:
+            ts.isClassDeclaration(node.parent) &&
+            !!node.parent.modifiers?.some(
+              (m) => m.kind === ts.SyntaxKind.AbstractKeyword,
+            ),
           styleUrls: [],
         }
         result.declarations.push(declaration)
@@ -494,7 +674,23 @@ export function analyzeScript(path: string, source: string): ScriptResult {
       }
     ts.forEachChild(node, visit)
   }
+  const used = new Set<string>()
   visit(file)
+  // Each library class used this way counts once per file.
+  for (const key of used) {
+    const [library, name] = key.split('\0') as [Library, string]
+    bump(result.services[library], name)
+  }
+  for (const statement of file.statements)
+    if (ts.isEnumDeclaration(statement)) {
+      const members = new Map<string, string>()
+      for (const member of statement.members) {
+        const value = member.initializer && stringText(member.initializer)
+        const name = propertyName(member.name)
+        if (name && value !== undefined) members.set(name, value)
+      }
+      if (members.size) result.enums.set(statement.name.text, members)
+    }
   return result
 }
 
@@ -523,17 +719,28 @@ function listFiles(root: string, directory: string): string[] {
 }
 
 // Callers must extract each commit to its own directory: ESM caches modules by URL.
-// Once Artemis deletes the rule, Bootstrap is retired: nothing is banned and nothing is locked.
+// Bootstrap is retired once eslint.config.mjs no longer enables the rule: nothing is banned and
+// nothing is locked. A rule that is enabled but not found where we look is an error, not a retirement.
 export const retiredRule = 'retired'
 export async function loadRule(root: string) {
-  const path = join(root, 'rules/no-bootstrap-classes.mjs')
-  if (!existsSync(path))
+  const found = rulePaths.find((p) => existsSync(join(root, p)))
+  const config = join(root, 'eslint.config.mjs')
+  const enabled =
+    existsSync(config) &&
+    readFileSync(config, 'utf8').includes('no-bootstrap-classes')
+  if (!found && enabled)
+    throw new Error(
+      `eslint.config.mjs enables no-bootstrap-classes but the rule is not at ${rulePaths.join(' or ')}`,
+    )
+  const path = found && join(root, found)
+  if (!path || !enabled)
     return {
       rule: {
         isBanned: () => false,
         bannedClassesInBindingExpression: () => [],
       } satisfies Rule,
       sha: retiredRule,
+      path: undefined,
     }
   const source = readFileSync(path)
   const rule = (await import(pathToFileURL(path).href)) as Partial<Rule>
@@ -548,6 +755,7 @@ export async function loadRule(root: string) {
       .update(`blob ${source.length}\0`)
       .update(source)
       .digest('hex'),
+    path: found,
   }
 }
 
@@ -555,7 +763,7 @@ export async function analyzeTree(
   root: string,
   meta: Omit<Summary, 'totals' | 'sections' | 'rule'>,
 ): Promise<{ summary: Summary; detail: Detail }> {
-  const { rule, sha } = await loadRule(root)
+  const { rule, sha, path: rulePath } = await loadRule(root)
   const kit = readKit(root)
   const lockGlobs =
     sha === retiredRule
@@ -576,7 +784,7 @@ export async function analyzeTree(
   const styles = new Map<string, StyleResult>()
   const files = [
     ...listFiles(root, appRoot).filter(
-      (p) => !p.startsWith(`${appRoot}/shared-ui/tum-ui/`),
+      (p) => !p.startsWith(`${legacyKitDir}/`),
     ),
     ...listFiles(root, 'src/main/webapp/content'),
   ].filter(
@@ -611,6 +819,7 @@ export async function analyzeTree(
   for (const [path, script] of scripts) {
     const resolve = (url: string) => posix.join(dirname(path), url)
     script.declarations.forEach((declaration, index) => {
+      if (declaration.abstract) return
       const id = index ? `${path}#${index}` : path
       if (declaration.className)
         classNames.set(
@@ -641,7 +850,7 @@ export async function analyzeTree(
       const usage = (library: Library) =>
         merge(
           merge(
-            index || library === 'tumUi' ? {} : { ...script.services[library] },
+            index ? {} : { ...script.services[library] },
             external?.[library],
           ),
           inline?.[library],
@@ -705,6 +914,27 @@ export async function analyzeTree(
     return name ? classes.get(name) : classes.values().next().value
   }
   const visitedRoutes = new Set<string>()
+  // A route array by name: declared in this file or imported from another one.
+  const routeArray = (file: string, name: string) => {
+    const local = scripts.get(file)!.routes.get(name)
+    if (local) return { file, nodes: local }
+    const imported = scripts.get(file)!.imports.get(name)
+    const target = imported && resolveFile(imported.base)
+    const nodes = target && scripts.get(target)!.routes.get(imported.name)
+    return nodes ? { file: target, nodes } : undefined
+  }
+  const enumValue = (
+    file: string,
+    { enumName, member }: { enumName: string; member: string },
+  ) => {
+    const local = scripts.get(file)!.enums.get(enumName)
+    if (local) return local.get(member)
+    const imported = scripts.get(file)!.imports.get(enumName)
+    const target = imported && resolveFile(imported.base)
+    return target
+      ? scripts.get(target)!.enums.get(imported.name)?.get(member)
+      : undefined
+  }
   const walkRoutes = (
     file: string,
     nodes: RouteNode[],
@@ -713,8 +943,18 @@ export async function analyzeTree(
   ) => {
     for (const node of nodes) {
       if (node.outlet) continue
+      for (const name of node.spreads ?? []) {
+        const spread = routeArray(file, name)
+        if (spread && !visitedRoutes.has(`${spread.file}#${name}@${prefix}`)) {
+          visitedRoutes.add(`${spread.file}#${name}@${prefix}`)
+          walkRoutes(spread.file, spread.nodes, prefix, ancestors)
+        }
+      }
+      if (node.spreads) continue
+      const literal =
+        node.path ?? (node.pathRef && enumValue(file, node.pathRef))
       const segment =
-        node.path === undefined ? ':dynamic' : node.path.replace(/^\/+/, '')
+        literal === undefined ? ':dynamic' : literal.replace(/^\/+/, '')
       const path = [prefix, segment].filter(Boolean).join('/')
       const unitId = node.component && unitFor(node.component)
       const unit = unitId ? units.get(unitId) : undefined
@@ -724,9 +964,9 @@ export async function analyzeTree(
       }
       const parents = unitId ? [...ancestors, unitId] : ancestors
       const children = node.childrenRef
-        ? (scripts.get(file)!.routes.get(node.childrenRef) ?? [])
-        : node.children
-      walkRoutes(file, children, path, parents)
+        ? routeArray(file, node.childrenRef)
+        : { file, nodes: node.children }
+      if (children) walkRoutes(children.file, children.nodes, path, parents)
       if (node.loadChildren) {
         const target = resolveFile(node.loadChildren.base)
         const routes = target && scripts.get(target)!.routes
@@ -789,10 +1029,18 @@ export async function analyzeTree(
     }))
     .sort((a, b) => styleHits(b) - styleHits(a) || a.path.localeCompare(b.path))
   orphanFiles.sort((a, b) => a.path.localeCompare(b.path))
-  // A directory is lockable when nothing under it, nor anything it renders, still carries Bootstrap.
+  // A directory is lockable when nothing under it carries Bootstrap: Artemis's own definition
+  // (`migrate.mjs check`, which the lint and stylelint locks then enforce). Units that still
+  // import Bootstrap from outside are counted, because they render it until those are migrated.
   const dirs = new Map<
     string,
-    { units: number; unlocked: number; templates: number; clean: boolean }
+    {
+      units: number
+      unlocked: number
+      templates: number
+      clean: boolean
+      blocked: number
+    }
   >()
   const ancestors = (path: string) => {
     const relative = dirname(path).slice(appRoot.length + 1)
@@ -807,11 +1055,13 @@ export async function analyzeTree(
         unlocked: 0,
         templates: 0,
         clean: true,
+        blocked: 0,
       }
       entry.units++
       if (unit.status !== 'locked') entry.unlocked++
       if (unit.template) entry.templates++
-      entry.clean &&= ownHits(unit) === 0 && closureHits(unit) === 0
+      entry.clean &&= ownHits(unit) === 0
+      if (closureHits(unit) > 0) entry.blocked++
       dirs.set(dir, entry)
     }
   for (const file of orphanFiles)
@@ -833,7 +1083,11 @@ export async function analyzeTree(
   const lockable = [...lockableDirs]
     .filter((dir) => !lockableDirs.has(dirname(dir)))
     .sort()
-    .map((dir) => ({ dir, units: dirs.get(dir)!.units }))
+    .map((dir) => ({
+      dir,
+      units: dirs.get(dir)!.units,
+      blocked: dirs.get(dir)!.blocked,
+    }))
   const sections = new Map<string, Section>()
   const section = (name: string) => {
     const entry = sections.get(name) ?? {
@@ -847,6 +1101,7 @@ export async function analyzeTree(
       lockableDirs: 0,
       blockers: 0,
       legacyFree: 0,
+      bootstrapUnits: 0,
       primeng: 0,
       ngBootstrap: 0,
       tumUi: 0,
@@ -860,6 +1115,7 @@ export async function analyzeTree(
     entry.units++
     entry[unit.status]++
     if (stageOf(unit) === 'modern') entry.legacyFree++
+    if (ownHits(unit) > 0) entry.bootstrapUnits++
     if (usesLibrary(unit.primeng)) entry.primeng++
     if (usesLibrary(unit.ngBootstrap)) entry.ngBootstrap++
     if (usesLibrary(unit.tumUi)) entry.tumUi++
@@ -902,6 +1158,7 @@ export async function analyzeTree(
         routeHits(u) === 0,
     ).length,
     legacyFree: all.filter((u) => stageOf(u) === 'modern').length,
+    bootstrapUnits: all.filter((u) => ownHits(u) > 0).length,
   }
   // Stored paths are relative to src/main/webapp/.
   const rel = (path: string) => path.slice(webapp.length)
@@ -925,6 +1182,8 @@ export async function analyzeTree(
             s.primeng,
             s.ngBootstrap,
             s.tumUi,
+            lockGlobs.filter((g) => sectionOf(g) === s.name).length,
+            s.bootstrapUnits,
           ],
         ]),
       ),
@@ -933,6 +1192,7 @@ export async function analyzeTree(
       analyzerVersion,
       commit: meta.commit,
       rule: sha,
+      rulePath,
       kit: [...kit.elements, ...kit.attributes].sort(),
       lockGlobs,
       lockable: lockable.map((l) => ({ ...l, dir: rel(l.dir) })),

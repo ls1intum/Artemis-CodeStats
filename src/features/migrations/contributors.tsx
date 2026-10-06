@@ -78,11 +78,11 @@ const columns: ColumnDef<Row, unknown>[] = [
     cell: ({ getValue }) =>
       getValue<number>() ? percent(getValue<number>(), 1) : '',
   },
-  count('legacyFree', 'Legacy-free', false),
+  count('converted', 'Units converted'),
   count('primeng', 'PrimeNG'),
   count('ngBootstrap', 'ng-bootstrap'),
-  count('tumUi', 'TUM UI'),
-  count('locks', 'Locked dirs'),
+  count('tumUi', 'TUM AET UI'),
+  count('locked', 'Units locked'),
   {
     id: 'hitsAdded',
     header: 'Hits added',
@@ -145,8 +145,7 @@ export function Contributors({
   const rows =
     window === 'compare' ? all.filter((c) => Date.parse(c.date) > since) : all
   const removed = rows.reduce(
-    (n, c) =>
-      n + (c.attributable && !c.ruleChanged && c.hits < 0 ? -c.hits : 0),
+    (n, c) => n + (c.attributable && !c.ruleChanged ? c.hitsRemoved : 0),
     0,
   )
   const board: Row[] = leaderboard(rows).map((r) => ({
@@ -165,12 +164,15 @@ export function Contributors({
             Every integrated commit is credited to the people who did the work
             on its pull request branch, in proportion to the legacy each of them
             removed there (lines changed when nobody touched legacy). Ranked by
-            Bootstrap hits removed, then by units made legacy-free; every column
-            sorts. PRs are commits with progress the person shared in; Share is
-            the part of all hits removed in the window. Legacy-free, PrimeNG,
-            ng-bootstrap and TUM UI are net unit counts (removed, or added for
-            TUM UI), so a commit that adds legacy subtracts. Hits added stays
-            visible next to the progress.
+            Bootstrap hits removed, then units converted; every column sorts.
+            Hits removed and added are counted unit by unit, so a pull request
+            that removes 100 hits and adds 20 elsewhere shows both; moved files
+            count as neither. Units converted became legacy-free; new units do
+            not count. PrimeNG, ng-bootstrap and TUM AET UI are the net change
+            in units using them (fewer for the legacy libraries, more for the
+            kit), and units locked counts units newly under the lock list. PRs
+            are the commits with progress the person shared in; Share is their
+            part of all hits removed in the window.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-[minmax(0,1fr)] gap-5">
@@ -195,7 +197,7 @@ export function Contributors({
                         ? `hits removed · ${percent(r.share, 1)}`
                         : 'hits removed',
                     )}
-                    {stat(r.legacyFree, 'units legacy-free')}
+                    {stat(r.converted, 'units converted')}
                     {stat(r.prs, r.prs === 1 ? 'PR' : 'PRs')}
                   </span>
                 </li>
@@ -238,9 +240,9 @@ export function Contributors({
             </CardTitle>
             <CardDescription>
               The last {latest.length} commits up to the snapshot that reduced
-              legacy or adopted TUM UI, newest first, with everyone credited for
-              the work on the branch. Δ hits is Bootstrap hits; the other deltas
-              count units.
+              legacy or adopted TUM AET UI, newest first, with everyone credited
+              for the work on the branch. Δ hits is Bootstrap hits; the other
+              deltas count units.
             </CardDescription>
           </CardHeader>
           <CardContent>

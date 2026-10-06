@@ -4,8 +4,11 @@ import {
   useNavigate,
   useSearch,
 } from '@tanstack/react-router'
+import { TriangleAlert } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { inventoryOf, sourceUrl, views, type View } from './model'
+import { day } from './format'
+import { inventoryOf, repoUrl, views, type View } from './model'
 import { Controls } from './controls'
 import { Headline } from './headline'
 import { Regressions } from './regressions'
@@ -59,10 +62,16 @@ export function MigrationDashboard() {
   const adoption = manifest.snapshots.findIndex(
     (s) => s.commit === manifest.packageAdoption,
   )
+  // Trends start at package adoption, or at the kit pilot for a snapshot before adoption.
+  const from =
+    manifest.snapshots.indexOf(loaded.snapshot) >= adoption ? adoption : 0
   const series = snapshots.filter(
     (s, i) =>
-      i >= adoption && Date.parse(s.date) <= Date.parse(loaded.snapshot.date),
+      i >= from && Date.parse(s.date) <= Date.parse(loaded.snapshot.date),
   )
+  const latest = manifest.snapshots.at(-1)!
+  // Artemis integrates commits every working day; three quiet days mean collection stopped.
+  const stale = Date.now() - Date.parse(latest.date) > 3 * 86_400_000
   const view = search.view ?? 'overview'
   const kit = new Set(detail.kit)
   return (
@@ -78,19 +87,19 @@ export function MigrationDashboard() {
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
             Retiring Bootstrap, ng-bootstrap and PrimeNG from the Artemis client
-            for Tailwind and the TUM UI kit. Bootstrap is measured with
+            for Tailwind and the TUM AET UI kit. Bootstrap is measured with
             Artemis's own{' '}
             <a
               className="underline underline-offset-4"
-              href={sourceUrl(
+              href={repoUrl(
                 loaded.snapshot.commit,
-                'rules/no-bootstrap-classes.mjs',
+                loaded.detail.rulePath ?? 'rules/no-bootstrap-classes.mjs',
               )}
             >
               lint rule
             </a>{' '}
-            and lock list; PrimeNG, ng-bootstrap and TUM UI by what each unit
-            uses and imports. A unit is legacy-free when none of the three
+            and lock list; PrimeNG, ng-bootstrap and TUM AET UI by what each
+            unit uses and imports. A unit is legacy-free when none of the three
             remain. Pick a module to see everything for that part of the client.
           </p>
         </div>
@@ -103,6 +112,23 @@ export function MigrationDashboard() {
           onChange={update}
         />
       </div>
+      {stale && (
+        <Alert variant="destructive">
+          <TriangleAlert aria-hidden="true" />
+          <AlertTitle>No new data since {day(latest.date, true)}</AlertTitle>
+          <AlertDescription>
+            The newest collected Artemis commit is from {day(latest.date, true)}
+            ; the hourly collection is probably failing. Every number below
+            describes that commit, not today's develop.{' '}
+            <a
+              className="underline underline-offset-4"
+              href="https://github.com/ls1intum/Artemis-CodeStats/actions/workflows/daily-report.yml"
+            >
+              Collection runs
+            </a>
+          </AlertDescription>
+        </Alert>
+      )}
       {(search.snapshot && search.snapshot !== snapshot.commit) ||
       (search.compare && search.compare !== compare.commit) ? (
         <p role="status" className="text-sm text-destructive">

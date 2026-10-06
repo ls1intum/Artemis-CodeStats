@@ -246,7 +246,7 @@ export function ModuleDetail({
       },
       {
         id: 'tumUi',
-        header: 'TUM UI',
+        header: 'TUM AET UI',
         accessorFn: (u) => usage(u.tumUi),
         meta: { align: 'right' },
         cell: ({ getValue }) => getValue<number>() || '',
@@ -321,8 +321,9 @@ export function ModuleDetail({
           <StageBar
             counts={{
               modern: summary.legacyFree,
-              components: summary.units - summary.legacyFree - summary.dirty,
-              bootstrap: summary.dirty,
+              components:
+                summary.units - summary.legacyFree - summary.bootstrapUnits,
+              bootstrap: summary.bootstrapUnits,
             }}
             legend
           />
@@ -345,7 +346,7 @@ export function ModuleDetail({
             Every component and directive of the module. Hits are Bootstrap hits
             in its own template and styles; imported hits are in units it
             imports (open the count for the list); PrimeNG / ngb opens the
-            usages with the TUM UI component that replaces each.
+            usages with the TUM AET UI component that replaces each.
           </p>
           <DataTable
             columns={unitColumns}
