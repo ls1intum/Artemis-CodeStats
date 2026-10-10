@@ -330,6 +330,22 @@ export const callerSchema = z
         value.generatedMethodId !== undefined),
     'Resolved callers need one operation; generated callers need a method reference',
   )
+
+// Call-site measurements form a disjoint partition; excluded traffic has no REST bucket.
+export function callSiteBucket(
+  caller: z.infer<typeof callerSchema>,
+): 'generated' | 'manual' | 'unresolved' | undefined {
+  if (
+    caller.kind !== 'production' ||
+    !['artemis-rest', 'unresolved'].includes(caller.traffic)
+  )
+    return undefined
+  return caller.traffic === 'artemis-rest' &&
+    caller.mapping === 'resolved' &&
+    caller.transport !== 'unresolved'
+    ? caller.transport
+    : 'unresolved'
+}
 export const diagnosticSchema = z
   .object({
     id: text,
@@ -621,10 +637,12 @@ export const snapshotSchema = z
         if (production.length !== operation.adoption.callerIds.length)
           fail(`Adoption includes excluded callers: ${operation.id}`)
         const generated = production.some(
-          (caller) => caller?.transport === 'generated',
+          (caller) =>
+            caller?.transport === 'generated' && caller.mapping === 'resolved',
         )
         const manual = production.some(
-          (caller) => caller?.transport === 'manual',
+          (caller) =>
+            caller?.transport === 'manual' && caller.mapping === 'resolved',
         )
         const unresolved = production.some(
           (caller) =>
@@ -677,6 +695,7 @@ export const snapshotSchema = z
           (caller) =>
             caller.kind === 'production' &&
             caller.traffic === 'artemis-rest' &&
+            caller.mapping === 'resolved' &&
             caller.operationIds.includes(operation.id),
         )
       )
@@ -931,6 +950,33 @@ export const snapshotSchema = z
             )
           : [],
         inventoryComplete(module),
+      )
+    const validateCallCounts = (
+      measurements: z.infer<typeof measurementsSchema>,
+      operationIds?: string[],
+    ) => {
+      for (const bucket of ['generated', 'manual', 'unresolved'] as const) {
+        const measurement = measurements[`${bucket}CallSites`]
+        const observed = snapshot.callers.filter(
+          (caller) =>
+            callSiteBucket(caller) === bucket &&
+            (!operationIds ||
+              caller.operationIds.some((id) => operationIds.includes(id))),
+        )
+        if (
+          measurement.state === 'measured' &&
+          measurement.value !== observed.length
+        )
+          fail(`Call-site count disagrees with ${bucket} production records`)
+      }
+    }
+    validateCallCounts(snapshot.measurements)
+    for (const module of snapshot.modules)
+      validateCallCounts(
+        module.measurements,
+        module.inventory.state === 'inventoried'
+          ? module.inventory.operationIds
+          : [],
       )
     const scoped = (scope: z.infer<typeof scopeSchema>) => {
       references(scope.moduleIds, modules, 'module')

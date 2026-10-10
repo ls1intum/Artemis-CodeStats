@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import {
   bindingSchema,
+  callSiteBucket,
   manifestSchema,
   schemaVersion,
   snapshotSchema,
@@ -47,8 +48,9 @@ import {
   type Specification,
 } from './spec'
 import { analyzeGenerated, reconcileGenerated } from './generated'
+import { analyzeAdoption, reconcileAdoption } from './adoption'
 
-export const analyzerVersion = 'openapi-inventory-5'
+export const analyzerVersion = 'openapi-inventory-7'
 const directory = path.dirname(fileURLToPath(import.meta.url))
 export const defaultMapping = path.join(directory, 'module-mapping.json')
 export const sha256 = (value: string | Buffer) =>
@@ -82,6 +84,7 @@ export function inventorySnapshot({
   rawSpecification,
   specRevisionMatches,
   generatedSources,
+  clientSources,
 }: {
   provenance: Provenance
   mapping: ModuleMapping
@@ -91,6 +94,7 @@ export function inventorySnapshot({
   rawSpecification?: Specification
   specRevisionMatches: boolean
   generatedSources?: { path: string; content: string }[]
+  clientSources?: { path: string; content: string }[]
 }): Snapshot {
   const diagnostics: Diagnostic[] = []
   const diagnostic = (
@@ -371,10 +375,75 @@ export function inventorySnapshot({
             (input.kind === 'configuration' &&
               input.revision.state === 'not-applicable')),
       )
+  const adoption =
+    clientSources === undefined
+      ? undefined
+      : analyzeAdoption(clientSources, operations, generated?.methods ?? [], {
+          clientRoot: mapping.clientRoot,
+          generatedRoot:
+            mapping.generatedRoot ?? `${mapping.clientRoot}/openapi`,
+        })
+  if (adoption) {
+    for (const operation of operations) reconcileAdoption(operation, adoption)
+    for (const issue of adoption.issues)
+      diagnostic(
+        'adoption',
+        [
+          ...new Set(
+            issue.operationIds.flatMap((id) => [...candidates.get(id)!]),
+          ),
+        ],
+        issue.operationIds,
+        issue.evidence,
+        issue.reason,
+        issue.nextStep,
+      )
+    const anchor =
+      adoption.evidence[0] ??
+      inputAnchor(provenance.inputs.find((input) => input.id === 'client')!)
+    diagnostic(
+      'adoption',
+      [],
+      [],
+      [anchor],
+      'Direct-only production analysis: shared wrappers, inherited helpers, receiver aliases and indirect call chains remain unassessed. No direct caller does not establish server-only status or migration.',
+      'Resolve wrapper/indirect chains and reconcile unresolved callers in iteration 5; assess web relevance with callers or explicit supporting metadata before calculating exclusive adoption or candidates.',
+    )
+  }
+  const callerCount = (
+    bucket: 'generated' | 'manual' | 'unresolved',
+    scoped: Operation[],
+    global: boolean,
+  ) => {
+    if (!adoption) return unassessed('Production caller analysis has not run')
+    const ids = new Set(scoped.map((operation) => operation.id))
+    const callers = adoption.callers.filter(
+      (caller) =>
+        callSiteBucket(caller) === bucket &&
+        (global || caller.operationIds.some((id) => ids.has(id))),
+    )
+    return {
+      state: 'measured' as const,
+      value: callers.length,
+      completeness: 'incomplete-analysis' as const,
+      basis:
+        'Disjoint direct-call partition: resolved generated REST / resolved manual REST / unresolved production transport. Module counts use candidate server ownership, independently of caller area; unbound callers are global-only. Wrappers and indirect chains remain unassessed.',
+      evidence: callers.length
+        ? callers.map((caller) => caller.location)
+        : adoption.evidence.length
+          ? [adoption.evidence[0]]
+          : [
+              inputAnchor(
+                provenance.inputs.find((input) => input.id === 'client')!,
+              ),
+            ],
+    }
+  }
   const measurements = (
     scoped: Operation[],
     complete: boolean,
     evidence: SourceLocation[],
+    global = false,
   ): Snapshot['measurements'] => {
     const measured = (value: number) => ({
       state: 'measured' as const,
@@ -492,9 +561,9 @@ export function inventorySnapshot({
                 ? 'Evidenced scope has no potential REST operations'
                 : 'Incomplete inventory, unresolved ownership/specification, or unavailable/mismatched inputs prevent a complete denominator',
           },
-      generatedCallSites: unassessed('Production caller analysis has not run'),
-      manualCallSites: unassessed('Production caller analysis has not run'),
-      unresolvedCallSites: unassessed('Production caller analysis has not run'),
+      generatedCallSites: callerCount('generated', scoped, global),
+      manualCallSites: callerCount('manual', scoped, global),
+      unresolvedCallSites: callerCount('unresolved', scoped, global),
       generatedTransportCoverage: generatedEligible
         ? {
             state: 'eligible',
@@ -520,9 +589,15 @@ export function inventorySnapshot({
                 ? 'Evidenced scope has no potential REST operations'
                 : 'Unavailable output, unsupported implementations, incomplete server inventory or ambiguous identities prevent a complete generated-transport percentage',
           },
-      productionAdoption: unassessed(
-        'Production caller analysis and web-relevance assessment have not run',
-      ),
+      productionAdoption: adoption
+        ? {
+            state: 'incomplete-analysis',
+            reason:
+              'Direct callers are assessed; wrapper/indirect analysis and unassessed web relevance prevent an exclusive-adoption denominator.',
+          }
+        : unassessed(
+            'Production caller analysis and web-relevance assessment have not run',
+          ),
     }
   }
   const assessments: ModuleAssessment[] = modules.map((module) => {
@@ -569,7 +644,7 @@ export function inventorySnapshot({
                 ? `All ${serverFiles.length} committed Java files in this ownership scope parsed and assessed; no potential annotation mappings or detected unsupported registrations`
                 : module.roots.some((root) => root.inputId === 'server')
                   ? 'Tracked ownership overrides assign this directory’s server files to another discovered scope; no independently owned mappings remain'
-                  : 'Source-root discovery establishes a client area with no server ownership scope; caller/adoption analysis remains unassessed',
+                  : 'Source-root discovery establishes a client area with no server ownership scope; its callers remain independently attributed to their server operations',
             },
       measurements: measurements(scoped, complete, evidence),
     }
@@ -586,10 +661,15 @@ export function inventorySnapshot({
     modules: assessments,
     operations,
     generatedMethods: generated?.methods ?? [],
-    callers: [],
+    callers: adoption?.callers ?? [],
     exceptions: [],
     diagnostics: diagnostics.sort((a, b) => compare(a.id, b.id)),
-    measurements: measurements(operations, complete, [assessments[0].roots[0]]),
+    measurements: measurements(
+      operations,
+      complete,
+      [assessments[0].roots[0]],
+      true,
+    ),
   })
 }
 
@@ -820,6 +900,7 @@ export async function generateReport(
       'server.ts',
       'spec.ts',
       'generated.ts',
+      'adoption.ts',
     ].map((file) => path.join(directory, file))
     analyzerFiles.push(
       extractorSource,
@@ -1044,6 +1125,22 @@ export async function generateReport(
       specification: spec.parsed,
       rawSpecification: raw?.parsed,
       specRevisionMatches: spec.revision === commit,
+      clientSources: extractedFiles.some((file) =>
+        file.startsWith(`${mapping.clientRoot}/`),
+      )
+        ? await Promise.all(
+            extractedFiles
+              .filter(
+                (file) =>
+                  file.startsWith(`${mapping.clientRoot}/`) &&
+                  file.endsWith('.ts'),
+              )
+              .map(async (file) => ({
+                path: file,
+                content: await readFile(path.join(tree, file), 'utf8'),
+              })),
+          )
+        : undefined,
       generatedSources: generatedFiles.length
         ? await Promise.all(
             generatedFiles

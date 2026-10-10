@@ -18,6 +18,7 @@ const baseline = z
     cases: z.array(
       z.object({
         id: z.string(),
+        group: z.string(),
         operation: operationIdentitySchema,
         serverModule: z.string(),
         server: sourceLocationSchema,
@@ -29,8 +30,17 @@ const baseline = z
             transport: z.enum(['observable', 'resource-helper']),
           }),
         ),
+        callers: z.array(
+          z.object({
+            symbol: z.string(),
+            area: z.string(),
+            transport: z.enum(['generated', 'manual']),
+            location: sourceLocationSchema,
+          }),
+        ),
         expected: z.object({
           generatedTransport: z.enum(['available', 'missing']),
+          adoption: z.string(),
         }),
       }),
     ),
@@ -168,12 +178,132 @@ test('real limitations prevent global completeness and later migration claims', 
   assert.equal(snapshot.enforcement, undefined)
   assert.equal(snapshot.verification, undefined)
   assert.ok(snapshot.generatedMethods.length > 0)
-  assert.equal(snapshot.callers.length, 0)
+  assert.ok(snapshot.callers.length > 0)
   assert.ok(
     snapshot.operations.every(
       (operation) =>
-        operation.adoption.state === 'unassessed' &&
-        operation.webRelevance.state === 'unassessed',
+        !['generated-only', 'no-calls'].includes(operation.adoption.state),
+    ),
+  )
+  assert.equal(
+    snapshot.measurements.productionAdoption.state,
+    'incomplete-analysis',
+  )
+  assert.ok(
+    snapshot.diagnostics.some(
+      (item) =>
+        item.stage === 'adoption' && item.reason.includes('Direct-only'),
+    ),
+  )
+})
+
+test('real direct adoption reconciles independent pinned call sites, symbols and ownership across client areas', () => {
+  for (const expected of baseline.cases.filter(
+    (entry) => entry.group !== 'inherited-wrapper',
+  )) {
+    const id = `${expected.operation.method} ${expected.operation.path}`
+    const operation = snapshot.operations.find((entry) => entry.id === id)!
+    assert.equal(
+      operation.adoption.state,
+      expected.expected.adoption,
+      expected.id,
+    )
+    assert.equal(operation.webRelevance.state, 'relevant')
+    const callers = snapshot.callers.filter((caller) =>
+      caller.operationIds.includes(id),
+    )
+    assert.equal(callers.length, expected.callers.length, expected.id)
+    for (const anchor of expected.callers) {
+      assert.ok(
+        callers.some(
+          (caller) =>
+            caller.symbol === anchor.symbol &&
+            caller.area === anchor.area &&
+            caller.transport === anchor.transport &&
+            caller.location.path === anchor.location.path &&
+            caller.location.line === anchor.location.line,
+        ),
+        expected.id,
+      )
+    }
+  }
+  const shared = snapshot.callers.find(
+    (caller) => caller.symbol === 'UsersImportDialogComponent.importUsers',
+  )!
+  assert.equal(shared.area, 'shared-ui')
+  assert.deepEqual(shared.operationIds, [
+    'POST /api/tutorialgroup/courses/{courseId}/tutorial-groups/{tutorialGroupId}/import-registrations',
+  ])
+  const owner = snapshot.operations.find(
+    (operation) => operation.id === shared.operationIds[0],
+  )!.ownership
+  assert.equal(owner.state === 'resolved' && owner.moduleId, 'tutorialgroup')
+  const search = snapshot.callers.find(
+    (caller) => caller.symbol === 'GlobalSearchModalComponent.constructor',
+  )!
+  assert.equal(search.area, 'core')
+  assert.deepEqual(search.operationIds, ['GET /api/search'])
+})
+
+test('real inherited examples remain actionable unresolved work and totals independently reconcile every call site', () => {
+  for (const expected of baseline.cases.filter(
+    (entry) => entry.group === 'inherited-wrapper',
+  )) {
+    for (const anchor of expected.callers) {
+      const caller = snapshot.callers.find(
+        (caller) =>
+          caller.symbol === anchor.symbol &&
+          caller.location.path === anchor.location.path &&
+          caller.location.line === anchor.location.line,
+      )
+      assert.ok(caller)
+      assert.equal(caller.transport, 'unresolved')
+      assert.equal(caller.mapping, 'unresolved')
+      assert.match(caller.reason, /Inherited/)
+      assert.ok(
+        snapshot.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.stage === 'adoption' &&
+            diagnostic.evidence.some(
+              (evidence) =>
+                evidence.path === caller.location.path &&
+                evidence.line === caller.location.line,
+            ),
+        ),
+      )
+    }
+  }
+  for (const [bucket, key] of [
+    ['generated', 'generatedCallSites'],
+    ['manual', 'manualCallSites'],
+    ['unresolved', 'unresolvedCallSites'],
+  ] as const) {
+    // Independently calculate the partition rather than invoking the collector's helper.
+    const expected = snapshot.callers.filter(
+      (caller) =>
+        caller.kind === 'production' &&
+        (bucket === 'unresolved'
+          ? caller.traffic === 'unresolved' ||
+            (caller.traffic === 'artemis-rest' &&
+              (caller.mapping !== 'resolved' ||
+                caller.transport === 'unresolved'))
+          : caller.traffic === 'artemis-rest' &&
+            caller.mapping === 'resolved' &&
+            caller.transport === bucket),
+    )
+    const count = snapshot.measurements[key]
+    assert.equal(count.state, 'measured')
+    if (count.state === 'measured') {
+      assert.equal(count.value, expected.length)
+      assert.equal(count.completeness, 'incomplete-analysis')
+    }
+  }
+  assert.ok(
+    snapshot.callers.every(
+      (caller) =>
+        ['production', 'wrapper-implementation'].includes(caller.kind) &&
+        !caller.location.path.includes('/openapi/') &&
+        !/\.(spec|test)\.ts$/.test(caller.location.path),
     ),
   )
 })

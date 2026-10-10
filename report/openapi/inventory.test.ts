@@ -6,6 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { after, before, test } from 'node:test'
 import {
+  callSiteBucket,
   manifestSchema,
   snapshotSchema,
   type Provenance,
@@ -553,6 +554,16 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
       path.join(repo, 'raw.yaml'),
       specContent + '  /api/pruned:\n    get: {}\n',
     )
+    const directClient =
+      'import { inject } from "@angular/core"; import { HttpClient } from "@angular/common/http"; import { AlphaApi as Api } from "app/openapi/api"; export class SharedConsumer { api = inject(Api); http = inject(HttpClient); read(id: number) { this.api.read(id); this.http.get("api/alpha/" + id); } }'
+    await writeFile(
+      path.join(repo, 'client/shared-ui/service.ts'),
+      directClient,
+    )
+    await writeFile(
+      path.join(repo, 'client/shared-ui/service.spec.ts'),
+      directClient,
+    )
     await writeFile(configFile, JSON.stringify(mapping))
     const git = (...args: string[]) =>
       execFileSync('git', ['-C', repo, ...args], {
@@ -598,16 +609,79 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
           declaration.includes('7.21.0'),
         ),
       )
-    assert.deepEqual(first.snapshot.callers, [])
+    assert.equal(first.snapshot.callers.length, 2)
     assert.ok(
-      first.snapshot.operations.every(
-        (operation) => operation.adoption.state === 'unassessed',
-      ),
+      first.snapshot.callers.every((caller) => caller.area === 'shared-ui'),
+    )
+    assert.equal(
+      first.snapshot.operations.find(
+        (operation) => operation.id === 'GET /api/alpha/{id}',
+      )!.adoption.state,
+      'mixed',
+    )
+    const alpha = first.snapshot.modules.find(
+      (module) => module.id === 'alpha',
+    )!
+    assert.equal(
+      alpha.measurements.generatedCallSites.state === 'measured' &&
+        alpha.measurements.generatedCallSites.value,
+      1,
+    )
+    assert.equal(
+      alpha.measurements.manualCallSites.state === 'measured' &&
+        alpha.measurements.manualCallSites.value,
+      1,
+    )
+    const shared = first.snapshot.modules.find(
+      (module) => module.id === 'shared-ui',
+    )!
+    assert.equal(
+      shared.measurements.generatedCallSites.state === 'measured' &&
+        shared.measurements.generatedCallSites.value,
+      0,
+    )
+    assert.equal(
+      first.snapshot.measurements.productionAdoption.state,
+      'incomplete-analysis',
     )
     const firstBytes = await readFile(path.join(output, `${ref}.json`), 'utf8')
     assert.equal(sha256(firstBytes), first.manifest.snapshots[0].sha256)
     const cached = await generateReport(options)
     assert.equal(cached.cached, true)
+    await writeFile(
+      path.join(repo, 'client/shared-ui/service.ts'),
+      directClient.replace(
+        'this.api.read(id);',
+        'this.api.read(id); this.api.read(id);',
+      ),
+    )
+    git('add', 'client/shared-ui/service.ts')
+    git('commit', '-qm', 'Only committed production caller changed')
+    const clientChange = await generateReport({
+      ...options,
+      ref: git('rev-parse', 'HEAD'),
+    })
+    assert.equal(clientChange.cached, false)
+    assert.equal(clientChange.snapshot.callers.length, 3)
+    assert.notEqual(
+      clientChange.snapshot.provenance.fingerprint,
+      first.snapshot.provenance.fingerprint,
+    )
+    assert.notDeepEqual(
+      clientChange.snapshot.provenance.inputs.find(
+        (input) => input.id === 'client',
+      )!.content,
+      first.snapshot.provenance.inputs.find((input) => input.id === 'client')!
+        .content,
+    )
+    assert.deepEqual(
+      clientChange.snapshot.provenance.inputs.find(
+        (input) => input.id === 'generated',
+      )!.content,
+      first.snapshot.provenance.inputs.find(
+        (input) => input.id === 'generated',
+      )!.content,
+    )
     const rebuilt = await generateReport({
       ...options,
       output: path.join(temporary, 'fresh'),
@@ -871,6 +945,37 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
         diagnostic.reason.includes('no assessable TypeScript'),
       ),
     )
+    const generatedSites = selected.snapshot.callers.filter(
+      (caller) => callSiteBucket(caller) === 'generated',
+    )
+    const assertMissingTransportCalls = (report: typeof selected) => {
+      assert.ok(generatedSites.length > 0)
+      assert.deepEqual(
+        report.snapshot.callers.map((caller) => caller.id),
+        selected.snapshot.callers.map((caller) => caller.id),
+        'Losing generated inputs must not erase production call sites',
+      )
+      for (const original of generatedSites) {
+        const caller = report.snapshot.callers.find(
+          (item) => item.id === original.id,
+        )!
+        assert.equal(callSiteBucket(caller), 'unresolved')
+        assert.deepEqual(caller.operationIds, [])
+        assert.equal(caller.generatedMethodId, undefined)
+        assert.ok(
+          report.snapshot.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.stage === 'adoption' &&
+              diagnostic.evidence.some(
+                (location) =>
+                  location.path === caller.location.path &&
+                  location.line === caller.location.line,
+              ),
+          ),
+        )
+      }
+    }
+    assertMissingTransportCalls(metadataOnly)
     await rm(path.join(repo, 'client/openapi'), { recursive: true })
     git('add', '.')
     git('commit', '-qm', 'Unavailable generated output')
@@ -895,6 +1000,7 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
         .state,
       'unknown',
     )
+    assertMissingTransportCalls(absentOutput)
   } finally {
     await rm(temporary, { recursive: true, force: true })
   }

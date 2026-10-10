@@ -150,6 +150,111 @@ function sample(): Snapshot {
     measurements: measurements(),
   })
 }
+
+test('call-site counts conserve records independently of unique operations and exclude nonproduction/non-REST calls', () => {
+  const snapshot = sample()
+  const measured = (value: number) => ({
+    state: 'measured' as const,
+    value,
+    completeness: 'incomplete-analysis' as const,
+    basis: 'Observed production call sites',
+    evidence,
+  })
+  snapshot.callers.push({
+    ...snapshot.callers[0],
+    id: 'another-call',
+    location: { ...location, line: 13 },
+  })
+  snapshot.operations[0].adoption = {
+    state: 'generated-detected',
+    callerIds: ['call', 'another-call'],
+    analysis: 'incomplete-analysis',
+    evidence,
+    reason: 'Two direct sites for one operation',
+  }
+  snapshot.callers.push({
+    ...snapshot.callers[0],
+    id: 'test-call',
+    kind: 'test',
+  })
+  snapshot.callers.push({
+    ...snapshot.callers[0],
+    id: 'asset-call',
+    transport: 'manual',
+    generatedMethodId: undefined,
+    traffic: 'asset',
+    mapping: 'unresolved',
+    operationIds: [],
+  })
+  snapshot.callers.push({
+    ...snapshot.callers[0],
+    id: 'unknown-call',
+    transport: 'unresolved',
+    generatedMethodId: undefined,
+    traffic: 'unresolved',
+    mapping: 'unresolved',
+    operationIds: [],
+  })
+  Object.assign(snapshot.measurements, {
+    generatedCallSites: measured(2),
+    manualCallSites: measured(0),
+    unresolvedCallSites: measured(1),
+  })
+  Object.assign(snapshot.modules[0].measurements, {
+    generatedCallSites: measured(2),
+    manualCallSites: measured(0),
+    unresolvedCallSites: measured(0),
+  })
+  assert.equal(snapshotSchema.safeParse(snapshot).success, true)
+  snapshot.measurements.generatedCallSites = measured(1)
+  assert.equal(
+    snapshotSchema.safeParse(snapshot).success,
+    false,
+    'one operation is not one call site',
+  )
+  snapshot.measurements.generatedCallSites = measured(2)
+  snapshot.modules[0].measurements.unresolvedCallSites = measured(1)
+  assert.equal(
+    snapshotSchema.safeParse(snapshot).success,
+    false,
+    'unbound callers cannot be assigned to a server owner by their area',
+  )
+})
+
+test('one ambiguous call site referencing multiple server candidates is counted once globally and once within its owner scope', () => {
+  const snapshot = sample()
+  const second = structuredClone(snapshot.operations[0])
+  second.id = 'GET /api/example/{otherId}'
+  second.path = '/api/example/{otherId}'
+  second.generatedTransport = unassessed
+  second.adoption = unassessed
+  second.webRelevance = unassessed
+  snapshot.operations[0].adoption = unassessed
+  snapshot.operations.push(second)
+  const inventory = snapshot.modules[0].inventory
+  assert.equal(inventory.state, 'inventoried')
+  if (inventory.state === 'inventoried') inventory.operationIds.push(second.id)
+  snapshot.callers.push({
+    ...snapshot.callers[0],
+    id: 'ambiguous-call',
+    transport: 'manual',
+    generatedMethodId: undefined,
+    mapping: 'ambiguous',
+    operationIds: [operationId, second.id],
+  })
+  const measured = {
+    state: 'measured' as const,
+    value: 1,
+    completeness: 'incomplete-analysis' as const,
+    basis: 'One source site with two possible identities',
+    evidence,
+  }
+  snapshot.measurements.unresolvedCallSites = measured
+  snapshot.modules[0].measurements.unresolvedCallSites = measured
+  assert.equal(snapshotSchema.safeParse(snapshot).success, true)
+  snapshot.measurements.unresolvedCallSites = { ...measured, value: 2 }
+  assert.equal(snapshotSchema.safeParse(snapshot).success, false)
+})
 const eligible = {
   state: 'eligible' as const,
   numerator: 1,
