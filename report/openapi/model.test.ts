@@ -4,6 +4,7 @@ import {
   adoptionStateSchema,
   countSchema,
   exceptionSchema,
+  inputSchema,
   manifestSchema,
   moduleAssessmentSchema,
   operationIdentitySchema,
@@ -718,5 +719,43 @@ test('manifests bind snapshot files to schema, revision and bytes', () => {
       snapshots: [{ ...manifest.snapshots[0], file: '../other.json' }],
     }).success,
     false,
+  )
+})
+
+test('collector configuration is content-bound without claiming an Artemis storage revision', () => {
+  const snapshot = sample()
+  const configuration = {
+    id: 'mapping',
+    kind: 'configuration' as const,
+    path: 'report/openapi/module-mapping.json',
+    revision: {
+      state: 'not-applicable' as const,
+      reason: 'Configuration is stored in CodeStats',
+    },
+    content: { state: 'available' as const, sha256: hash },
+  }
+  inputSchema.parse(configuration)
+  assert.equal(
+    inputSchema.safeParse({ ...configuration, kind: 'server-source' }).success,
+    false,
+  )
+  snapshot.provenance.inputs.push(configuration)
+  snapshotSchema.parse(snapshot)
+  snapshot.measurements.specificationCounts = {
+    present: {
+      state: 'measured',
+      value: 99,
+      completeness: 'complete',
+      basis: 'Invalid test claim',
+      evidence,
+    },
+    missing: unassessed,
+    ambiguous: unassessed,
+    unresolved: unassessed,
+  }
+  assert.equal(
+    snapshotSchema.safeParse(snapshot).success,
+    false,
+    'Coverage counts must reconcile with independently inventoried states',
   )
 })

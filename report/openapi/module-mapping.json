@@ -1,0 +1,32 @@
+{
+  "version": "1",
+  "serverRoot": "src/main/java/de/tum/cit/aet/artemis",
+  "clientRoot": "src/main/webapp/app",
+  "roleOverrides": {
+    "server-root": {
+      "role": "shared-infrastructure",
+      "reason": "Application/bootstrap and root configuration files have no feature-directory owner"
+    },
+    "config": {
+      "role": "shared-infrastructure",
+      "reason": "Cross-module server configuration is infrastructure"
+    },
+    "foundation": {
+      "role": "shared-infrastructure",
+      "reason": "Shared client foundations can serve callers from several feature areas"
+    },
+    "openapi": {
+      "role": "shared-infrastructure",
+      "reason": "Generated transport is shared infrastructure; file presence does not establish production use"
+    },
+    "shared": {
+      "role": "shared-infrastructure",
+      "reason": "Shared client models/services have no exclusive server feature owner"
+    },
+    "shared-ui": {
+      "role": "shared-infrastructure",
+      "reason": "Shared UI callers retain their own area independently of server operation ownership"
+    }
+  },
+  "ownershipOverrides": []
+}

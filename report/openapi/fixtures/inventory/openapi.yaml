@@ -1,0 +1,16 @@
+openapi: 3.0.3
+info:
+  title: Inventory reconciliation fixture
+  version: '1'
+paths:
+  /api/alpha/{id}:
+    get:
+      operationId: read
+      responses:
+        '200':
+          description: OK
+  /api/alpha/all:
+    get:
+      responses:
+        '200':
+          description: OK

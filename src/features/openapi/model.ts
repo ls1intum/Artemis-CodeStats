@@ -173,6 +173,15 @@ export const measurementsSchema = z
     specificationCoverage: percentageSchema,
     generatedTransportCoverage: percentageSchema,
     productionAdoption: percentageSchema,
+    specificationCounts: z
+      .object({
+        present: countSchema,
+        missing: countSchema,
+        ambiguous: countSchema,
+        unresolved: countSchema,
+      })
+      .strict()
+      .optional(),
   })
   .strict()
 
@@ -406,6 +415,7 @@ export const inputSchema = z
     revision: z.union([
       z.object({ state: z.literal('known'), commit }).strict(),
       z.object({ state: z.literal('unknown'), reason: text }).strict(),
+      z.object({ state: z.literal('not-applicable'), reason: text }).strict(),
     ]),
     content: z.union([
       z.object({ state: z.literal('available'), sha256: hash }).strict(),
@@ -413,11 +423,18 @@ export const inputSchema = z
     ]),
   })
   .strict()
+  .refine(
+    (input) =>
+      input.revision.state !== 'not-applicable' ||
+      input.kind === 'configuration',
+    'Only collector configuration may have a non-Artemis storage revision',
+  )
 export const provenanceSchema = z
   .object({
     artemisCommit: commit,
     repositoryUrl: z.string().url(),
     analyzerVersion: text,
+    fingerprint: hash.optional(),
     analyzedAt: date,
     inputs: z.array(inputSchema).min(1),
     moduleMapping: z.object({ version: text, sha256: hash }).strict(),
@@ -698,8 +715,10 @@ export const snapshotSchema = z
       analyzedInputs.every(
         (input) =>
           input.content.state === 'available' &&
-          input.revision.state === 'known' &&
-          input.revision.commit === snapshot.provenance.artemisCommit,
+          ((input.revision.state === 'known' &&
+            input.revision.commit === snapshot.provenance.artemisCommit) ||
+            (input.kind === 'configuration' &&
+              input.revision.state === 'not-applicable')),
       )
     const inventoryComplete = (
       module: z.infer<typeof moduleAssessmentSchema>,
@@ -724,6 +743,25 @@ export const snapshotSchema = z
       const generated = measurements.generatedTransportCoverage
       const adoption = measurements.productionAdoption
       const unique = measurements.uniqueOperations
+      if (measurements.specificationCounts) {
+        for (const [state, value] of Object.entries(
+          measurements.specificationCounts,
+        )) {
+          const expected = scopedOperations.filter((operation) =>
+            state === 'unresolved'
+              ? !['present', 'missing', 'ambiguous'].includes(
+                  operation.specification.state,
+                )
+              : operation.specification.state === state,
+          ).length
+          if (
+            value.state === 'measured' &&
+            (value.value !== expected ||
+              (value.completeness === 'complete' && !complete))
+          )
+            fail('Specification counts conflict with inventory or completeness')
+        }
+      }
       if (
         unique.state === 'measured' &&
         (unique.value !== scopedOperations.length ||
@@ -842,8 +880,10 @@ export const snapshotSchema = z
       ) &&
       analyzedInputs.every(
         (input) =>
-          input.revision.state === 'known' &&
-          input.revision.commit === binding.artemisCommit,
+          (input.revision.state === 'known' &&
+            input.revision.commit === binding.artemisCommit) ||
+          (input.kind === 'configuration' &&
+            input.revision.state === 'not-applicable'),
       )
     if (
       snapshot.provenance.generation.state === 'recorded' &&
@@ -918,3 +958,4 @@ export type Caller = z.infer<typeof callerSchema>
 export type Diagnostic = z.infer<typeof diagnosticSchema>
 export type Exception = z.infer<typeof exceptionSchema>
 export type Provenance = z.infer<typeof provenanceSchema>
+export type SourceLocation = z.infer<typeof sourceLocationSchema>
