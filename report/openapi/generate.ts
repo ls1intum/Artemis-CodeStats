@@ -46,8 +46,9 @@ import {
   reconcileSpecification,
   type Specification,
 } from './spec'
+import { analyzeGenerated, reconcileGenerated } from './generated'
 
-export const analyzerVersion = 'openapi-inventory-3'
+export const analyzerVersion = 'openapi-inventory-5'
 const directory = path.dirname(fileURLToPath(import.meta.url))
 export const defaultMapping = path.join(directory, 'module-mapping.json')
 export const sha256 = (value: string | Buffer) =>
@@ -80,6 +81,7 @@ export function inventorySnapshot({
   specification,
   rawSpecification,
   specRevisionMatches,
+  generatedSources,
 }: {
   provenance: Provenance
   mapping: ModuleMapping
@@ -88,6 +90,7 @@ export function inventorySnapshot({
   specification?: Specification
   rawSpecification?: Specification
   specRevisionMatches: boolean
+  generatedSources?: { path: string; content: string }[]
 }): Snapshot {
   const diagnostics: Diagnostic[] = []
   const diagnostic = (
@@ -165,9 +168,10 @@ export function inventorySnapshot({
               specification,
               specRevisionMatches,
             ),
-            generatedTransport: unassessed(
-              'Generated transport indexing begins in Iteration 3',
-            ),
+            generatedTransport: {
+              state: 'unknown',
+              reason: 'Generated output has not been supplied',
+            },
             adoption: unassessed('Production call analysis has not run'),
             webRelevance: unassessed(
               'No production caller analysis or explicit web-relevance metadata was supplied',
@@ -202,6 +206,86 @@ export function inventorySnapshot({
       )
     }
   }
+  const generated =
+    generatedSources === undefined
+      ? undefined
+      : analyzeGenerated(
+          generatedSources,
+          operations,
+          specification,
+          specRevisionMatches,
+        )
+  for (const operation of operations)
+    operation.generatedTransport = reconcileGenerated(operation.id, generated)
+  const moduleIdsFor = (ids: string[]) =>
+    [
+      ...new Set(
+        ids.flatMap((id) => {
+          const ownership = known.get(id)?.ownership
+          return !ownership
+            ? []
+            : ownership.state === 'resolved'
+              ? [ownership.moduleId]
+              : ownership.candidateModuleIds
+        }),
+      ),
+    ].sort()
+  for (const issue of generated?.issues ?? [])
+    diagnostic(
+      'generated',
+      [],
+      [],
+      issue.evidence.length ? issue.evidence : [mappingLocation],
+      issue.reason,
+      issue.nextStep,
+    )
+  for (const method of generated?.methods ?? []) {
+    if (method.mapping !== 'resolved')
+      diagnostic(
+        'generated',
+        moduleIdsFor(method.operationIds),
+        method.operationIds,
+        [method.location],
+        `${method.symbol}: ${method.reason}`,
+        'Reconcile the actual method/path with independent server evidence; preserve unsupported and orphan identities without changing the denominator.',
+      )
+    for (const identity of method.identities ?? [])
+      if (identity.specification.state === 'missing')
+        diagnostic(
+          'generated',
+          moduleIdsFor(method.operationIds),
+          method.operationIds,
+          [method.location, ...identity.specification.evidence],
+          `Generated identity ${identity.method} ${identity.path} is absent from the audited specification`,
+          'Review stale output, missing specification coverage or the generation inputs; static presence does not prove current generation provenance.',
+        )
+  }
+  if (!generated)
+    diagnostic(
+      'generated',
+      [],
+      [],
+      [mappingLocation],
+      'Committed generated output is unavailable; transport coverage remains unknown',
+      'Supply the generated output at the analyzed revision or configure its committed source root.',
+    )
+  if (generated?.complete && specification?.complete && specRevisionMatches)
+    for (const [id, evidence] of specification.operations)
+      if (
+        !generated.methods.some((method) =>
+          method.identities?.some(
+            (identity) => `${identity.method} ${identity.path}` === id,
+          ),
+        )
+      )
+        diagnostic(
+          'generated',
+          moduleIdsFor([id]),
+          known.has(id) ? [id] : [],
+          evidence,
+          `Specification identity ${id} has no generated HTTP implementation`,
+          'Reconcile generation inputs, pruning and output; generate the missing transport or document its exclusion without treating it as adoption.',
+        )
   for (const issue of [
     ...(specification?.issues ?? []),
     ...(rawSpecification?.issues ?? []),
@@ -273,16 +357,20 @@ export function inventorySnapshot({
           'Reconcile unsupported/server registrations or stale specification content; do not add it to the expected denominator from the specification alone.',
         )
   }
-  const inputsMatch = provenance.inputs
-    .filter((input) => !['verification', 'enforcement'].includes(input.kind))
-    .every(
-      (input) =>
-        input.content.state === 'available' &&
-        ((input.revision.state === 'known' &&
-          input.revision.commit === provenance.artemisCommit) ||
-          (input.kind === 'configuration' &&
-            input.revision.state === 'not-applicable')),
-    )
+  const inputsMatch = (kinds: Provenance['inputs'][number]['kind'][]) =>
+    kinds.every((kind) =>
+      provenance.inputs.some((input) => input.kind === kind),
+    ) &&
+    provenance.inputs
+      .filter((input) => kinds.includes(input.kind))
+      .every(
+        (input) =>
+          input.content.state === 'available' &&
+          ((input.revision.state === 'known' &&
+            input.revision.commit === provenance.artemisCommit) ||
+            (input.kind === 'configuration' &&
+              input.revision.state === 'not-applicable')),
+      )
   const measurements = (
     scoped: Operation[],
     complete: boolean,
@@ -300,7 +388,7 @@ export function inventorySnapshot({
     })
     const eligible =
       complete &&
-      inputsMatch &&
+      inputsMatch(['server-source', 'specification', 'configuration']) &&
       scoped.length > 0 &&
       scoped.every(
         (operation) =>
@@ -321,6 +409,43 @@ export function inventorySnapshot({
             reason:
               'A complete revision-matching specification is required to count assessed coverage states',
           }
+    const generatedEligible =
+      complete &&
+      generated?.complete &&
+      inputsMatch(['server-source', 'generated-client', 'configuration']) &&
+      scoped.length > 0 &&
+      scoped.every(
+        (operation) =>
+          operation.ownership.state === 'resolved' &&
+          ['available', 'missing'].includes(operation.generatedTransport.state),
+      )
+    const generatedCount = (
+      state: 'available' | 'missing' | 'ambiguous' | 'unresolved',
+    ) => {
+      if (!generated)
+        return {
+          state: 'unknown' as const,
+          reason: 'Generated output is unavailable',
+        }
+      const count = measured(
+        scoped.filter((operation) =>
+          state === 'unresolved'
+            ? !['available', 'missing', 'ambiguous'].includes(
+                operation.generatedTransport.state,
+              )
+            : operation.generatedTransport.state === state,
+        ).length,
+      )
+      return {
+        ...count,
+        completeness:
+          complete && generated.complete
+            ? ('complete' as const)
+            : ('incomplete-analysis' as const),
+        basis:
+          'Unique independent server identities classified against actual generated implementations; incomplete counts are lower bounds',
+      }
+    }
     return {
       uniqueOperations: measured(scoped.length),
       specificationCounts: {
@@ -335,6 +460,12 @@ export function inventorySnapshot({
               ),
           ).length,
         ),
+      },
+      generatedTransportCounts: {
+        available: generatedCount('available'),
+        missing: generatedCount('missing'),
+        ambiguous: generatedCount('ambiguous'),
+        unresolved: generatedCount('unresolved'),
       },
       specificationCoverage: eligible
         ? {
@@ -364,9 +495,31 @@ export function inventorySnapshot({
       generatedCallSites: unassessed('Production caller analysis has not run'),
       manualCallSites: unassessed('Production caller analysis has not run'),
       unresolvedCallSites: unassessed('Production caller analysis has not run'),
-      generatedTransportCoverage: unassessed(
-        'Generated transport indexing has not run',
-      ),
+      generatedTransportCoverage: generatedEligible
+        ? {
+            state: 'eligible',
+            numerator: scoped.filter(
+              (operation) => operation.generatedTransport.state === 'available',
+            ).length,
+            denominator: scoped.length,
+            denominatorComplete: true,
+            analysisComplete: true,
+            basis:
+              'Actual generated transport availability / independent potential server operations; this measures neither specification coverage nor production adoption',
+            evidence,
+          }
+        : {
+            state:
+              complete && scoped.length === 0
+                ? 'not-applicable'
+                : !generated
+                  ? 'unknown'
+                  : 'incomplete-analysis',
+            reason:
+              complete && scoped.length === 0
+                ? 'Evidenced scope has no potential REST operations'
+                : 'Unavailable output, unsupported implementations, incomplete server inventory or ambiguous identities prevent a complete generated-transport percentage',
+          },
       productionAdoption: unassessed(
         'Production caller analysis and web-relevance assessment have not run',
       ),
@@ -432,7 +585,7 @@ export function inventorySnapshot({
     provenance,
     modules: assessments,
     operations,
-    generatedMethods: [],
+    generatedMethods: generated?.methods ?? [],
     callers: [],
     exceptions: [],
     diagnostics: diagnostics.sort((a, b) => compare(a.id, b.id)),
@@ -465,6 +618,7 @@ export async function generateReport(
   const commit = resolveRef(options.ref)
   const mappingBytes = await readFile(options.mapping ?? defaultMapping)
   const mapping = mappingSchema.parse(JSON.parse(mappingBytes.toString()))
+  const generatedRoot = mapping.generatedRoot ?? `${mapping.clientRoot}/openapi`
   const files = git('ls-tree', '-rz', '--name-only', commit)
     .toString()
     .split('\0')
@@ -477,6 +631,7 @@ export async function generateReport(
   const archivePaths = [
     mapping.serverRoot,
     mapping.clientRoot,
+    generatedRoot,
     ...metadataPaths,
   ].filter((root) =>
     files.some((file) => file === root || file.startsWith(root + '/')),
@@ -546,6 +701,21 @@ export async function generateReport(
         revision: { state: 'known', commit },
         content: { state: 'available', sha256: treeHash(mapping.clientRoot) },
       })
+    const generatedFiles = extractedFiles.filter((file) =>
+      file.startsWith(generatedRoot + '/'),
+    )
+    inputs.push({
+      id: 'generated',
+      kind: 'generated-client',
+      path: generatedRoot,
+      revision: { state: 'known', commit },
+      content: generatedFiles.length
+        ? { state: 'available', sha256: treeHash(generatedRoot) }
+        : {
+            state: 'unavailable',
+            reason: `No committed generated output under ${generatedRoot} at ${commit}`,
+          },
+    })
     for (const file of metadataPaths)
       inputs.push({
         id: file,
@@ -649,6 +819,7 @@ export async function generateReport(
       'scope.ts',
       'server.ts',
       'spec.ts',
+      'generated.ts',
     ].map((file) => path.join(directory, file))
     analyzerFiles.push(
       extractorSource,
@@ -759,6 +930,29 @@ export async function generateReport(
           'Pruning needs complete raw and derived specifications tied to the same evidenced generation run',
       },
     }
+    if (provenance.generation.state === 'unknown')
+      for (const file of generatedFiles.filter((file) =>
+        file.endsWith('/.openapi-generator/VERSION'),
+      ))
+        provenance.generation.declarations.push(
+          `Generic OpenAPI Generator version metadata (${file}): ${(await readFile(path.join(tree, file), 'utf8')).trim()}; does not identify the custom generator artifact or run`,
+        )
+    if (
+      provenance.generation.state === 'unknown' &&
+      metadataPaths.includes('build.gradle')
+    ) {
+      const lines = (
+        await readFile(path.join(tree, 'build.gradle'), 'utf8')
+      ).split('\n')
+      for (const [index, line] of lines.entries())
+        if (
+          line.trim().startsWith('classpath ') &&
+          line.includes('openapi-generator-angular22')
+        )
+          provenance.generation.declarations.push(
+            `Source dependency declaration (build.gradle:${index + 1}): ${line.trim()}; not proof of the artifact/run used for committed output`,
+          )
+    }
     const analyzedInputs = inputs.filter(
       (input) => !['verification', 'enforcement'].includes(input.kind),
     )
@@ -850,6 +1044,34 @@ export async function generateReport(
       specification: spec.parsed,
       rawSpecification: raw?.parsed,
       specRevisionMatches: spec.revision === commit,
+      generatedSources: generatedFiles.length
+        ? await Promise.all(
+            generatedFiles
+              .filter(
+                (file) =>
+                  file.endsWith('.ts') &&
+                  !file.endsWith('.d.ts') &&
+                  !/\.(spec|test)\.ts$/.test(file) &&
+                  !file
+                    .split('/')
+                    .some((part) =>
+                      [
+                        '__tests__',
+                        'test',
+                        'tests',
+                        'mock',
+                        'mocks',
+                        'fixture',
+                        'fixtures',
+                      ].includes(part),
+                    ),
+              )
+              .map(async (file) => ({
+                path: file,
+                content: await readFile(path.join(tree, file), 'utf8'),
+              })),
+          )
+        : undefined,
     })
     const bytes = JSON.stringify(snapshot) + '\n'
     const manifest = manifestSchema.parse({

@@ -286,7 +286,7 @@ test('discovery includes new and absent-from-spec modules, client areas, no-REST
   assert.ok(
     snapshot.operations.every(
       (operation) =>
-        operation.generatedTransport.state === 'unassessed' &&
+        operation.generatedTransport.state === 'unknown' &&
         operation.adoption.state === 'unassessed' &&
         operation.webRelevance.state === 'unassessed',
     ),
@@ -546,6 +546,10 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
   try {
     await cp(fixture, repo, { recursive: true })
     await writeFile(
+      path.join(repo, 'client/openapi/fake.spec.ts'),
+      'import { HttpClient } from "@angular/common/http"; import { inject } from "@angular/core"; export class FakeApi { private readonly http = inject(HttpClient); read() { return this.http.get("/api/alias/all"); } }',
+    )
+    await writeFile(
       path.join(repo, 'raw.yaml'),
       specContent + '  /api/pruned:\n    get: {}\n',
     )
@@ -580,6 +584,26 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
     assert.equal(first.cached, false)
     snapshotSchema.parse(first.snapshot)
     manifestSchema.parse(first.manifest)
+    assert.equal(first.snapshot.generatedMethods.length, 2)
+    assert.equal(
+      first.snapshot.operations.find(
+        (operation) => operation.id === 'GET /api/alpha/{id}',
+      )!.generatedTransport.state,
+      'available',
+    )
+    assert.equal(first.snapshot.provenance.generation.state, 'unknown')
+    if (first.snapshot.provenance.generation.state === 'unknown')
+      assert.ok(
+        first.snapshot.provenance.generation.declarations.some((declaration) =>
+          declaration.includes('7.21.0'),
+        ),
+      )
+    assert.deepEqual(first.snapshot.callers, [])
+    assert.ok(
+      first.snapshot.operations.every(
+        (operation) => operation.adoption.state === 'unassessed',
+      ),
+    )
     const firstBytes = await readFile(path.join(output, `${ref}.json`), 'utf8')
     assert.equal(sha256(firstBytes), first.manifest.snapshots[0].sha256)
     const cached = await generateReport(options)
@@ -771,6 +795,106 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
       spec: 'config/openapi/openapi.yaml',
     })
     assert.equal(specInput(selected).path, 'config/openapi/openapi.yaml')
+    const generatedFile = path.join(repo, 'client/openapi/api.ts')
+    await writeFile(
+      generatedFile,
+      (await readFile(generatedFile, 'utf8')).replace(
+        '/api/alpha/all',
+        '/api/added',
+      ),
+    )
+    await writeFile(
+      path.join(repo, 'client/openapi/.openapi-generator/VERSION'),
+      '8.0.0\n',
+    )
+    git('add', '.')
+    git(
+      'commit',
+      '-qm',
+      'Changed generated implementation and generic metadata',
+    )
+    const generatedChange = await generateReport({
+      ...automatic,
+      ref: git('rev-parse', 'HEAD'),
+      spec: 'config/openapi/openapi.yaml',
+    })
+    const inputHash = (report: typeof selected, id: string) =>
+      report.snapshot.provenance.inputs.find((input) => input.id === id)!
+        .content
+    assert.deepEqual(
+      inputHash(generatedChange, 'server'),
+      inputHash(selected, 'server'),
+    )
+    assert.deepEqual(
+      inputHash(generatedChange, 'specification'),
+      inputHash(selected, 'specification'),
+    )
+    assert.notDeepEqual(
+      inputHash(generatedChange, 'generated'),
+      inputHash(selected, 'generated'),
+    )
+    assert.notEqual(
+      generatedChange.snapshot.provenance.fingerprint,
+      selected.snapshot.provenance.fingerprint,
+    )
+    assert.equal(generatedChange.cached, false)
+    assert.ok(
+      generatedChange.snapshot.generatedMethods.some((method) =>
+        method.identities?.some((identity) => identity.path === '/api/added'),
+      ),
+    )
+    assert.equal(
+      generatedChange.snapshot.provenance.generation.state,
+      'unknown',
+    )
+    await rm(generatedFile)
+    git('add', '.')
+    git(
+      'commit',
+      '-qm',
+      'Only generic generation metadata and excluded test remain',
+    )
+    const metadataOnly = await generateReport({
+      ...automatic,
+      ref: git('rev-parse', 'HEAD'),
+      spec: 'config/openapi/openapi.yaml',
+    })
+    assert.deepEqual(metadataOnly.snapshot.generatedMethods, [])
+    assert.ok(
+      metadataOnly.snapshot.operations.every(
+        (operation) =>
+          operation.generatedTransport.state === 'incomplete-analysis',
+      ),
+    )
+    assert.ok(
+      metadataOnly.snapshot.diagnostics.some((diagnostic) =>
+        diagnostic.reason.includes('no assessable TypeScript'),
+      ),
+    )
+    await rm(path.join(repo, 'client/openapi'), { recursive: true })
+    git('add', '.')
+    git('commit', '-qm', 'Unavailable generated output')
+    const absentOutput = await generateReport({
+      ...automatic,
+      ref: git('rev-parse', 'HEAD'),
+      spec: 'config/openapi/openapi.yaml',
+    })
+    assert.equal(
+      absentOutput.snapshot.provenance.inputs.find(
+        (input) => input.id === 'generated',
+      )!.content.state,
+      'unavailable',
+    )
+    assert.ok(
+      absentOutput.snapshot.operations.every(
+        (operation) => operation.generatedTransport.state === 'unknown',
+      ),
+    )
+    assert.equal(
+      absentOutput.snapshot.measurements.generatedTransportCounts!.available
+        .state,
+      'unknown',
+    )
   } finally {
     await rm(temporary, { recursive: true, force: true })
   }

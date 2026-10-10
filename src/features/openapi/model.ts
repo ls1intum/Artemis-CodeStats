@@ -182,6 +182,15 @@ export const measurementsSchema = z
       })
       .strict()
       .optional(),
+    generatedTransportCounts: z
+      .object({
+        available: countSchema,
+        missing: countSchema,
+        ambiguous: countSchema,
+        unresolved: countSchema,
+      })
+      .strict()
+      .optional(),
   })
   .strict()
 
@@ -270,6 +279,15 @@ export const generatedMethodSchema = z
     operationIds: ids,
     mapping,
     reason: text,
+    // Actual transport identities survive even when the independent server inventory has no match.
+    identities: z
+      .array(
+        operationIdentitySchema
+          .extend({ specification: specificationStateSchema })
+          .strict(),
+      )
+      .optional(),
+    implementations: evidence.optional(),
   })
   .strict()
   .refine(
@@ -687,8 +705,24 @@ export const snapshotSchema = z
           )
       }
     }
-    for (const method of snapshot.generatedMethods)
+    for (const method of snapshot.generatedMethods) {
       references(method.operationIds, operations, 'operation')
+      if (method.identities) {
+        const identityIds = method.identities.map(
+          (identity) => `${identity.method} ${identity.path}`,
+        )
+        if (new Set(identityIds).size !== identityIds.length)
+          fail(`Duplicate generated identity: ${method.id}`)
+        if (
+          method.mapping === 'resolved' &&
+          (identityIds.length !== 1 ||
+            identityIds[0] !== method.operationIds[0])
+        )
+          fail(
+            `Resolved generated identity disagrees with server mapping: ${method.id}`,
+          )
+      }
+    }
     for (const caller of snapshot.callers) {
       references(caller.operationIds, operations, 'operation')
       if (caller.generatedMethodId) {
@@ -710,16 +744,22 @@ export const snapshotSchema = z
     const analyzedInputs = snapshot.provenance.inputs.filter(
       (input) => input.kind !== 'verification' && input.kind !== 'enforcement',
     )
-    const validInputs =
+    const validInputs = (kinds?: z.infer<typeof inputSchema>['kind'][]) =>
       analyzedInputs.length > 0 &&
-      analyzedInputs.every(
-        (input) =>
-          input.content.state === 'available' &&
-          ((input.revision.state === 'known' &&
-            input.revision.commit === snapshot.provenance.artemisCommit) ||
-            (input.kind === 'configuration' &&
-              input.revision.state === 'not-applicable')),
-      )
+      (!kinds ||
+        kinds.every((kind) =>
+          analyzedInputs.some((input) => input.kind === kind),
+        )) &&
+      analyzedInputs
+        .filter((input) => !kinds || kinds.includes(input.kind))
+        .every(
+          (input) =>
+            input.content.state === 'available' &&
+            ((input.revision.state === 'known' &&
+              input.revision.commit === snapshot.provenance.artemisCommit) ||
+              (input.kind === 'configuration' &&
+                input.revision.state === 'not-applicable')),
+        )
     const inventoryComplete = (
       module: z.infer<typeof moduleAssessmentSchema>,
     ) =>
@@ -762,6 +802,27 @@ export const snapshotSchema = z
             fail('Specification counts conflict with inventory or completeness')
         }
       }
+      if (measurements.generatedTransportCounts) {
+        for (const [state, value] of Object.entries(
+          measurements.generatedTransportCounts,
+        )) {
+          const expected = scopedOperations.filter((operation) =>
+            state === 'unresolved'
+              ? !['available', 'missing', 'ambiguous'].includes(
+                  operation.generatedTransport.state,
+                )
+              : operation.generatedTransport.state === state,
+          ).length
+          if (
+            value.state === 'measured' &&
+            (value.value !== expected ||
+              (value.completeness === 'complete' && !complete))
+          )
+            fail(
+              'Generated transport counts conflict with inventory or completeness',
+            )
+        }
+      }
       if (
         unique.state === 'measured' &&
         (unique.value !== scopedOperations.length ||
@@ -773,13 +834,26 @@ export const snapshotSchema = z
           (value) => value.state === 'eligible',
         ) &&
         (!complete ||
-          !validInputs ||
           scopedOperations.some(
             (operation) => operation.ownership.state !== 'resolved',
           ))
       )
         fail(
           'Eligible percentages need a complete independent inventory, resolved ownership and matching available inputs',
+        )
+      if (
+        (spec.state === 'eligible' &&
+          !validInputs(['server-source', 'specification', 'configuration'])) ||
+        (generated.state === 'eligible' &&
+          !validInputs([
+            'server-source',
+            'generated-client',
+            'configuration',
+          ])) ||
+        (adoption.state === 'eligible' && !validInputs())
+      )
+        fail(
+          'Eligible percentages need all required matching available inputs for their measurement',
         )
       if (
         spec.state === 'eligible' &&

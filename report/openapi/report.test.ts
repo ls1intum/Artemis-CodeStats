@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import { z } from 'zod'
 import {
   manifestSchema,
+  inputSchema,
   operationIdentitySchema,
   snapshotSchema,
   sourceLocationSchema,
@@ -13,6 +14,7 @@ import { analyzerVersion, defaultMapping, sha256 } from './generate'
 const baseline = z
   .object({
     artemisCommit: z.string(),
+    inputs: z.array(inputSchema),
     cases: z.array(
       z.object({
         id: z.string(),
@@ -20,6 +22,16 @@ const baseline = z
         serverModule: z.string(),
         server: sourceLocationSchema,
         specification: z.object({ state: z.enum(['present', 'missing']) }),
+        generatedMethods: z.array(
+          z.object({
+            symbol: z.string(),
+            location: sourceLocationSchema,
+            transport: z.enum(['observable', 'resource-helper']),
+          }),
+        ),
+        expected: z.object({
+          generatedTransport: z.enum(['available', 'missing']),
+        }),
       }),
     ),
   })
@@ -155,14 +167,96 @@ test('real limitations prevent global completeness and later migration claims', 
   assert.equal(snapshot.provenance.pruning.state, 'unknown')
   assert.equal(snapshot.enforcement, undefined)
   assert.equal(snapshot.verification, undefined)
-  assert.equal(snapshot.generatedMethods.length, 0)
+  assert.ok(snapshot.generatedMethods.length > 0)
   assert.equal(snapshot.callers.length, 0)
   assert.ok(
     snapshot.operations.every(
       (operation) =>
-        operation.generatedTransport.state === 'unassessed' &&
         operation.adoption.state === 'unassessed' &&
         operation.webRelevance.state === 'unassessed',
     ),
   )
+})
+
+test('real generated inventory matches independently pinned methods, tree hash and the quiz transport gap', () => {
+  const tree = snapshot.provenance.inputs.find(
+    (input) => input.id === 'generated',
+  )!
+  const expectedTree = baseline.inputs.find(
+    (input) => input.id === 'generated-tree',
+  )!
+  assert.deepEqual(tree.content, expectedTree.content)
+  assert.deepEqual(tree.revision, expectedTree.revision)
+  for (const expected of baseline.cases) {
+    const id = `${expected.operation.method} ${expected.operation.path}`
+    const operation = snapshot.operations.find((entry) => entry.id === id)!
+    assert.equal(
+      operation.generatedTransport.state,
+      expected.expected.generatedTransport,
+      expected.id,
+    )
+    for (const anchor of expected.generatedMethods) {
+      const method = snapshot.generatedMethods.find(
+        (entry) =>
+          entry.symbol === anchor.symbol &&
+          entry.location.path === anchor.location.path &&
+          entry.location.line === anchor.location.line,
+      )
+      assert.ok(
+        method,
+        `Missing independently pinned generated method: ${anchor.symbol}`,
+      )
+      assert.equal(method.transport, anchor.transport)
+      assert.equal(method.mapping, 'resolved')
+      assert.ok(method.operationIds.includes(id))
+      assert.ok(
+        method.identities?.some(
+          (identity) => `${identity.method} ${identity.path}` === id,
+        ),
+      )
+    }
+  }
+  const calendar = snapshot.modules.find((module) => module.id === 'calendar')!
+    .measurements.generatedTransportCoverage
+  assert.deepEqual(
+    calendar.state === 'eligible'
+      ? [calendar.numerator, calendar.denominator]
+      : calendar.state,
+    [3, 3],
+  )
+  assert.equal(
+    snapshot.generatedMethods.some((method) =>
+      method.identities?.some(
+        (identity) =>
+          `${identity.method} ${identity.path}` ===
+          'POST /api/quiz/exercises/{exerciseId}/submissions/live',
+      ),
+    ),
+    false,
+  )
+  assert.ok(
+    snapshot.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.stage === 'generated' &&
+        diagnostic.reason.includes(
+          'POST /api/quiz/exercises/{exerciseId}/submissions/live',
+        ),
+    ),
+  )
+  assert.ok(
+    snapshot.generatedMethods.some(
+      (method) =>
+        method.mapping === 'unresolved' &&
+        method.identities?.length &&
+        method.operationIds.length === 0,
+    ),
+    'Generated identities outside the independent inventory remain visible',
+  )
+  assert.equal(snapshot.provenance.generation.state, 'unknown')
+  if (snapshot.provenance.generation.state === 'unknown')
+    assert.ok(
+      snapshot.provenance.generation.declarations.some((declaration) =>
+        declaration.includes('7.21.0'),
+      ),
+    )
 })

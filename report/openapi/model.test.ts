@@ -160,6 +160,23 @@ const eligible = {
   evidence,
 }
 
+function percentageSample(): Snapshot {
+  const snapshot = sample()
+  for (const kind of [
+    'specification',
+    'generated-client',
+    'configuration',
+  ] as const)
+    snapshot.provenance.inputs.push({
+      id: kind,
+      kind,
+      path: `inputs/${kind}`,
+      revision: { state: 'known', commit },
+      content: { state: 'available', sha256: hash },
+    })
+  return snapshot
+}
+
 test('OpenAPI unknown evidence stays unknown and cannot acquire a zero default', () => {
   const unknown = { state: 'unknown', reason: 'Generation run not recorded' }
   assert.deepEqual(unavailableSchema.parse(unknown), unknown)
@@ -398,7 +415,7 @@ test('generated, manual and mixed usage count endpoint calls, excluding implemen
 })
 
 test('percentages reconcile independently and incomplete adoption cannot be advertised', () => {
-  const snapshot = sample()
+  const snapshot = percentageSample()
   snapshot.measurements.specificationCoverage = eligible
   snapshot.modules[0].measurements.specificationCoverage = eligible
   assert.equal(snapshotSchema.safeParse(snapshot).success, true)
@@ -758,4 +775,138 @@ test('collector configuration is content-bound without claiming an Artemis stora
     false,
     'Coverage counts must reconcile with independently inventoried states',
   )
+})
+
+test('actual generated identities reconcile references/counts and preserve orphan transport without a fabricated server denominator', () => {
+  const snapshot = sample()
+  const method = snapshot.generatedMethods[0]
+  method.identities = [
+    {
+      method: 'GET',
+      path: '/api/example/{id}',
+      specification: snapshot.operations[0].specification,
+    },
+  ]
+  snapshotSchema.parse(snapshot)
+  method.identities[0].path = '/different'
+  assert.equal(snapshotSchema.safeParse(snapshot).success, false)
+  method.identities[0].path = '/api/example/{id}'
+  snapshot.generatedMethods.push({
+    ...method,
+    id: 'orphan',
+    symbol: 'Api.orphan',
+    mapping: 'unresolved',
+    operationIds: [],
+    identities: [
+      {
+        method: 'GET',
+        path: '/different',
+        specification: {
+          state: 'missing',
+          reason: 'Not in audited contract',
+          evidence,
+        },
+      },
+    ],
+  })
+  snapshotSchema.parse(snapshot)
+  snapshot.measurements.generatedTransportCounts = {
+    available: {
+      state: 'measured',
+      value: 2,
+      completeness: 'complete',
+      basis: 'Invalid count',
+      evidence,
+    },
+    missing: unassessed,
+    ambiguous: unassessed,
+    unresolved: unassessed,
+  }
+  assert.equal(snapshotSchema.safeParse(snapshot).success, false)
+})
+
+test('missing generated output constrains transport eligibility without erasing independently assessed specification coverage', () => {
+  const snapshot = percentageSample()
+  snapshot.provenance.inputs.find(
+    (input) => input.kind === 'generated-client',
+  )!.content = {
+    state: 'unavailable',
+    reason: 'No committed generated output',
+  }
+  snapshot.measurements.specificationCoverage = eligible
+  snapshot.operations[0].generatedTransport = {
+    state: 'unknown',
+    reason: 'Output unavailable',
+  }
+  snapshotSchema.parse(snapshot)
+  snapshot.measurements.generatedTransportCoverage = eligible
+  assert.equal(snapshotSchema.safeParse(snapshot).success, false)
+})
+
+test('eligible specification and transport percentages require every relevant input kind at the matching revision', () => {
+  for (const [field, required] of [
+    [
+      'specificationCoverage',
+      ['server-source', 'specification', 'configuration'],
+    ],
+    [
+      'generatedTransportCoverage',
+      ['server-source', 'generated-client', 'configuration'],
+    ],
+  ] as const) {
+    const valid = percentageSample()
+    valid.measurements[field] = eligible
+    valid.modules[0].measurements[field] = eligible
+    snapshotSchema.parse(valid)
+    for (const kind of required) {
+      for (const failure of [
+        'missing-kind',
+        'unavailable',
+        'unknown-revision',
+        'mismatched-revision',
+      ] as const) {
+        const snapshot = structuredClone(valid)
+        const input = snapshot.provenance.inputs.find(
+          (entry) => entry.kind === kind,
+        )!
+        if (failure === 'missing-kind') {
+          // Keep source locations valid while reproducing absent required kinds and
+          // the former empty-filter success. The replacement is not measurement evidence.
+          input.kind = 'production-client'
+          input.revision = {
+            state: 'unknown',
+            reason: 'Unrelated input revision is unknown',
+          }
+        } else if (failure === 'unavailable') {
+          input.content = {
+            state: 'unavailable',
+            reason: 'Input bytes are missing',
+          }
+        } else if (failure === 'unknown-revision') {
+          input.revision = {
+            state: 'unknown',
+            reason: 'Storage revision is unknown',
+          }
+        } else {
+          input.revision = { state: 'known', commit: 'c'.repeat(40) }
+        }
+        const result = snapshotSchema.safeParse(snapshot)
+        assert.equal(result.success, false, `${field}: ${kind} ${failure}`)
+        if (!result.success)
+          assert.ok(
+            result.error.issues.some((issue) =>
+              issue.message.includes('all required matching available inputs'),
+            ),
+          )
+      }
+    }
+    const empty = structuredClone(valid)
+    for (const input of empty.provenance.inputs)
+      input.kind = 'production-client'
+    assert.equal(
+      snapshotSchema.safeParse(empty).success,
+      false,
+      `${field}: no required input kinds`,
+    )
+  }
 })

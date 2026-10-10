@@ -1,7 +1,8 @@
 {
-  "version": "1",
+  "version": "2",
   "serverRoot": "src/main/java/de/tum/cit/aet/artemis",
   "clientRoot": "src/main/webapp/app",
+  "generatedRoot": "src/main/webapp/app/openapi",
   "roleOverrides": {
     "server-root": {
       "role": "shared-infrastructure",

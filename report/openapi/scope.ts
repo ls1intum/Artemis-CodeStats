@@ -19,6 +19,7 @@ export const mappingSchema = z
     version: z.string().min(1),
     serverRoot: relative,
     clientRoot: relative,
+    generatedRoot: relative.optional(),
     roleOverrides: z.record(
       z
         .object({
