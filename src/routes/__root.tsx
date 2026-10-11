@@ -11,7 +11,7 @@ import { Toaster } from '@/components/ui/sonner'
 
 export function RootLayout() {
   const currentPath = useRouterState().location.pathname
-  const archived = currentPath !== '/'
+  const archived = ['/decoratorless', '/dto-usage'].includes(currentPath)
   return (
     <div className="min-h-screen bg-background text-foreground">
       <a
@@ -46,10 +46,17 @@ export function RootLayout() {
           >
             <Link
               to="/"
-              aria-current={!archived ? 'page' : undefined}
-              className={`rounded-md px-3 py-2 font-medium ${!archived ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+              aria-current={currentPath === '/' ? 'page' : undefined}
+              className={`rounded-md px-3 py-2 font-medium ${currentPath === '/' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
             >
               UI modernization
+            </Link>
+            <Link
+              to="/openapi"
+              aria-current={currentPath === '/openapi' ? 'page' : undefined}
+              className={`rounded-md px-3 py-2 font-medium ${currentPath === '/openapi' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+            >
+              OpenAPI migration
             </Link>
             <Popover>
               <PopoverTrigger asChild>

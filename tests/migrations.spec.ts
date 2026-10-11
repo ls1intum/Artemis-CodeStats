@@ -210,6 +210,13 @@ test('every table fits a desktop viewport without sideways scrolling', async ({
 test('contributors are ranked, linked to GitHub and windowed', async ({
   page,
 }) => {
+  // Keep avatar rendering deterministic without relying on GitHub image availability.
+  await page.route('https://github.com/*.png*', (route) =>
+    route.fulfill({
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
+    }),
+  )
   await page.goto('./#/?view=contributors')
   await loaded(page)
   const manifest = await (
@@ -401,7 +408,9 @@ test('active dashboard has no automated WCAG A/AA violations', async ({
 
 test('historical dashboards still render as archives', async ({ page }) => {
   // Archives are frozen; they must keep rendering however long ago their last report was.
-  await page.clock.setFixedTime(Date.now() + 365 * 86_400_000)
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.clock.setFixedTime(new Date('2035-01-01T12:00:00Z'))
   await page.goto('./#/decoratorless')
   await expect(page.getByText('Archived.', { exact: true })).toBeVisible()
   await expect(
@@ -410,11 +419,15 @@ test('historical dashboards still render as archives', async ({ page }) => {
       exact: true,
     }),
   ).toBeVisible()
+  await expect(
+    page.getByRole('combobox', { name: 'Compare with:' }),
+  ).not.toHaveText('Select version to compare')
   await page.goto('./#/dto-usage')
   await expect(page.getByText('Archived.', { exact: true })).toBeVisible()
   await expect(
     page.getByRole('heading', { name: 'DTO Usage Migration', exact: true }),
   ).toBeVisible()
+  expect(errors).toEqual([])
 })
 
 test('DTO archive loads only selected details and pins historical source links', async ({
