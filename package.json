@@ -18,7 +18,7 @@
     "test:e2e": "playwright test",
     "typecheck:report": "tsc -p tsconfig.report.json",
     "test:coverage": "node --import tsx --test --experimental-test-coverage --test-coverage-include=\"report/ui/analyze.ts\" report/ui/*.test.ts",
-    "format:check": "prettier --check --single-quote --no-semi src/features/migrations src/features/openapi src/lib/router.tsx src/routes/__root.tsx report/ui report/openapi docs/openapi-dashboard.md docs/openapi-dashboard-audit.md README.md .github/workflows/daily-report.yml .github/workflows/ci.yml package.json tsconfig.report.json tests playwright.config.ts report/prepare-dto-archive.ts src/lib/dto-data.ts",
+    "format:check": "prettier --check --single-quote --no-semi src/features/migrations src/features/openapi src/lib/router.tsx src/routes/__root.tsx report/ui report/openapi docs/openapi-dashboard.md README.md .github/workflows/daily-report.yml .github/workflows/ci.yml package.json tsconfig.report.json tests playwright.config.ts report/prepare-dto-archive.ts src/lib/dto-data.ts",
     "predev": "tsx report/prepare-dto-archive.ts",
     "prebuild": "tsx report/prepare-dto-archive.ts"
   },
