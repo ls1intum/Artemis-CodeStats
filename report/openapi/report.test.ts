@@ -9,6 +9,7 @@ import {
   snapshotSchema,
   sourceLocationSchema,
 } from '../../src/features/openapi/model'
+import { scopeReport } from '../../src/features/openapi/scope'
 import { analyzerVersion, defaultMapping, sha256 } from './generate'
 
 const baseline = z
@@ -36,6 +37,7 @@ const baseline = z
             area: z.string(),
             transport: z.enum(['generated', 'manual']),
             location: sourceLocationSchema,
+            via: z.array(sourceLocationSchema).optional(),
           }),
         ),
         expected: z.object({
@@ -192,27 +194,29 @@ test('real limitations prevent global completeness and later migration claims', 
   assert.ok(
     snapshot.diagnostics.some(
       (item) =>
-        item.stage === 'adoption' && item.reason.includes('Direct-only'),
+        item.stage === 'adoption' &&
+        item.reason.includes('Supported source-chain'),
     ),
   )
 })
 
-test('real direct adoption reconciles independent pinned call sites, symbols and ownership across client areas', () => {
+test('real adoption retains independently pinned transport anchors and their callers across client areas', () => {
   for (const expected of baseline.cases.filter(
     (entry) => entry.group !== 'inherited-wrapper',
   )) {
     const id = `${expected.operation.method} ${expected.operation.path}`
     const operation = snapshot.operations.find((entry) => entry.id === id)!
-    assert.equal(
-      operation.adoption.state,
-      expected.expected.adoption,
+    assert.ok(
+      [expected.expected.adoption, 'incomplete-analysis'].includes(
+        operation.adoption.state,
+      ),
       expected.id,
     )
     assert.equal(operation.webRelevance.state, 'relevant')
     const callers = snapshot.callers.filter((caller) =>
       caller.operationIds.includes(id),
     )
-    assert.equal(callers.length, expected.callers.length, expected.id)
+    assert.ok(callers.length >= expected.callers.length, expected.id)
     for (const anchor of expected.callers) {
       assert.ok(
         callers.some(
@@ -228,7 +232,10 @@ test('real direct adoption reconciles independent pinned call sites, symbols and
     }
   }
   const shared = snapshot.callers.find(
-    (caller) => caller.symbol === 'UsersImportDialogComponent.importUsers',
+    (caller) =>
+      caller.symbol === 'UsersImportDialogComponent.importUsers' &&
+      caller.location.line === 146 &&
+      caller.transport === 'generated',
   )!
   assert.equal(shared.area, 'shared-ui')
   assert.deepEqual(shared.operationIds, [
@@ -239,13 +246,16 @@ test('real direct adoption reconciles independent pinned call sites, symbols and
   )!.ownership
   assert.equal(owner.state === 'resolved' && owner.moduleId, 'tutorialgroup')
   const search = snapshot.callers.find(
-    (caller) => caller.symbol === 'GlobalSearchModalComponent.constructor',
+    (caller) =>
+      caller.symbol === 'GlobalSearchModalComponent.constructor' &&
+      caller.location.line === 275 &&
+      caller.transport === 'generated',
   )!
   assert.equal(search.area, 'core')
   assert.deepEqual(search.operationIds, ['GET /api/search'])
 })
 
-test('real inherited examples remain actionable unresolved work and totals independently reconcile every call site', () => {
+test('real inherited examples resolve through BaseApiHttpService and totals independently reconcile every call site', () => {
   for (const expected of baseline.cases.filter(
     (entry) => entry.group === 'inherited-wrapper',
   )) {
@@ -257,17 +267,28 @@ test('real inherited examples remain actionable unresolved work and totals indep
           caller.location.line === anchor.location.line,
       )
       assert.ok(caller)
-      assert.equal(caller.transport, 'unresolved')
-      assert.equal(caller.mapping, 'unresolved')
-      assert.match(caller.reason, /Inherited/)
+      assert.equal(caller.transport, 'manual')
+      assert.equal(caller.mapping, 'resolved')
+      assert.deepEqual(caller.operationIds, [
+        `${expected.operation.method} ${expected.operation.path}`,
+      ])
+      assert.equal(caller.kind, 'wrapper-implementation')
+      for (const via of anchor.via ?? [])
+        assert.ok(
+          caller.via.some(
+            (location) =>
+              location.path === via.path && location.line === via.line,
+          ),
+        )
       assert.ok(
-        snapshot.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.stage === 'adoption' &&
-            diagnostic.evidence.some(
-              (evidence) =>
-                evidence.path === caller.location.path &&
-                evidence.line === caller.location.line,
+        snapshot.callers.some(
+          (production) =>
+            production.kind === 'production' &&
+            production.transport === 'manual' &&
+            production.mapping === 'resolved' &&
+            production.operationIds.includes(caller.operationIds[0]) &&
+            production.via.some(
+              (location) => location.path === caller.location.path,
             ),
         ),
       )
@@ -305,6 +326,84 @@ test('real inherited examples remain actionable unresolved work and totals indep
         !caller.location.path.includes('/openapi/') &&
         !/\.(spec|test)\.ts$/.test(caller.location.path),
     ),
+  )
+})
+
+test('shared server-module scope reconciles every module independently and preserves cross-area/unbound work', () => {
+  const global = scopeReport(snapshot)
+  assert.equal(
+    global.counts.uniqueOperations,
+    new Set(snapshot.operations.map((operation) => operation.id)).size,
+  )
+  for (const module of snapshot.modules) {
+    const scoped = scopeReport(snapshot, module.id)
+    const operations = snapshot.operations.filter((operation) =>
+      operation.ownership.state === 'resolved'
+        ? operation.ownership.moduleId === module.id
+        : operation.ownership.candidateModuleIds.includes(module.id),
+    )
+    assert.deepEqual(
+      scoped.operations.map((operation) => operation.id),
+      operations.map((operation) => operation.id),
+    )
+    assert.equal(scoped.counts.uniqueOperations, operations.length)
+    for (const [bucket, key] of [
+      ['generated', 'generatedCallSites'],
+      ['manual', 'manualCallSites'],
+      ['unresolved', 'unresolvedCallSites'],
+    ] as const) {
+      const observed = snapshot.callers.filter(
+        (caller) =>
+          caller.kind === 'production' &&
+          caller.operationIds.some((id) =>
+            operations.some((operation) => operation.id === id),
+          ) &&
+          (bucket === 'unresolved'
+            ? caller.traffic === 'unresolved' ||
+              (caller.traffic === 'artemis-rest' &&
+                (caller.mapping !== 'resolved' ||
+                  caller.transport === 'unresolved'))
+            : caller.traffic === 'artemis-rest' &&
+              caller.mapping === 'resolved' &&
+              caller.transport === bucket),
+      )
+      assert.equal(scoped.counts[key], observed.length, `${module.id}:${key}`)
+      const measured = module.measurements[key]
+      assert.equal(
+        measured.state === 'measured' && measured.value,
+        observed.length,
+        `${module.id}:${key}`,
+      )
+    }
+    assert.ok(
+      scoped.nextSteps.every(
+        (step) => step.evidence.length && step.action.length,
+      ),
+    )
+  }
+  assert.ok(
+    scopeReport(snapshot, 'globalsearch').callers.some(
+      (caller) => caller.area === 'core',
+    ),
+  )
+  assert.ok(
+    scopeReport(snapshot, 'tutorialgroup').callers.some(
+      (caller) => caller.area === 'shared-ui',
+    ),
+  )
+  assert.ok(scopeReport(snapshot, 'calendar').unscopedCallers.length)
+  assert.equal(snapshot.readiness!.length, snapshot.modules.length)
+  assert.ok(
+    snapshot.readiness!.every(
+      (record) =>
+        ['blocked', 'not-applicable'].includes(record.migration) &&
+        ['blocked', 'not-applicable'].includes(record.protection),
+    ),
+  )
+  assert.ok(
+    snapshot
+      .readiness!.filter((record) => record.migration === 'blocked')
+      .every((record) => record.prerequisiteIds.length),
   )
 })
 

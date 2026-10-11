@@ -394,6 +394,7 @@ export const exceptionSchema = z
   .object({
     id: text,
     binding: bindingSchema,
+    bindingStatus: z.enum(['matched', 'mismatched', 'unknown']).optional(),
     scope: scopeSchema,
     evidence,
     reason: text,
@@ -425,7 +426,51 @@ export const enforcementSchema = z
     state: z.enum(['enabled', 'disabled', 'unknown']),
     exclusions: z.array(text),
     exceptionIds: ids,
+    coverage: z.enum(['complete', 'partial', 'unknown']).optional(),
+    checks: z.array(z.enum(['specification', 'manual-transport'])).optional(),
     recordedAt: date,
+    evidence,
+    reason: text,
+  })
+  .strict()
+
+export const nextStepSchema = z
+  .object({
+    id: text,
+    category: z.enum([
+      'inventory',
+      'specification',
+      'generated-transport',
+      'manual-transport',
+      'unresolved-analysis',
+      'web-relevance',
+      'exception-review',
+      'verification',
+      'enforcement',
+      'provenance',
+    ]),
+    moduleIds: ids,
+    operationIds: ids,
+    callerIds: ids,
+    evidence,
+    reason: text,
+    action: text,
+  })
+  .strict()
+export const readinessSchema = z
+  .object({
+    moduleId: text,
+    migration: z.enum(['blocked', 'candidate', 'verified', 'not-applicable']),
+    protection: z.enum([
+      'blocked',
+      'candidate',
+      'protected',
+      'unknown',
+      'not-applicable',
+    ]),
+    prerequisiteIds: ids,
+    verificationIds: ids,
+    enforcementIds: ids,
     evidence,
     reason: text,
   })
@@ -551,6 +596,8 @@ export const snapshotSchema = z
     measurements: measurementsSchema,
     verification: z.array(verificationSchema).optional(),
     enforcement: z.array(enforcementSchema).optional(),
+    readiness: z.array(readinessSchema).optional(),
+    nextSteps: z.array(nextStepSchema).optional(),
   })
   .strict()
   .superRefine((snapshot, ctx) => {
@@ -568,6 +615,7 @@ export const snapshotSchema = z
     const inputs = index(snapshot.provenance.inputs, 'input')
     const exceptions = index(snapshot.exceptions, 'exception')
     index(snapshot.diagnostics, 'diagnostic')
+    const nextSteps = index(snapshot.nextSteps ?? [], 'next step')
     const references = (
       values: string[],
       known: Map<string, unknown>,
@@ -622,7 +670,7 @@ export const snapshotSchema = z
         const observed = snapshot.callers.filter(
           (caller) =>
             caller.kind === 'production' &&
-            caller.traffic === 'artemis-rest' &&
+            ['artemis-rest', 'unresolved'].includes(caller.traffic) &&
             caller.operationIds.includes(operation.id),
         )
         if (observed.some((caller) => !adoption.callerIds.includes(caller.id)))
@@ -632,7 +680,7 @@ export const snapshotSchema = z
           .filter(
             (caller) =>
               caller?.kind === 'production' &&
-              caller.traffic === 'artemis-rest',
+              ['artemis-rest', 'unresolved'].includes(caller.traffic),
           )
         if (production.length !== operation.adoption.callerIds.length)
           fail(`Adoption includes excluded callers: ${operation.id}`)
@@ -984,6 +1032,156 @@ export const snapshotSchema = z
       references(scope.callerIds, callers, 'caller')
     }
     for (const exception of snapshot.exceptions) scoped(exception.scope)
+    for (const step of snapshot.nextSteps ?? []) scoped(step)
+    if (
+      snapshot.readiness &&
+      new Set(snapshot.readiness.map((record) => record.moduleId)).size !==
+        snapshot.readiness.length
+    )
+      fail('Duplicate module readiness assessment')
+    for (const record of snapshot.readiness ?? []) {
+      references([record.moduleId], modules, 'module')
+      references(record.prerequisiteIds, nextSteps, 'next step')
+      references(
+        record.verificationIds,
+        new Map((snapshot.verification ?? []).map((item) => [item.id, item])),
+        'verification',
+      )
+      references(
+        record.enforcementIds,
+        new Map((snapshot.enforcement ?? []).map((item) => [item.id, item])),
+        'enforcement',
+      )
+      const module = modules.get(record.moduleId)
+      const scopedOperations = snapshot.operations.filter((operation) =>
+        operation.ownership.state === 'resolved'
+          ? operation.ownership.moduleId === record.moduleId
+          : operation.ownership.candidateModuleIds.includes(record.moduleId),
+      )
+      const covers = (scope: z.infer<typeof scopeSchema>) =>
+        scope.moduleIds.includes(record.moduleId) ||
+        (scopedOperations.length > 0 &&
+          scopedOperations.every((operation) =>
+            scope.operationIds.includes(operation.id),
+          ))
+      if (
+        (record.migration === 'not-applicable' ||
+          record.protection === 'not-applicable') &&
+        (module?.inventory.state !== 'no-rest' ||
+          scopedOperations.length ||
+          record.prerequisiteIds.length)
+      )
+        fail(
+          `Not-applicable readiness needs an evidenced no-REST scope: ${record.moduleId}`,
+        )
+      if (
+        ['candidate', 'verified'].includes(record.migration) ||
+        ['candidate', 'protected'].includes(record.protection)
+      ) {
+        if (
+          !module ||
+          !inventoryComplete(module) ||
+          !scopedOperations.length ||
+          !validInputs([
+            'server-source',
+            'specification',
+            'generated-client',
+            'production-client',
+            'configuration',
+          ]) ||
+          snapshot.callers.some(
+            (caller) =>
+              callSiteBucket(caller) === 'unresolved' &&
+              (!caller.operationIds.length ||
+                caller.operationIds.some((id) =>
+                  scopedOperations.some((operation) => operation.id === id),
+                )),
+          ) ||
+          scopedOperations.some(
+            (operation) =>
+              operation.ownership.state !== 'resolved' ||
+              operation.specification.state !== 'present' ||
+              (operation.webRelevance.state !== 'server-only' &&
+                (operation.webRelevance.state !== 'relevant' ||
+                  operation.generatedTransport.state !== 'available' ||
+                  operation.adoption.state !== 'generated-only')),
+          ) ||
+          snapshot.exceptions.some(
+            (exception) =>
+              exception.scope.moduleIds.includes(record.moduleId) ||
+              exception.scope.operationIds.some((id) =>
+                scopedOperations.some((operation) => operation.id === id),
+              ) ||
+              exception.scope.callerIds.some((id) =>
+                callers
+                  .get(id)
+                  ?.operationIds.some((operationId) =>
+                    scopedOperations.some(
+                      (operation) => operation.id === operationId,
+                    ),
+                  ),
+              ),
+          ) ||
+          record.prerequisiteIds.some(
+            (id) =>
+              !['verification', 'enforcement'].includes(
+                nextSteps.get(id)?.category ?? '',
+              ),
+          )
+        )
+          fail(
+            `Candidate readiness has incomplete inventory, transport, adoption, inputs or exceptions: ${record.moduleId}`,
+          )
+      }
+      if (
+        (record.protection === 'protected' && record.prerequisiteIds.length) ||
+        (record.migration === 'verified' &&
+          record.prerequisiteIds.some(
+            (id) => nextSteps.get(id)?.category !== 'enforcement',
+          ))
+      )
+        fail(
+          `Verified/protected scope still has prerequisites: ${record.moduleId}`,
+        )
+      if (
+        record.migration === 'verified' &&
+        !['wire-compatibility', 'runtime-flow'].every((kind) =>
+          snapshot.verification?.some(
+            (item) =>
+              record.verificationIds.includes(item.id) &&
+              item.kind === kind &&
+              item.bindingStatus === 'matched' &&
+              item.result === 'passed' &&
+              covers(item.scope),
+          ),
+        )
+      )
+        fail(
+          `Verified migration requires wire and runtime evidence: ${record.moduleId}`,
+        )
+      if (
+        record.protection === 'protected' &&
+        (record.migration !== 'verified' ||
+          !snapshot.enforcement?.some(
+            (item) =>
+              record.enforcementIds.includes(item.id) &&
+              item.bindingStatus === 'matched' &&
+              item.state === 'enabled' &&
+              item.coverage === 'complete' &&
+              item.exclusions.length === 0 &&
+              item.exceptionIds.length === 0 &&
+              covers(item.scope) &&
+              ['specification', 'manual-transport'].every((check) =>
+                item.checks?.includes(
+                  check as 'specification' | 'manual-transport',
+                ),
+              ),
+          ))
+      )
+        fail(
+          `Protected scope requires enabled complete enforcement without exclusions: ${record.moduleId}`,
+        )
+    }
     const hashes = Object.fromEntries(
       analyzedInputs.flatMap((input) =>
         input.content.state === 'available'
@@ -1013,6 +1211,7 @@ export const snapshotSchema = z
     index(snapshot.verification ?? [], 'verification')
     index(snapshot.enforcement ?? [], 'enforcement')
     for (const record of [
+      ...snapshot.exceptions,
       ...(snapshot.verification ?? []),
       ...(snapshot.enforcement ?? []),
     ]) {
@@ -1077,5 +1276,9 @@ export type GeneratedMethod = z.infer<typeof generatedMethodSchema>
 export type Caller = z.infer<typeof callerSchema>
 export type Diagnostic = z.infer<typeof diagnosticSchema>
 export type Exception = z.infer<typeof exceptionSchema>
+export type Verification = z.infer<typeof verificationSchema>
+export type Enforcement = z.infer<typeof enforcementSchema>
+export type NextStep = z.infer<typeof nextStepSchema>
+export type Readiness = z.infer<typeof readinessSchema>
 export type Provenance = z.infer<typeof provenanceSchema>
 export type SourceLocation = z.infer<typeof sourceLocationSchema>

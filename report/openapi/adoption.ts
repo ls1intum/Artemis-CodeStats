@@ -55,6 +55,20 @@ const visit = (node: ts.Node, action: (node: ts.Node) => void) => {
   action(node)
   node.forEachChild((child) => visit(child, action))
 }
+// Nested callable bodies are assessed separately; declaring a function is not calling it.
+const visitBody = (node: ts.Node, action: (node: ts.Node) => void) => {
+  action(node)
+  node.forEachChild((child) => {
+    if (
+      ts.isFunctionDeclaration(child) ||
+      ts.isFunctionExpression(child) ||
+      ts.isArrowFunction(child) ||
+      ts.isMethodDeclaration(child)
+    )
+      action(child)
+    else visitBody(child, action)
+  })
+}
 const trafficOf = (url: string | undefined): Caller['traffic'] =>
   url === undefined
     ? 'unresolved'
@@ -173,7 +187,8 @@ export function analyzeAdoption(
     for (const statement of file?.statements ?? []) {
       if (
         (ts.isClassDeclaration(statement) ||
-          ts.isFunctionDeclaration(statement)) &&
+          ts.isFunctionDeclaration(statement) ||
+          ts.isEnumDeclaration(statement)) &&
         statement.name?.text === binding.exported &&
         statement.modifiers?.some(
           (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
@@ -247,6 +262,60 @@ export function analyzeAdoption(
   }
   const declaration = (node: ts.Expression) =>
     bindingSymbol(node)?.valueDeclaration
+  const memberAccess = (node: ts.Expression) => {
+    node = unwrap(node)
+    if (ts.isPropertyAccessExpression(node))
+      return { receiver: node.expression, key: node.name.text }
+    if (ts.isElementAccessExpression(node)) {
+      const key = unwrap(node.argumentExpression)
+      return {
+        receiver: node.expression,
+        key:
+          ts.isStringLiteral(key) || ts.isNoSubstitutionTemplateLiteral(key)
+            ? key.text
+            : undefined,
+      }
+    }
+    return undefined
+  }
+  // inject() is untyped without Angular declarations. Retain receiver/member writes
+  // independently of checker property symbols, including writes through stable aliases.
+  const receiverIds = new Map<ts.Symbol | ts.Node, number>()
+  const receiverId = (value: ts.Symbol | ts.Node) => {
+    if (!receiverIds.has(value)) receiverIds.set(value, receiverIds.size)
+    return String(receiverIds.get(value))
+  }
+  const receiverKey = (
+    node: ts.Expression,
+    seen = new Set<ts.Node>(),
+  ): string | undefined => {
+    node = unwrap(node)
+    const symbol = bindingSymbol(node)
+    const declared = symbol?.valueDeclaration
+    if (
+      declared &&
+      !seen.has(declared) &&
+      (ts.isVariableDeclaration(declared) ||
+        ts.isPropertyDeclaration(declared)) &&
+      declared.initializer
+    ) {
+      seen.add(declared)
+      const key = receiverKey(declared.initializer, seen)
+      if (key !== undefined) return key
+    }
+    if (symbol) return receiverId(symbol)
+    if (node.kind === ts.SyntaxKind.ThisKeyword) {
+      for (let parent = node.parent; parent; parent = parent.parent)
+        if (ts.isClassDeclaration(parent) || ts.isClassExpression(parent))
+          return receiverId(parent)
+    }
+    const access = memberAccess(node)
+    const root = access && receiverKey(access.receiver, seen)
+    return root !== undefined && access?.key !== undefined
+      ? `${root}.${access.key}`
+      : undefined
+  }
+  const memberWrites = new Map<string, Set<string | undefined>>()
   const writes = new Set<ts.Symbol>()
   const recordWrite = (target: ts.Expression) => {
     target = unwrap(target)
@@ -269,6 +338,13 @@ export function analyzeAdoption(
     )
       recordWrite(target.left)
     else {
+      const access = memberAccess(target)
+      const receiver = access && receiverKey(access.receiver)
+      if (receiver !== undefined && access) {
+        const keys = memberWrites.get(receiver) ?? new Set<string | undefined>()
+        keys.add(access.key)
+        memberWrites.set(receiver, keys)
+      }
       const symbol = bindingSymbol(target)
       if (symbol) writes.add(symbol)
       else if (ts.isElementAccessExpression(target)) {
@@ -297,10 +373,17 @@ export function analyzeAdoption(
             : undefined
       if (target) recordWrite(target)
     })
-  const assigned = (node: ts.Expression) => writes.has(bindingSymbol(node)!)
+  const assigned = (node: ts.Expression) => {
+    if (writes.has(bindingSymbol(node)!)) return true
+    const access = memberAccess(node)
+    const receiver = access && receiverKey(access.receiver)
+    const keys = receiver !== undefined && memberWrites.get(receiver)
+    return !!(keys && (keys.has(undefined) || keys.has(access?.key)))
+  }
   const dependency = (
     node: ts.Expression,
     ignoreWrites = false,
+    seen = new Set<ts.Node>(),
   ): Binding | undefined => {
     node = unwrap(node)
     if (!ignoreWrites && assigned(node)) return undefined
@@ -310,17 +393,16 @@ export function analyzeAdoption(
     )
       return node.arguments[0] && bindingOf(node.arguments[0])
     const declared = declaration(node)
+    if (!declared || seen.has(declared)) return undefined
+    seen.add(declared)
     if (
       declared &&
       (ts.isPropertyDeclaration(declared) ||
         ts.isParameter(declared) ||
         ts.isVariableDeclaration(declared))
     ) {
-      if (
-        declared.initializer &&
-        ts.isCallExpression(unwrap(declared.initializer))
-      )
-        return dependency(declared.initializer, ignoreWrites)
+      if (declared.initializer)
+        return dependency(declared.initializer, ignoreWrites, seen)
       if (
         ts.isParameter(declared) &&
         declared.type &&
@@ -330,7 +412,7 @@ export function analyzeAdoption(
     }
     return undefined
   }
-  // Follow initial receiver aliases only to retain unresolved sites, never to establish adoption.
+  // Ignore writes only when retaining the original receiver as unresolved evidence.
   const originalBinding = (
     node: ts.Expression,
     seen = new Set<ts.Node>(),
@@ -352,6 +434,230 @@ export function analyzeAdoption(
       dep?.module === '@angular/common/http' && dep.exported === 'HttpClient'
     )
   }
+  type Callable =
+    | ts.MethodDeclaration
+    | ts.FunctionDeclaration
+    | ts.ArrowFunction
+    | ts.FunctionExpression
+  type Frame = {
+    owner?: ts.ClassLikeDeclaration
+    values?: Map<ts.Symbol, string | undefined>
+  }
+  const sourceLocation = (node: ts.Node): SourceLocation => {
+    const file = node.getSourceFile()
+    return {
+      inputId: generatedFile(file.fileName) ? 'generated' : 'client',
+      path: file.fileName,
+      line: file.getLineAndCharacterOfPosition(node.getStart()).line + 1,
+    }
+  }
+  const enclosing = (node: ts.Node) => {
+    let owner: ts.ClassLikeDeclaration | undefined
+    let callable: Callable | undefined
+    let member: string | undefined
+    for (
+      let parent = node.parent;
+      parent && !ts.isSourceFile(parent);
+      parent = parent.parent
+    ) {
+      if (
+        !callable &&
+        (ts.isMethodDeclaration(parent) ||
+          ts.isFunctionDeclaration(parent) ||
+          ts.isArrowFunction(parent) ||
+          ts.isFunctionExpression(parent))
+      )
+        callable = parent
+      if (
+        !member &&
+        (ts.isMethodDeclaration(parent) ||
+          ts.isFunctionDeclaration(parent) ||
+          ts.isPropertyDeclaration(parent))
+      )
+        member = name(parent.name)
+      if (
+        !member &&
+        ts.isVariableDeclaration(parent) &&
+        parent.initializer === callable
+      )
+        member = name(parent.name)
+      if (!member && ts.isConstructorDeclaration(parent)) member = 'constructor'
+      if (ts.isClassDeclaration(parent) || ts.isClassExpression(parent)) {
+        owner = parent
+        break
+      }
+    }
+    return {
+      owner,
+      callable,
+      symbol:
+        [owner?.name?.text, member].filter(Boolean).join('.') || '<top-level>',
+    }
+  }
+  const exportedNode = (binding: Binding) => {
+    const target = exportedAt(binding)
+    return (
+      target?.resolved &&
+      program
+        .getSourceFile(target.file)
+        ?.statements.flatMap((statement): ts.Node[] =>
+          ts.isVariableStatement(statement)
+            ? [...statement.declarationList.declarations]
+            : [statement],
+        )
+        .find(
+          (statement) =>
+            (ts.isClassDeclaration(statement) ||
+              ts.isFunctionDeclaration(statement) ||
+              ts.isEnumDeclaration(statement) ||
+              ts.isVariableDeclaration(statement)) &&
+            name(statement.name) === target.symbol,
+        )
+    )
+  }
+  const baseClass = (owner: ts.ClassLikeDeclaration) => {
+    const expression = owner.heritageClauses?.find(
+      (clause) => clause.token === ts.SyntaxKind.ExtendsKeyword,
+    )?.types[0].expression
+    const binding = expression && bindingOf(expression)
+    const node = binding
+      ? exportedNode(binding)
+      : expression && declaration(expression)
+    return node && ts.isClassDeclaration(node) ? node : undefined
+  }
+  const memberOf = (
+    owner: ts.ClassLikeDeclaration | undefined,
+    key: string,
+    seen = new Set<ts.Node>(),
+  ): ts.ClassElement | undefined => {
+    if (!owner || seen.has(owner)) return undefined
+    seen.add(owner)
+    return (
+      owner.members.find((member) => name(member.name) === key) ??
+      memberOf(baseClass(owner), key, seen)
+    )
+  }
+  const receiverClass = (
+    node: ts.Expression,
+    frame: Frame,
+    seen = new Set<ts.Node>(),
+    ignoreWrites = false,
+  ): ts.ClassLikeDeclaration | undefined => {
+    node = unwrap(node)
+    if (node.kind === ts.SyntaxKind.ThisKeyword) return frame.owner
+    if (node.kind === ts.SyntaxKind.SuperKeyword)
+      return frame.owner && baseClass(frame.owner)
+    const binding = dependency(node, ignoreWrites)
+    const declared = binding ? exportedNode(binding) : declaration(node)
+    if (declared && ts.isClassDeclaration(declared)) return declared
+    if (
+      ts.isCallExpression(node) &&
+      imported(node.expression, '@angular/core', 'inject') &&
+      node.arguments[0]
+    )
+      return receiverClass(node.arguments[0], frame, seen, ignoreWrites)
+    if (ts.isNewExpression(node))
+      return receiverClass(node.expression, frame, seen, ignoreWrites)
+    if (!declared || seen.has(declared) || (!ignoreWrites && assigned(node)))
+      return undefined
+    seen.add(declared)
+    if (
+      (ts.isPropertyDeclaration(declared) ||
+        ts.isVariableDeclaration(declared)) &&
+      declared.initializer
+    )
+      return receiverClass(declared.initializer, frame, seen, ignoreWrites)
+    if (
+      ts.isParameter(declared) &&
+      declared.type &&
+      ts.isTypeReferenceNode(declared.type)
+    ) {
+      const local = checker.getSymbolAtLocation(
+        declared.type.typeName,
+      )?.valueDeclaration
+      if (local && ts.isClassDeclaration(local)) return local
+    }
+    return undefined
+  }
+  const callableTarget = (
+    expression: ts.Expression,
+    frame: Frame,
+    ignoreWrites = false,
+    seen = new Set<ts.Node>(),
+  ):
+    | {
+        callable: Callable
+        owner?: ts.ClassLikeDeclaration
+        unsupportedAlias?: boolean
+      }
+    | undefined => {
+    expression = unwrap(expression)
+    if (!ignoreWrites && assigned(expression)) return undefined
+    const binding = bindingOf(expression)
+    const declared = binding ? exportedNode(binding) : declaration(expression)
+    if (
+      declared &&
+      (ts.isFunctionDeclaration(declared) ||
+        ts.isVariableDeclaration(declared)) &&
+      !ignoreWrites &&
+      assigned(declared.name as ts.Expression)
+    )
+      return undefined
+    if (ts.isPropertyAccessExpression(expression)) {
+      const owner = receiverClass(
+        expression.expression,
+        frame,
+        new Set(),
+        ignoreWrites,
+      )
+      const member = memberOf(owner, expression.name.text)
+      if (
+        member &&
+        ts.isMethodDeclaration(member) &&
+        member.body &&
+        (ignoreWrites || !assigned(member.name as ts.Expression))
+      )
+        return { callable: member, owner }
+    }
+    if (declared && ts.isFunctionDeclaration(declared) && declared.body)
+      return { callable: declared }
+    if (
+      declared &&
+      ts.isVariableDeclaration(declared) &&
+      declared.initializer &&
+      !seen.has(declared)
+    ) {
+      seen.add(declared)
+      const initializer = unwrap(declared.initializer)
+      if (
+        ts.isArrowFunction(initializer) ||
+        ts.isFunctionExpression(initializer)
+      )
+        return { callable: initializer }
+      const bound =
+        ts.isCallExpression(initializer) &&
+        ts.isPropertyAccessExpression(initializer.expression) &&
+        initializer.expression.name.text === 'bind'
+      const original = bound ? initializer.expression.expression : initializer
+      const target = callableTarget(original, frame, ignoreWrites, seen)
+      if (target)
+        return {
+          ...target,
+          unsupportedAlias:
+            target.unsupportedAlias ||
+            bound ||
+            (!!target.owner &&
+              (ts.isPropertyAccessExpression(original) ||
+                ts.isElementAccessExpression(original))),
+        }
+    }
+    return undefined
+  }
+  const callTarget = (
+    node: ts.CallExpression,
+    frame: Frame,
+    ignoreWrites = false,
+  ) => callableTarget(node.expression, frame, ignoreWrites)
   const parameterExpression = (node: ts.Expression): boolean => {
     node = unwrap(node)
     return (
@@ -366,15 +672,44 @@ export function analyzeAdoption(
   const render = (
     node: ts.Expression,
     seen = new Set<ts.Node>(),
+    frame: Frame = {},
   ): string | undefined => {
     node = unwrap(node)
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
       return node.text
+    if (assigned(node)) return undefined
+    const symbol = bindingSymbol(node)
+    if (symbol && frame.values?.has(symbol)) return frame.values.get(symbol)
+    if (ts.isPropertyAccessExpression(node)) {
+      const binding = bindingOf(node.expression)
+      const enumNode = binding
+        ? exportedNode(binding)
+        : declaration(node.expression)
+      if (enumNode && ts.isEnumDeclaration(enumNode)) {
+        const member = enumNode.members.find(
+          (member) => name(member.name) === node.name.text,
+        )
+        if (member?.initializer) return render(member.initializer, seen, frame)
+      }
+      if (node.expression.kind === ts.SyntaxKind.ThisKeyword && frame.owner) {
+        const member = memberOf(frame.owner, node.name.text)
+        if (
+          member &&
+          ts.isPropertyDeclaration(member) &&
+          member.initializer &&
+          !assigned(member.name as ts.Expression) &&
+          !seen.has(member)
+        ) {
+          seen.add(member)
+          return render(member.initializer, seen, frame)
+        }
+      }
+    }
     if (ts.isTemplateExpression(node)) {
       let value = node.head.text
       for (const span of node.templateSpans) {
         if (/[?#]/.test(value)) return value // Query/fragment values do not affect operation identity.
-        const part = render(span.expression, new Set(seen))
+        const part = render(span.expression, new Set(seen), frame)
         // A dynamic interpolation may fill one path parameter, but must never supply a URL origin/prefix.
         const parameter = parameterExpression(span.expression)
         if (part === undefined && (!parameter || !value)) return undefined
@@ -386,8 +721,8 @@ export function analyzeAdoption(
       ts.isBinaryExpression(node) &&
       node.operatorToken.kind === ts.SyntaxKind.PlusToken
     ) {
-      const left = render(node.left, new Set(seen))
-      const right = render(node.right, new Set(seen))
+      const left = render(node.left, new Set(seen), frame)
+      const right = render(node.right, new Set(seen), frame)
       if (left !== undefined && right !== undefined) return left + right
       if (left !== undefined && parameterExpression(node.right))
         return left + '{parameter}'
@@ -402,7 +737,7 @@ export function analyzeAdoption(
         ts.isPropertyDeclaration(declared)) &&
       declared.initializer
     )
-      return render(declared.initializer, seen)
+      return render(declared.initializer, seen, frame)
     return undefined
   }
   const join = (method: string, url: string) => {
@@ -433,101 +768,182 @@ export function analyzeAdoption(
       })
       .map((operation) => operation.id)
   }
+  type Finding = Pick<
+    Caller,
+    'transport' | 'traffic' | 'operationIds' | 'mapping' | 'reason'
+  > & { generatedMethodId?: string; via?: SourceLocation[] }
+  const graph = new Map<Callable, Callable[]>()
+  const callbackEdges = new Map<Callable, Set<Callable>>()
+  const terminals = new Map<Callable, number>()
+  const reachesTransport = new Set<Callable>()
+  const calls: ts.CallExpression[] = []
   for (const file of program.getSourceFiles()) {
     if (
       excludedClientSource(file.fileName, scope.generatedRoot) ||
-      !file.fileName.startsWith(`${scope.clientRoot}/`)
+      program.getSyntacticDiagnostics(file).length
     )
       continue
-    const location = (node: ts.Node, symbol?: string): SourceLocation => ({
-      inputId: 'client',
-      path: file.fileName,
-      line: file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1,
-      ...(symbol ? { symbol } : {}),
-    })
-    result.evidence.push(location(file))
-    const issue = (
-      evidence: SourceLocation[],
-      operationIds: string[],
-      reason: string,
-    ) =>
-      result.issues.push({
-        evidence,
-        operationIds,
-        reason,
-        nextStep:
-          'Inspect this source call and its URL/receiver; reconcile unsupported wrappers, aliases or indirect chains in iteration 5 before claiming complete adoption.',
-      })
-    const errors = program.getSyntacticDiagnostics(file)
-    if (errors.length) {
-      for (const error of errors)
-        issue(
-          [
-            {
-              ...location(file),
-              line:
-                file.getLineAndCharacterOfPosition(error.start ?? 0).line + 1,
-            },
-          ],
-          [],
-          `Production TypeScript parse failure: ${ts.flattenDiagnosticMessageText(error.messageText, '\n')}`,
-        )
-      continue
-    }
     visit(file, (node) => {
-      if (!ts.isCallExpression(node) && !ts.isNewExpression(node)) return
-      let parent: ts.Node | undefined = node.parent
-      let member: string | undefined
-      let owner: ts.ClassLikeDeclaration | undefined
-      while (parent && !ts.isSourceFile(parent)) {
+      if (ts.isCallExpression(node)) calls.push(node)
+      if (
+        !ts.isMethodDeclaration(node) &&
+        !ts.isFunctionDeclaration(node) &&
+        !ts.isArrowFunction(node) &&
+        !ts.isFunctionExpression(node)
+      )
+        return
+      if (!node.body) return
+      const owner = enclosing(node).owner
+      const edges: Callable[] = []
+      graph.set(node, edges)
+      terminals.set(node, 0)
+      visitBody(node.body, (child) => {
         if (
-          !member &&
-          (ts.isMethodDeclaration(parent) ||
-            ts.isFunctionDeclaration(parent) ||
-            ts.isPropertyDeclaration(parent))
-        )
-          member = name(parent.name)
-        if (!member && ts.isConstructorDeclaration(parent))
-          member = 'constructor'
-        if (ts.isClassDeclaration(parent) || ts.isClassExpression(parent)) {
-          owner = parent
-          break
+          (ts.isArrowFunction(child) || ts.isFunctionExpression(child)) &&
+          !ts.isVariableDeclaration(child.parent) &&
+          !ts.isPropertyDeclaration(child.parent)
+        ) {
+          edges.push(child)
+          const callbacks = callbackEdges.get(node) ?? new Set<Callable>()
+          callbacks.add(child)
+          callbackEdges.set(node, callbacks)
+          return
         }
-        parent = parent.parent
+        if (!ts.isCallExpression(child)) return
+        const access =
+          ts.isPropertyAccessExpression(child.expression) ||
+          ts.isElementAccessExpression(child.expression)
+            ? child.expression
+            : undefined
+        const binding = access
+          ? originalBinding(access.expression)
+          : bindingOf(child.expression)
+        const exported = binding && exportedAt(binding)
+        if (
+          (access && http(access.expression)) ||
+          (exported && generatedFile(exported.file)) ||
+          imported(child.expression, '@angular/common/http', 'httpResource') ||
+          (access &&
+            imported(
+              access.expression,
+              '@angular/common/http',
+              'httpResource',
+            )) ||
+          (ts.isIdentifier(child.expression) &&
+            child.expression.text === 'fetch' &&
+            !declaration(child.expression))
+        ) {
+          reachesTransport.add(node)
+          terminals.set(node, Math.min(2, terminals.get(node)! + 1))
+        }
+        const target = callTarget(child, { owner })
+        if (target && !generatedFile(target.callable.getSourceFile().fileName))
+          edges.push(target.callable)
+      })
+    })
+  }
+  // A fixed point handles cycles without arbitrarily choosing the first edge.
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const [callable, edges] of graph)
+      if (
+        !reachesTransport.has(callable) &&
+        [...edges].some((edge) => reachesTransport.has(edge))
+      ) {
+        reachesTransport.add(callable)
+        changed = true
       }
-      const symbol =
-        [owner?.name?.text, member].filter(Boolean).join('.') || '<top-level>'
-      const access = ts.isPropertyAccessExpression(node.expression)
-        ? node.expression
-        : undefined
-      const anchor = location(access?.name ?? node.expression, symbol)
-      const add = (
-        data: Pick<
-          Caller,
-          'transport' | 'traffic' | 'operationIds' | 'mapping' | 'reason'
-        > & { generatedMethodId?: string; via?: SourceLocation[] },
-      ) => {
-        const caller: Caller = {
-          id: `${file.fileName}:${node.getStart(file)}`,
-          symbol,
-          area: file.fileName.slice(scope.clientRoot.length + 1).split('/')[0],
-          location: anchor,
-          kind: owner?.modifiers?.some(
-            (modifier) => modifier.kind === ts.SyntaxKind.AbstractKeyword,
-          )
-            ? 'wrapper-implementation'
-            : 'production',
-          via: [],
-          ...data,
-        }
-        result.callers.push(caller)
-        if (
-          caller.traffic === 'unresolved' ||
-          (caller.traffic === 'artemis-rest' &&
-            (caller.mapping !== 'resolved' ||
-              caller.transport === 'unresolved'))
+  }
+  // Only a single-terminal forwarder is an implementation node. Multi-operation
+  // business methods retain their concrete transport sites as production evidence.
+  const terminalCounts = new Map(terminals)
+  changed = true
+  while (changed) {
+    changed = false
+    for (const [callable, edges] of graph) {
+      const count = Math.min(
+        2,
+        terminals.get(callable)! +
+          edges.reduce(
+            (sum, edge) =>
+              sum +
+              (callbackEdges.get(callable)?.has(edge) &&
+              terminalCounts.get(edge)
+                ? 2
+                : (terminalCounts.get(edge) ?? 0)),
+            0,
+          ),
+      )
+      if (count !== terminalCounts.get(callable)) {
+        terminalCounts.set(callable, count)
+        changed = true
+      }
+    }
+  }
+  const implementations = new Set<Callable>()
+  for (const call of calls) {
+    const target = callTarget(call, { owner: enclosing(call).owner })
+    if (target && terminalCounts.get(target.callable) === 1)
+      implementations.add(target.callable)
+  }
+  const classHasTransport = (
+    owner: ts.ClassLikeDeclaration | undefined,
+  ): boolean => {
+    const seen = new Set<ts.Node>()
+    while (owner && !seen.has(owner)) {
+      seen.add(owner)
+      if (
+        owner.members.some(
+          (member) =>
+            ts.isMethodDeclaration(member) && reachesTransport.has(member),
         )
-          issue([anchor, ...caller.via], caller.operationIds, caller.reason)
+      )
+        return true
+      owner = baseClass(owner)
+    }
+    return false
+  }
+  const inspect = (
+    node: ts.CallExpression | ts.NewExpression,
+    frame: Frame = {},
+    stack = new Set<Callable>(),
+  ): Finding[] => {
+    const owner = frame.owner ?? enclosing(node).owner
+    frame = { ...frame, owner }
+    const findings: Finding[] = []
+    const access = ts.isPropertyAccessExpression(node.expression)
+      ? node.expression
+      : undefined
+    const add = (finding: Finding) => {
+      findings.push(finding)
+    }
+    const scan = () => {
+      if (ts.isCallExpression(node) && assigned(node.expression)) {
+        const initialTarget = callTarget(node, frame, true)
+        const receiver = memberAccess(node.expression)?.receiver
+        const binding = receiver && originalBinding(receiver)
+        const original = binding && exportedAt(binding)
+        if (
+          (initialTarget &&
+            (reachesTransport.has(initialTarget.callable) ||
+              generatedFile(
+                initialTarget.callable.getSourceFile().fileName,
+              ))) ||
+          (receiver && http(receiver)) ||
+          (original && generatedFile(original.file))
+        ) {
+          add({
+            transport: 'unresolved',
+            traffic: 'unresolved',
+            operationIds: [],
+            mapping: 'unresolved',
+            via: initialTarget ? [sourceLocation(initialTarget.callable)] : [],
+            reason:
+              'Transport method/function is reassigned; its declared body cannot establish the called implementation.',
+          })
+          return
+        }
       }
       const directImport = bindingOf(node.expression)
       const dep = access && dependency(access.expression)
@@ -555,6 +971,25 @@ export function analyzeAdoption(
         })
         return
       }
+      if (access && !receiverClass(access.expression, frame)) {
+        const initialBinding = originalBinding(access.expression)
+        const originalClass = initialBinding && exportedNode(initialBinding)
+        if (
+          originalClass &&
+          ts.isClassDeclaration(originalClass) &&
+          classHasTransport(originalClass)
+        ) {
+          add({
+            transport: 'unresolved',
+            traffic: 'unresolved',
+            operationIds: [],
+            mapping: 'unresolved',
+            reason:
+              'Source transport-wrapper receiver is reassigned or unsupported; its initial binding cannot establish the called implementation.',
+          })
+          return
+        }
+      }
       if (
         imported(node.expression, '@angular/common/http', 'httpResource') ||
         (access &&
@@ -574,7 +1009,11 @@ export function analyzeAdoption(
         const receiver = node.expression.expression
         const binding = originalBinding(receiver)
         const declaration = binding && exportedAt(binding)
-        if (http(receiver) || (declaration && generatedFile(declaration.file)))
+        if (
+          http(receiver) ||
+          (declaration && generatedFile(declaration.file)) ||
+          classHasTransport(receiverClass(receiver, frame))
+        )
           add({
             transport: 'unresolved',
             traffic: 'unresolved',
@@ -599,7 +1038,7 @@ export function analyzeAdoption(
           operationIds: [],
           mapping: 'unresolved',
           reason:
-            'Generated API receiver alias/indirect binding needs iteration 5 analysis; its initial import does not establish the called transport.',
+            'Generated API receiver binding is unsupported; its initial import does not establish the called transport.',
         })
         return
       }
@@ -663,18 +1102,18 @@ export function analyzeAdoption(
             operationIds: [],
             mapping: 'unresolved',
             reason:
-              'HttpClient receiver alias/indirect binding needs iteration 5 analysis.',
+              'HttpClient receiver binding is unsupported; no transport was inferred.',
           })
           return
         }
         const args = node.arguments ?? []
         const method = (
           access.name.text === 'request'
-            ? args[0] && render(args[0])
+            ? args[0] && render(args[0], new Set(), frame)
             : access.name.text
         )?.toUpperCase()
         const urlNode = args[access.name.text === 'request' ? 1 : 0]
-        const url = urlNode && render(urlNode)
+        const url = urlNode && render(urlNode, new Set(), frame)
         const traffic = trafficOf(url)
         const operationIds =
           traffic === 'artemis-rest' && method ? join(method, url!) : []
@@ -700,6 +1139,7 @@ export function analyzeAdoption(
       if (
         access &&
         access.expression.kind === ts.SyntaxKind.ThisKeyword &&
+        !callTarget(node as ts.CallExpression, { owner }) &&
         owner?.heritageClauses?.some(
           (clause) => clause.token === ts.SyntaxKind.ExtendsKeyword,
         ) &&
@@ -721,7 +1161,7 @@ export function analyzeAdoption(
           operationIds: [],
           mapping: 'unresolved',
           reason:
-            'Inherited transport-like call needs wrapper/base-class resolution in iteration 5; no HTTP method, API prefix or operation was inferred.',
+            'Inherited transport-like call has an unavailable or unsupported base-class binding; no HTTP method, API prefix or operation was inferred.',
         })
         return
       }
@@ -739,13 +1179,185 @@ export function analyzeAdoption(
           transport: 'unresolved',
           traffic: ts.isNewExpression(node)
             ? 'websocket'
-            : trafficOf(node.arguments?.[0] && render(node.arguments[0])),
+            : trafficOf(
+                node.arguments?.[0] &&
+                  render(node.arguments[0], new Set(), frame),
+              ),
           operationIds: [],
           mapping: 'unresolved',
           reason: ts.isNewExpression(node)
             ? 'WebSocket construction is separate traffic and excluded from REST adoption.'
             : 'Native fetch transport needs focused analysis; it cannot disappear from remaining work.',
         })
+      }
+      if (!findings.length && ts.isCallExpression(node)) {
+        const target = callTarget(node, frame)
+        const initialTarget = target ?? callTarget(node, frame, true)
+        if (
+          initialTarget &&
+          (reachesTransport.has(initialTarget.callable) ||
+            generatedFile(initialTarget.callable.getSourceFile().fileName)) &&
+          (!target || target.unsupportedAlias)
+        ) {
+          add({
+            transport: 'unresolved',
+            traffic: 'unresolved',
+            operationIds: [],
+            mapping: 'unresolved',
+            via: [sourceLocation(initialTarget.callable)],
+            reason: !target
+              ? 'Transport function alias or receiver is reassigned; its original body cannot establish the called implementation.'
+              : 'Bound or extracted transport method alias requires focused receiver/argument analysis; no operation binding was guessed.',
+          })
+          return
+        }
+        if (target && reachesTransport.has(target.callable)) {
+          if (stack.has(target.callable) || stack.size >= 12) {
+            add({
+              transport: 'unresolved',
+              traffic: 'unresolved',
+              operationIds: [],
+              mapping: 'unresolved',
+              via: [sourceLocation(target.callable)],
+              reason:
+                'Recursive or deep transport chain exceeds supported static resolution; inspect its dispatch and arguments.',
+            })
+            return
+          }
+          const values = new Map<ts.Symbol, string | undefined>()
+          for (const [
+            index,
+            parameter,
+          ] of target.callable.parameters.entries()) {
+            const symbol = checker.getSymbolAtLocation(parameter.name)
+            const argument = node.arguments[index]
+            if (symbol)
+              values.set(
+                symbol,
+                argument
+                  ? render(argument, new Set(), frame)
+                  : parameter.initializer
+                    ? render(parameter.initializer, new Set(), frame)
+                    : undefined,
+              )
+          }
+          const nested: Finding[] = []
+          const next = new Set(stack).add(target.callable)
+          if (target.callable.body)
+            visitBody(target.callable.body, (child) => {
+              if (ts.isCallExpression(child) || ts.isNewExpression(child)) {
+                for (const finding of inspect(
+                  child,
+                  { owner: target.owner, values },
+                  next,
+                ))
+                  nested.push({
+                    ...finding,
+                    via: [
+                      sourceLocation(target.callable),
+                      sourceLocation(child),
+                      ...(finding.via ?? []),
+                    ],
+                  })
+              }
+            })
+          if (nested.length === 1)
+            add({
+              ...nested[0],
+              reason: `Resolved source chain: ${nested[0].reason}`,
+            })
+          else
+            add({
+              transport: 'unresolved',
+              traffic: 'unresolved',
+              operationIds: [
+                ...new Set(nested.flatMap((finding) => finding.operationIds)),
+              ],
+              mapping: nested.length ? 'ambiguous' : 'unresolved',
+              via: nested.length
+                ? nested.flatMap((finding) => finding.via ?? [])
+                : [sourceLocation(target.callable)],
+              reason: `Transport chain reaches ${nested.length} terminal calls; reconcile multiple branches or unsupported dispatch before assigning one call site to transport.`,
+            })
+        }
+      }
+    }
+    scan()
+    return findings
+  }
+  for (const file of program.getSourceFiles()) {
+    if (
+      excludedClientSource(file.fileName, scope.generatedRoot) ||
+      !file.fileName.startsWith(`${scope.clientRoot}/`)
+    )
+      continue
+    const location = (node: ts.Node, symbol?: string): SourceLocation => ({
+      inputId: 'client',
+      path: file.fileName,
+      line: file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1,
+      ...(symbol ? { symbol } : {}),
+    })
+    result.evidence.push(location(file))
+    const issue = (
+      evidence: SourceLocation[],
+      operationIds: string[],
+      reason: string,
+    ) =>
+      result.issues.push({
+        evidence,
+        operationIds,
+        reason,
+        nextStep:
+          'Inspect this source call, its recorded chain and URL/receiver; reconcile unsupported dispatch or arguments before claiming complete adoption.',
+      })
+    const errors = program.getSyntacticDiagnostics(file)
+    if (errors.length) {
+      for (const error of errors)
+        issue(
+          [
+            {
+              ...location(file),
+              line:
+                file.getLineAndCharacterOfPosition(error.start ?? 0).line + 1,
+            },
+          ],
+          [],
+          `Production TypeScript parse failure: ${ts.flattenDiagnosticMessageText(error.messageText, '\n')}`,
+        )
+      continue
+    }
+    visit(file, (node) => {
+      if (!ts.isCallExpression(node) && !ts.isNewExpression(node)) return
+      const { owner, callable, symbol } = enclosing(node)
+      const access = ts.isPropertyAccessExpression(node.expression)
+        ? node.expression
+        : undefined
+      const anchor = location(access?.name ?? node.expression, symbol)
+      for (const data of inspect(node, { owner })) {
+        const caller: Caller = {
+          id: `${file.fileName}:${node.getStart(file)}`,
+          symbol,
+          area: file.fileName.slice(scope.clientRoot.length + 1).split('/')[0],
+          location: anchor,
+          kind:
+            (callable && implementations.has(callable)) ||
+            owner?.modifiers?.some(
+              (modifier) => modifier.kind === ts.SyntaxKind.AbstractKeyword,
+            )
+              ? 'wrapper-implementation'
+              : 'production',
+          via: [],
+          ...data,
+        }
+        result.callers.push(caller)
+        if (
+          caller.kind === 'production' &&
+          (caller.traffic === 'unresolved' ||
+            (caller.traffic === 'artemis-rest' &&
+              (caller.mapping !== 'resolved' ||
+                caller.transport === 'unresolved')))
+        )
+          issue([anchor, ...caller.via], caller.operationIds, caller.reason)
       }
     })
   }
@@ -760,14 +1372,14 @@ export function reconcileAdoption(
   const callers = inventory.callers.filter(
     (caller) =>
       caller.kind === 'production' &&
-      caller.traffic === 'artemis-rest' &&
+      ['artemis-rest', 'unresolved'].includes(caller.traffic) &&
       caller.operationIds.includes(operation.id),
   )
   if (!callers.length) {
     operation.adoption = {
       state: 'unassessed',
       reason:
-        'No direct caller was bound. Wrappers, indirect callers and dynamic URLs remain unassessed; absence is not migration or server-only evidence.',
+        'No supported production caller was bound. Unsupported dispatch and dynamic URLs remain unassessed; absence is not migration or server-only evidence.',
     }
     return
   }
@@ -785,17 +1397,13 @@ export function reconcileAdoption(
       reason:
         'Only ambiguous/unresolved caller candidates exist; reconcile their operation identities before establishing web relevance.',
     }
-  if (callers.some((caller) => caller.mapping !== 'resolved')) {
-    operation.adoption = {
-      state: 'incomplete-analysis',
-      reason:
-        'Caller candidates include ambiguous/unresolved operation bindings. Direct transport evidence is retained on the caller records without asserting operation-level adoption.',
-      evidence: callers.map((caller) => caller.location),
-    }
-    return
-  }
-  const generated = callers.some((caller) => caller.transport === 'generated')
-  const manual = callers.some((caller) => caller.transport === 'manual')
+  const generated = callers.some(
+    (caller) =>
+      caller.mapping === 'resolved' && caller.transport === 'generated',
+  )
+  const manual = callers.some(
+    (caller) => caller.mapping === 'resolved' && caller.transport === 'manual',
+  )
   operation.adoption =
     generated || manual
       ? {
@@ -809,12 +1417,12 @@ export function reconcileAdoption(
           analysis: 'incomplete-analysis',
           evidence: callers.map((caller) => caller.location),
           reason:
-            'Direct production call sites detected; wrapper/indirect analysis is deferred, so exclusive use, runtime migration and protection remain unassessed.',
+            'Production calls and supported source chains were detected. Unsupported dispatch/dynamic cases constrain exclusive adoption; static calls do not establish runtime migration or protection.',
         }
       : {
           state: 'incomplete-analysis',
           reason:
-            'Only unresolved transport bindings were found; inspect their caller diagnostics.',
+            'Only ambiguous/unresolved transport candidates were found; inspect their caller diagnostics before asserting operation-level adoption.',
           evidence: callers.map((caller) => caller.location),
         }
 }

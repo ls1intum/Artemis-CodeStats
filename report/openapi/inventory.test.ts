@@ -648,6 +648,102 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
     assert.equal(sha256(firstBytes), first.manifest.snapshots[0].sha256)
     const cached = await generateReport(options)
     assert.equal(cached.cached, true)
+    const assessmentFile = path.join(temporary, 'assessment.json')
+    const assessmentRecord = {
+      version: 1,
+      exceptions: [
+        {
+          id: 'temporary-manual',
+          binding: {
+            artemisCommit: ref,
+            inputHashes: Object.fromEntries(
+              first.snapshot.provenance.inputs
+                .filter(
+                  (input) =>
+                    !['verification', 'enforcement'].includes(input.kind),
+                )
+                .flatMap((input) =>
+                  input.content.state === 'available'
+                    ? [[input.id, input.content.sha256]]
+                    : [],
+                ),
+            ),
+          },
+          scope: {
+            moduleIds: ['alpha'],
+            operationIds: [],
+            callerIds: [
+              first.snapshot.callers.find(
+                (caller) => caller.transport === 'manual',
+              )!.id,
+            ],
+          },
+          reason: 'Temporary handwritten endpoint',
+          reviewCondition: 'generated response conversion is reviewed',
+          removalCondition: 'the generated adapter passes wire/runtime checks',
+          evidence: [
+            {
+              inputId: 'assessment-evidence',
+              path: 'report/openapi/evidence.json',
+              line: 1,
+            },
+          ],
+        },
+      ],
+      verification: [],
+      enforcement: [],
+      webRelevance: [],
+    }
+    await writeFile(assessmentFile, JSON.stringify(assessmentRecord))
+    const assessed = await generateReport({
+      ...options,
+      evidence: assessmentFile,
+      output: path.join(temporary, 'assessment-output'),
+    })
+    assert.equal(assessed.snapshot.exceptions[0].bindingStatus, 'matched')
+    assert.equal(
+      assessed.snapshot.measurements.manualCallSites.state === 'measured' &&
+        assessed.snapshot.measurements.manualCallSites.value,
+      1,
+    )
+    assert.ok(
+      assessed.snapshot.nextSteps!.some(
+        (step) => step.category === 'exception-review',
+      ),
+    )
+    assert.notEqual(
+      assessed.snapshot.provenance.fingerprint,
+      first.snapshot.provenance.fingerprint,
+    )
+    assert.deepEqual(
+      assessed.snapshot.provenance.inputs.find(
+        (input) => input.id === 'client',
+      ),
+      first.snapshot.provenance.inputs.find((input) => input.id === 'client'),
+    )
+    assert.equal(
+      (
+        await generateReport({
+          ...options,
+          evidence: assessmentFile,
+          output: path.join(temporary, 'assessment-output'),
+        })
+      ).cached,
+      true,
+    )
+    assessmentRecord.exceptions[0].binding.artemisCommit = 'd'.repeat(40)
+    await writeFile(assessmentFile, JSON.stringify(assessmentRecord))
+    const stale = await generateReport({
+      ...options,
+      evidence: assessmentFile,
+      output: path.join(temporary, 'assessment-output'),
+    })
+    assert.equal(stale.cached, false)
+    assert.equal(stale.snapshot.exceptions[0].bindingStatus, 'mismatched')
+    assert.notEqual(
+      stale.snapshot.provenance.fingerprint,
+      assessed.snapshot.provenance.fingerprint,
+    )
     await writeFile(
       path.join(repo, 'client/shared-ui/service.ts'),
       directClient.replace(
@@ -720,11 +816,15 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
       binding: {
         artemisCommit: ref,
         inputHashes: Object.fromEntries(
-          withRaw.snapshot.provenance.inputs.flatMap((input) =>
-            input.content.state === 'available'
-              ? [[input.id, input.content.sha256]]
-              : [],
-          ),
+          withRaw.snapshot.provenance.inputs
+            .filter(
+              (input) => !['verification', 'enforcement'].includes(input.kind),
+            )
+            .flatMap((input) =>
+              input.content.state === 'available'
+                ? [[input.id, input.content.sha256]]
+                : [],
+            ),
         ),
       },
       runId: 'fixture-run',

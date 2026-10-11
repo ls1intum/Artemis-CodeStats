@@ -7,14 +7,12 @@
     "noEmit": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
   "include": [
     "report/ui",
     "report/openapi",
-    "src/features/openapi/model.ts",
+    "src/features/openapi",
     "src/features/migrations/model.ts",
     "src/features/migrations/format.ts",
     "src/features/migrations/targets.ts",

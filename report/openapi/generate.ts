@@ -49,10 +49,21 @@ import {
 } from './spec'
 import { analyzeGenerated, reconcileGenerated } from './generated'
 import { analyzeAdoption, reconcileAdoption } from './adoption'
+import {
+  applyEvidence,
+  assessmentEvidenceSchema,
+  type AssessmentEvidence,
+} from './evidence'
+import {
+  callersForOperations,
+  ownersOf,
+} from '../../src/features/openapi/scope'
+import { assessReadiness } from '../../src/features/openapi/assessment'
 
-export const analyzerVersion = 'openapi-inventory-7'
+export const analyzerVersion = 'openapi-inventory-9'
 const directory = path.dirname(fileURLToPath(import.meta.url))
 export const defaultMapping = path.join(directory, 'module-mapping.json')
+export const defaultEvidence = path.join(directory, 'evidence.json')
 export const sha256 = (value: string | Buffer) =>
   createHash('sha256').update(value).digest('hex')
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
@@ -85,6 +96,7 @@ export function inventorySnapshot({
   specRevisionMatches,
   generatedSources,
   clientSources,
+  assessmentEvidence,
 }: {
   provenance: Provenance
   mapping: ModuleMapping
@@ -95,6 +107,7 @@ export function inventorySnapshot({
   specRevisionMatches: boolean
   generatedSources?: { path: string; content: string }[]
   clientSources?: { path: string; content: string }[]
+  assessmentEvidence?: AssessmentEvidence
 }): Snapshot {
   const diagnostics: Diagnostic[] = []
   const diagnostic = (
@@ -406,8 +419,8 @@ export function inventorySnapshot({
       [],
       [],
       [anchor],
-      'Direct-only production analysis: shared wrappers, inherited helpers, receiver aliases and indirect call chains remain unassessed. No direct caller does not establish server-only status or migration.',
-      'Resolve wrapper/indirect chains and reconcile unresolved callers in iteration 5; assess web relevance with callers or explicit supporting metadata before calculating exclusive adoption or candidates.',
+      'Supported source-chain analysis: direct and aliased receivers, inherited helpers and single-terminal adapters are assessed. Dynamic dispatch, callbacks, mutable arguments, multiple terminal branches and unseen runtime registrations can still hide callers. No caller does not establish server-only status or migration.',
+      'Reconcile unsupported source chains and web relevance with explicit evidence before claiming exclusive adoption or complete candidate analysis.',
     )
   }
   const callerCount = (
@@ -416,18 +429,17 @@ export function inventorySnapshot({
     global: boolean,
   ) => {
     if (!adoption) return unassessed('Production caller analysis has not run')
-    const ids = new Set(scoped.map((operation) => operation.id))
-    const callers = adoption.callers.filter(
-      (caller) =>
-        callSiteBucket(caller) === bucket &&
-        (global || caller.operationIds.some((id) => ids.has(id))),
-    )
+    const callers = callersForOperations(
+      adoption.callers,
+      scoped,
+      global,
+    ).filter((caller) => callSiteBucket(caller) === bucket)
     return {
       state: 'measured' as const,
       value: callers.length,
       completeness: 'incomplete-analysis' as const,
       basis:
-        'Disjoint direct-call partition: resolved generated REST / resolved manual REST / unresolved production transport. Module counts use candidate server ownership, independently of caller area; unbound callers are global-only. Wrappers and indirect chains remain unassessed.',
+        'Disjoint source-site partition: resolved generated REST / resolved manual REST / unresolved production transport. Shared scoping follows candidate server ownership independently of caller area; unbound sites are global-only. Wrapper implementation records are excluded; unsupported chains remain incomplete.',
       evidence: callers.length
         ? callers.map((caller) => caller.location)
         : adoption.evidence.length
@@ -593,7 +605,7 @@ export function inventorySnapshot({
         ? {
             state: 'incomplete-analysis',
             reason:
-              'Direct callers are assessed; wrapper/indirect analysis and unassessed web relevance prevent an exclusive-adoption denominator.',
+              'Direct callers and supported source chains are assessed; unresolved dispatch, dynamic cases and unassessed web relevance prevent an exclusive-adoption denominator.',
           }
         : unassessed(
             'Production caller analysis and web-relevance assessment have not run',
@@ -602,7 +614,7 @@ export function inventorySnapshot({
   }
   const assessments: ModuleAssessment[] = modules.map((module) => {
     const scoped = operations.filter((operation) =>
-      candidates.get(operation.id)!.has(module.id),
+      ownersOf(operation).includes(module.id),
     )
     const limitations = diagnostics.filter(
       (item) =>
@@ -655,7 +667,7 @@ export function inventorySnapshot({
       (module.inventory.state === 'inventoried' &&
         module.inventory.completeness === 'complete'),
   )
-  return snapshotSchema.parse({
+  const snapshot = snapshotSchema.parse({
     schemaVersion,
     provenance,
     modules: assessments,
@@ -671,6 +683,15 @@ export function inventorySnapshot({
       true,
     ),
   })
+  if (assessmentEvidence)
+    applyEvidence(snapshot, assessmentEvidence, {
+      inputId: 'assessment-evidence',
+      path: 'report/openapi/evidence.json',
+      line: 1,
+    })
+  assessReadiness(snapshot)
+  snapshot.diagnostics.sort((a, b) => compare(a.id, b.id))
+  return snapshotSchema.parse(snapshot)
 }
 
 export interface GenerateOptions {
@@ -682,6 +703,7 @@ export interface GenerateOptions {
   rawSpec?: string
   rawSpecRef?: string
   generationEvidence?: string
+  evidence?: string
   mapping?: string
   rebuild?: boolean
 }
@@ -876,6 +898,21 @@ export async function generateReport(
         )
       : undefined
     let generationRecord: z.infer<typeof generationEvidenceSchema> | undefined
+    const evidenceBytes = await readFile(options.evidence ?? defaultEvidence)
+    const assessmentEvidence = assessmentEvidenceSchema.parse(
+      JSON.parse(evidenceBytes.toString()),
+    )
+    inputs.push({
+      id: 'assessment-evidence',
+      kind: 'verification',
+      path: 'report/openapi/evidence.json',
+      revision: {
+        state: 'unknown',
+        reason:
+          'External CodeStats assessment records; each claim is separately bound to the analyzed Artemis inputs',
+      },
+      content: { state: 'available', sha256: sha256(evidenceBytes) },
+    })
     if (options.generationEvidence) {
       const bytes = await readFile(options.generationEvidence)
       generationRecord = generationEvidenceSchema.parse(
@@ -901,11 +938,14 @@ export async function generateReport(
       'spec.ts',
       'generated.ts',
       'adoption.ts',
+      'evidence.ts',
     ].map((file) => path.join(directory, file))
     analyzerFiles.push(
       extractorSource,
       ...extractorLibraries,
       path.join(directory, '../../src/features/openapi/model.ts'),
+      path.join(directory, '../../src/features/openapi/scope.ts'),
+      path.join(directory, '../../src/features/openapi/assessment.ts'),
       path.join(directory, '../../package-lock.json'),
     )
     const analyzerHashes = await Promise.all(
@@ -1119,6 +1159,7 @@ export async function generateReport(
     }
     const snapshot = inventorySnapshot({
       provenance,
+      assessmentEvidence,
       mapping,
       modules: discoverModules(extractedFiles, mapping),
       server,

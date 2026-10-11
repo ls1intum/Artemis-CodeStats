@@ -41,6 +41,11 @@ const options = yargs(hideBin(process.argv))
     type: 'string',
     description: 'Optional local JSON generation-run evidence record',
   })
+  .option('evidence', {
+    type: 'string',
+    description:
+      'Assessment records: exceptions, web relevance, verification and enforcement (defaults to tracked evidence.json)',
+  })
   .option('mapping', {
     type: 'string',
     description: 'Tracked module mapping configuration override',
@@ -67,6 +72,7 @@ const result = await generateReport({
   rawSpec: options.rawSpec,
   rawSpecRef: options.rawSpecRef,
   generationEvidence: options.generationEvidence,
+  evidence: options.evidence,
   mapping: options.mapping,
   rebuild: options.rebuild,
 })
