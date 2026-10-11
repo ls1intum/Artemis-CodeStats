@@ -20,6 +20,8 @@ import {
 import { discoverModules, mappingSchema, ownerOf } from './scope'
 import { createServerExtractor, type ServerExtraction } from './server'
 import { parseSpecification, reconcileSpecification } from './spec'
+import { verifyReport } from './verify'
+import { validateArtifacts } from './artifacts'
 
 const fixture = fileURLToPath(new URL('./fixtures/inventory', import.meta.url))
 const mapping = mappingSchema.parse({
@@ -788,7 +790,19 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
       await readFile(path.join(temporary, 'fresh', `${ref}.json`), 'utf8'),
       firstBytes,
     )
+    assert.equal((await verifyReport(options)).commit, ref)
+    assert.equal(
+      await readFile(path.join(output, `${ref}.json`), 'utf8'),
+      firstBytes,
+    )
+    await writeFile(path.join(output, 'untracked.json'), '{}')
+    await assert.rejects(verifyReport(options), /Unlisted OpenAPI artifact/)
+    await rm(path.join(output, 'untracked.json'))
+    await rm(path.join(output, `${ref}.json`))
+    await assert.rejects(verifyReport(options), /ENOENT/)
+    await writeFile(path.join(output, `${ref}.json`), firstBytes)
     await writeFile(path.join(output, `${ref}.json`), firstBytes + ' ')
+    await assert.rejects(verifyReport(options), /digest mismatch/)
     assert.equal(
       (await generateReport(options)).cached,
       false,
@@ -798,6 +812,7 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
       configFile,
       JSON.stringify({ ...mapping, version: 'fixture-2' }),
     )
+    await assert.rejects(verifyReport(options), /Stale OpenAPI artifacts/)
     const changed = await generateReport(options)
     assert.equal(changed.cached, false)
     assert.notEqual(
@@ -881,6 +896,48 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
     git('commit', '-qm', 'Changed committed inputs and new module')
     const next = git('rev-parse', 'HEAD')
     const nextReport = await generateReport({ ...options, ref: next })
+    const uiManifest = path.join(temporary, 'ui.json')
+    const ui = JSON.parse(
+      await readFile(
+        new URL('../../public/migrations/index.json', import.meta.url),
+        'utf8',
+      ),
+    )
+    ui.snapshots.at(-1).commit = ref
+    await writeFile(uiManifest, JSON.stringify(ui))
+    await assert.rejects(
+      verifyReport({ ...options, ref: next, uiManifest }),
+      /do not share/,
+    )
+    ui.snapshots.at(-1).commit = next
+    await writeFile(uiManifest, JSON.stringify(ui))
+    assert.equal(
+      (await verifyReport({ ...options, ref: next, uiManifest })).commit,
+      next,
+    )
+    assert.ok(
+      nextReport.manifest.snapshots.some(
+        (entry) => entry.artemisCommit === ref,
+      ),
+    )
+    const preservedBytes = await readFile(
+      path.join(output, `${ref}.json`),
+      'utf8',
+    )
+    await generateReport({ ...options, ref: next, rebuild: true })
+    assert.equal(
+      await readFile(path.join(output, `${ref}.json`), 'utf8'),
+      preservedBytes,
+    )
+    await validateArtifacts(output)
+    await assert.rejects(
+      verifyReport({
+        ...options,
+        ref: 'HEAD~1',
+        output: path.join(temporary, 'fresh'),
+      }),
+      /Missing OpenAPI snapshot/,
+    )
     assert.notEqual(
       nextReport.snapshot.provenance.fingerprint,
       changed.snapshot.provenance.fingerprint,
@@ -891,6 +948,10 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
       'inventoried',
     )
     const mismatch = await generateReport({ ...options, specRef: next })
+    await assert.rejects(
+      verifyReport({ ...options, specRef: next }),
+      /inputs do not match/,
+    )
     assert.equal(mismatch.cached, false)
     assert.ok(
       mismatch.snapshot.operations.every(

@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process'
-import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import {
   lstat,
@@ -59,13 +58,14 @@ import {
   ownersOf,
 } from '../../src/features/openapi/scope'
 import { assessReadiness } from '../../src/features/openapi/assessment'
+import { readManifest, readSnapshot, sha256 } from './artifacts'
+
+export { sha256 } from './artifacts'
 
 export const analyzerVersion = 'openapi-inventory-9'
 const directory = path.dirname(fileURLToPath(import.meta.url))
 export const defaultMapping = path.join(directory, 'module-mapping.json')
 export const defaultEvidence = path.join(directory, 'evidence.json')
-export const sha256 = (value: string | Buffer) =>
-  createHash('sha256').update(value).digest('hex')
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 const unassessed = (reason: string) => ({
   state: 'unassessed' as const,
@@ -939,6 +939,7 @@ export async function generateReport(
       'generated.ts',
       'adoption.ts',
       'evidence.ts',
+      'artifacts.ts',
     ].map((file) => path.join(directory, file))
     analyzerFiles.push(
       extractorSource,
@@ -1212,18 +1213,31 @@ export async function generateReport(
         : undefined,
     })
     const bytes = JSON.stringify(snapshot) + '\n'
+    const history = existsSync(indexPath)
+      ? (await readManifest(options.output)).snapshots.filter(
+          (entry) => entry.artemisCommit !== commit,
+        )
+      : []
+    // History stays byte-identical; never silently drop a missing or corrupt retained file.
+    for (const entry of history) await readSnapshot(options.output, entry)
+    const entries = [
+      ...history,
+      {
+        artemisCommit: commit,
+        file: `${commit}.json`,
+        sha256: sha256(bytes),
+        analyzerVersion,
+        analyzedAt,
+      },
+    ].sort(
+      (a, b) =>
+        compare(b.analyzedAt, a.analyzedAt) ||
+        compare(a.artemisCommit, b.artemisCommit),
+    )
     const manifest = manifestSchema.parse({
       schemaVersion,
-      generatedAt: analyzedAt,
-      snapshots: [
-        {
-          artemisCommit: commit,
-          file: `${commit}.json`,
-          sha256: sha256(bytes),
-          analyzerVersion,
-          analyzedAt,
-        },
-      ],
+      generatedAt: entries[0].analyzedAt,
+      snapshots: entries,
     })
     await mkdir(options.output, { recursive: true })
     const atomicWrite = async (file: string, content: string) => {

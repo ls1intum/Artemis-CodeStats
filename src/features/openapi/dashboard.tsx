@@ -79,6 +79,12 @@ export function OpenApiDashboard() {
             Artemis modules. Static usage is evidence for remaining work;
             runtime migration requires matching verification.
           </p>
+          <a
+            className="mt-2 inline-block text-sm underline"
+            href="https://github.com/ls1intum/Artemis-CodeStats/blob/main/docs/openapi-dashboard.md"
+          >
+            Measurement definitions and collection methodology
+          </a>
         </div>
         <div className="flex flex-wrap items-end gap-4">
           <label className="grid gap-1.5 text-sm">

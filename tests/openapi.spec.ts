@@ -58,6 +58,14 @@ test('active navigation and retained report cover every discovered module under 
     page.getByRole('link', { name: 'OpenAPI migration', exact: true }),
   ).toHaveAttribute('aria-current', 'page')
   await expect(page.getByText('Archived.', { exact: true })).toHaveCount(0)
+  await expect(
+    page.getByRole('link', {
+      name: 'Measurement definitions and collection methodology',
+    }),
+  ).toHaveAttribute(
+    'href',
+    'https://github.com/ls1intum/Artemis-CodeStats/blob/main/docs/openapi-dashboard.md',
+  )
   const manifest = await (await page.request.get('./openapi/index.json')).json()
   const snapshot = await (
     await page.request.get(`./openapi/${manifest.snapshots[0].file}`)
@@ -85,6 +93,21 @@ test('active navigation and retained report cover every discovered module under 
     'href',
     new RegExp(`/blob/${snapshot.provenance.artemisCommit}/.*#L\\d+$`),
   )
+  await expect(
+    page.getByLabel('OpenAPI snapshot').locator('option'),
+  ).toHaveCount(manifest.snapshots.length)
+  const historical = manifest.snapshots.at(-1)
+  if (historical.artemisCommit !== snapshot.provenance.artemisCommit) {
+    await page
+      .getByLabel('OpenAPI snapshot')
+      .selectOption(historical.artemisCommit)
+    await expect(section(page, 'Revision and provenance')).toContainText(
+      historical.artemisCommit,
+    )
+    await expect(page).toHaveURL(
+      new RegExp(`snapshot=${historical.artemisCommit}`),
+    )
+  }
   expect(errors).toEqual([])
 })
 

@@ -115,6 +115,15 @@ test('generator catches up missed commits, preserves source checkout, is idempot
     const head = commit(5, '<div class="btn row"></div>')
     writeFileSync(file, 'uncommitted local work')
     const before = git('status', '--porcelain')
+    const pinned = await generateReports({
+      ...options,
+      ref: oldHead,
+      output: join(root, 'pinned'),
+    })
+    assert.equal(pinned.snapshots.at(-1)?.commit, oldHead)
+    assert.equal(git('rev-parse', 'HEAD'), head)
+    assert.equal(git('status', '--porcelain'), before)
+    lookups.length = 0
     const report = await generateReports(options)
     assert.equal(git('rev-parse', 'HEAD'), head)
     assert.equal(git('status', '--porcelain'), before)

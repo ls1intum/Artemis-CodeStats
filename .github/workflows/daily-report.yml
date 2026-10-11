@@ -1,4 +1,4 @@
-name: UI Migration Reports
+name: Migration Reports
 
 on:
   schedule:
@@ -33,15 +33,24 @@ jobs:
         with:
           node-version: '24'
           package-manager-cache: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
       - run: npm ci
       - name: Update pinned Artemis revision
+        id: artemis
         run: |
           git -C artemis fetch origin develop
           git -C artemis checkout --detach origin/develop
+          echo "commit=$(git -C artemis rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - run: npm run typecheck:report
-      - run: npm run report:ui
+      - run: npm run report:ui -- --ref "${{ steps.artemis.outputs.commit }}"
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      - run: npm run report:openapi -- --ref "${{ steps.artemis.outputs.commit }}"
+      - name: Validate history and reproduce OpenAPI evidence before publication
+        run: npm run report:openapi:verify -- --ref "${{ steps.artemis.outputs.commit }}"
       - run: npm test
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -52,9 +61,9 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add artemis public/migrations
+          git add artemis public/migrations public/openapi
           if ! git diff --cached --quiet; then
-            git commit -m "chore: refresh UI migration evidence"
+            git commit -m "chore: refresh migration evidence"
             git push origin "HEAD:$REPORT_BRANCH"
           fi
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -92,7 +101,7 @@ jobs:
             if [ -n "$issue" ]; then
               gh issue comment "$issue" --body "Still failing: $RUN"
             else
-              gh issue create --title "$TITLE" --body "The hourly UI migration collection failed and the dashboard is no longer updated. First failing run: $RUN. Read the failed step's log; the issue closes itself after the next successful run."
+              gh issue create --title "$TITLE" --body "The hourly UI/OpenAPI migration collection or deployment failed and the dashboards may no longer be updated. First failing run: $RUN. Read the failed step's log; the issue closes itself after the next successful run."
             fi
           elif [ -n "$issue" ]; then
             gh issue close "$issue" --comment "Recovered: $RUN"

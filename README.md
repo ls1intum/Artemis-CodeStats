@@ -3,7 +3,8 @@
 Migration reports for the [Artemis learning platform](https://github.com/ls1intum/Artemis) client.
 
 **[Open the dashboard](https://ls1intum.github.io/Artemis-CodeStats/)** ·
-[How it is measured](docs/migration-dashboard.md)
+[UI methodology](docs/migration-dashboard.md) ·
+[OpenAPI methodology](docs/openapi-dashboard.md)
 
 ## Active: client UI modernization
 
@@ -22,9 +23,23 @@ integrated commit to its GitHub author.
 The signals/decoratorless and DTO dashboards are archived under **Archived migrations**.
 Their data is preserved; their collection has stopped.
 
+## Active: OpenAPI migration
+
+The OpenAPI reporting feature has a [measurement contract, pinned evidence baseline and
+server, specification, generated-transport and production-call inventories](docs/openapi-dashboard.md). Run `npm run report:openapi --
+--repo /path/to/Artemis --ref <commit> --output /tmp/openapi-report` with Node 24, npm and
+a JDK 17+. The retained report is in `public/openapi/`. Direct calls and supported wrapper,
+inheritance and adapter chains are assessed, with scoped next steps and readiness prerequisites.
+Optional exceptions, verification, enforcement and web-relevance records are configured in
+`report/openapi/evidence.json` (or `--evidence <file>`). Missing or stale evidence cannot
+establish runtime migration or protection. The active **OpenAPI migration** dashboard at
+`/#/openapi` shows all module assessments, endpoint details, cross-area callers, scoped next steps,
+and revision-bound evidence. Module, view, endpoint and snapshot selections can be shared in the URL.
+
 ## Develop and verify
 
-Requires Node 24 and npm. The UI reads committed report artifacts; no Artemis server is needed.
+Requires Node 24, npm and a JDK 17+ for report tests/collection. The UI reads committed report
+artifacts; local viewing needs no Artemis server, generator checkout or GitHub token.
 
 ```sh
 npm ci
@@ -42,12 +57,18 @@ npm run test:e2e -- --workers=2
 
 ```sh
 git submodule update --init artemis
-npm run report:ui              # incremental
-npm run report:ui -- --rebuild # after changing the analyzer
+artemis_revision=$(git rev-parse HEAD:artemis)
+npm run report:ui -- --ref "$artemis_revision"
+npm run report:openapi -- --ref "$artemis_revision"
+npm run report:openapi:verify # isolated rebuild, history validation and matching UI revision
 ```
 
-The analyzer reads committed Artemis trees with `git archive` and never changes the submodule
-working tree. The workflow checks `origin/develop` hourly, commits validated reports with
+Collectors read committed Artemis trees with `git archive` and never change the source
+working tree. UI collection is incremental; use `--rebuild` after changing its analyzer.
+OpenAPI fingerprints invalidate stale inputs automatically; `--rebuild` forces extraction.
+Both collectors accept `--repo`, `--ref` and `--output` for isolated reproduction; see the
+[OpenAPI collection instructions](docs/openapi-dashboard.md#collection-and-reproduction).
+The workflow checks `origin/develop` hourly, collects both reports at one SHA, commits validated reports with
 `GITHUB_TOKEN`, and deploys that exact commit to Pages; see
 [collection runs](https://github.com/ls1intum/Artemis-CodeStats/actions/workflows/daily-report.yml)
 and the [collection notes](docs/migration-dashboard.md#collection-and-publication).
