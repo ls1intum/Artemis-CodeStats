@@ -60,7 +60,12 @@ export const mappingSchema = z
     'Ownership overrides must be within the server source root',
   )
 export type ModuleMapping = z.infer<typeof mappingSchema>
-export type DiscoveredModule = Pick<ModuleAssessment, 'id' | 'role' | 'roots'>
+export type DiscoveredModule = Pick<
+  ModuleAssessment,
+  'id' | 'role' | 'roots'
+> & {
+  limitation?: string
+}
 export const mappingLocation: SourceLocation = {
   inputId: 'module-mapping',
   path: 'report/openapi/module-mapping.json',
@@ -71,6 +76,7 @@ export const mappingLocation: SourceLocation = {
 export function discoverModules(
   files: string[],
   mapping: ModuleMapping,
+  evidenceFiles: ReadonlySet<string> = new Set(files),
 ): DiscoveredModule[] {
   const modules = new Map<string, DiscoveredModule>()
   for (const [root, inputId] of [
@@ -91,14 +97,17 @@ export function discoverModules(
           id,
           role,
           roots: [
-            anchor,
+            ...(evidenceFiles.has(file) ? [anchor] : []),
             ...(mapping.roleOverrides[id] ? [mappingLocation] : []),
           ],
         })
       else {
         if (inputId === 'server' && !(id in mapping.roleOverrides))
           existing.role = 'server-module'
-        if (!existing.roots.some((location) => location.inputId === inputId))
+        if (
+          evidenceFiles.has(file) &&
+          !existing.roots.some((location) => location.inputId === inputId)
+        )
           existing.roots.push(anchor)
       }
     }
@@ -107,6 +116,14 @@ export function discoverModules(
     throw new Error(
       'No module discovery evidence in the configured source roots',
     )
+  for (const module of modules.values()) {
+    if (
+      !module.roots.some((location) => location.inputId !== 'module-mapping')
+    ) {
+      module.roots = [mappingLocation]
+      module.limitation = `Discovered area ${module.id} contains only empty files under the configured source roots; no source line can establish an inventory or no-REST state`
+    }
+  }
   for (const override of mapping.ownershipOverrides) {
     if (!modules.has(override.moduleId))
       throw new Error(

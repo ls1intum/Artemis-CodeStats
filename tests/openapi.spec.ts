@@ -1,8 +1,33 @@
 import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { openApiFixture } from './fixtures/openapi'
 
 const fixture = openApiFixture()
+const acceptance = JSON.parse(
+  readFileSync(
+    new URL('../report/openapi/fixtures/acceptance.json', import.meta.url),
+    'utf8',
+  ),
+) as {
+  artemisCommit: string
+  cases: {
+    id: string
+    operation: { method: string; path: string }
+    module: string
+    server: { path: string; line: number }
+    specification: { state: string }
+    generatedTransport: string
+    adoption: string
+    callers: {
+      location: { path: string; line: number; symbol: string }
+      area: string
+      transport: string
+      kind: string
+      via: { path: string; line: number }[]
+    }[]
+  }[]
+}
 const artifact = (snapshot = fixture) => {
   const bytes = JSON.stringify(snapshot)
   const entry = {
@@ -41,6 +66,65 @@ const section = (page: Page, title: string) =>
     .getByRole('heading', { name: title, exact: true, level: 2 })
     .locator('../..')
 const pinned = new RegExp(`/blob/${'a'.repeat(40)}/.*#L\\d+$`)
+
+for (const expected of acceptance.cases)
+  test(`independent source acceptance: ${expected.id} renders contracts, callers and pinned chains`, async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(60_000)
+    const id = `${expected.operation.method} ${expected.operation.path}`
+    const query = new URLSearchParams({
+      snapshot: acceptance.artemisCommit,
+      module: expected.module,
+      view: 'endpoints',
+      operation: id,
+    })
+    await page.goto(`./#/openapi?${query}`)
+    await loaded(page)
+    const detail = section(page, id)
+    for (const [title, state] of [
+      ['Specification', expected.specification.state],
+      ['Generated transport', expected.generatedTransport],
+      ['Production adoption', expected.adoption],
+    ])
+      await expect(
+        detail.getByRole('heading', { name: title, exact: true }).locator('..'),
+      ).toContainText(state)
+    const href = (location: { path: string; line: number }) =>
+      `https://github.com/ls1intum/Artemis/blob/${acceptance.artemisCommit}/${location.path}#L${location.line}`
+    await expect(
+      detail.locator(`a[href="${href(expected.server)}"]`).first(),
+    ).toBeVisible()
+    for (const caller of expected.callers) {
+      await detail
+        .getByLabel('Search callers', { exact: true })
+        .fill(caller.location.symbol)
+      const row = detail
+        .getByRole('listitem')
+        .filter({
+          has: page.getByRole('heading', {
+            name: caller.location.symbol,
+            exact: true,
+          }),
+        })
+        .filter({ has: page.locator(`a[href="${href(caller.location)}"]`) })
+      await expect(row).toContainText(caller.area)
+      await expect(row).toContainText(caller.kind)
+      await expect(row).toContainText(caller.transport)
+      for (const disclosure of await row.locator('summary').all())
+        await disclosure.click()
+      for (const via of caller.via)
+        await expect(row.locator(`a[href="${href(via)}"]`)).toBeVisible()
+    }
+    await expect(section(page, 'Percentage eligibility')).toContainText(
+      'incomplete-analysis',
+    )
+    await expect(section(page, 'Revision and provenance')).toContainText(
+      'unknown',
+    )
+    if (expected.id === 'inherited-settings-get')
+      await detail.screenshot({ path: testInfo.outputPath('endpoint.png') })
+  })
 
 test('active navigation and retained report cover every discovered module under the production base path', async ({
   page,

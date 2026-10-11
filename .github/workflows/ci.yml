@@ -76,6 +76,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - run: npm run report:openapi:verify
+      - name: Independent OpenAPI source acceptance
+        run: node --import tsx --test report/openapi/acceptance.test.ts
+        env:
+          OPENAPI_AUDIT_REPO: artemis
       - name: Reports are up to date
         run: |
           git status --porcelain --untracked-files=all public/migrations public/openapi

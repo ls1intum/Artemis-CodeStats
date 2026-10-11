@@ -107,6 +107,44 @@ const collect = (config = mapping) =>
     specRevisionMatches: true,
   })
 
+test('discovery anchors skip empty files without dropping areas that have only empty files', () => {
+  const files = [
+    'server/alpha/.gitkeep',
+    'server/alpha/Resource.java',
+    'client/empty/.gitkeep',
+  ]
+  const modules = discoverModules(
+    files,
+    mapping,
+    new Set(['server/alpha/Resource.java']),
+  )
+  assert.equal(
+    modules.find((module) => module.id === 'alpha')!.roots[0].path,
+    'server/alpha/Resource.java',
+  )
+  const empty = modules.find((module) => module.id === 'empty')!
+  assert.match(empty.limitation!, /only empty files/)
+  const snapshot = inventorySnapshot({
+    provenance,
+    mapping,
+    modules,
+    server: { files: [], mappings: [], issues: [] },
+    specRevisionMatches: true,
+  })
+  assert.equal(
+    snapshot.modules.find((module) => module.id === 'empty')!.inventory.state,
+    'limited',
+  )
+  assert.ok(
+    snapshot.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.stage === 'modules' &&
+        diagnostic.moduleIds.includes('empty') &&
+        diagnostic.nextStep.includes('nonempty'),
+    ),
+  )
+})
+
 test('JavaParser composes every class/method alternative, constants and explicit HTTP method set', () => {
   const read = server.mappings.find(
     (entry) => entry.symbol === 'fixture.alpha.Resource.read',

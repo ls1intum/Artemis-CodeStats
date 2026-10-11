@@ -1,0 +1,1251 @@
+{
+  "kind": "source-expectations",
+  "artemisCommit": "1e68e12f48e2992df7ba2fdc3046a025381e5e0b",
+  "reviewedOn": "2026-10-11",
+  "sourceTrees": [
+    {
+      "inputId": "server",
+      "path": "src/main/java/de/tum/cit/aet/artemis",
+      "sha256": "a8d4716a47f83f5bb46dcb09a0a5bc19d29a083aaee460b05bd926572f0ccf3d",
+      "files": 3462
+    },
+    {
+      "inputId": "client",
+      "path": "src/main/webapp/app",
+      "sha256": "43fda942ad127341056974eecffed82e36d59fbb4229a4463e23e68416bd044a",
+      "files": 4865
+    },
+    {
+      "inputId": "generated",
+      "path": "src/main/webapp/app/openapi",
+      "sha256": "3671d4678f114d1e6d092860c30c00dcf90405d1909e820163e71f19f48f2b19",
+      "files": 110
+    }
+  ],
+  "modules": [
+    "account",
+    "admin",
+    "assessment",
+    "athena",
+    "atlas",
+    "buildagent",
+    "calendar",
+    "communication",
+    "config",
+    "core",
+    "course",
+    "deimos",
+    "editor",
+    "exam",
+    "exercise",
+    "fileupload",
+    "foundation",
+    "globalsearch",
+    "hyperion",
+    "iris",
+    "jenkins",
+    "lecture",
+    "localci",
+    "localvc",
+    "logos",
+    "lti",
+    "modeling",
+    "notification",
+    "openapi",
+    "plagiarism",
+    "programming",
+    "quiz",
+    "server-root",
+    "shared",
+    "shared-ui",
+    "sharing",
+    "text",
+    "tutorialgroup",
+    "videosource"
+  ],
+  "noRestModules": [
+    "buildagent",
+    "config",
+    "editor",
+    "foundation",
+    "jenkins",
+    "logos",
+    "openapi",
+    "server-root",
+    "shared",
+    "shared-ui",
+    "sharing"
+  ],
+  "sharedInfrastructure": [
+    "config",
+    "foundation",
+    "openapi",
+    "server-root",
+    "shared",
+    "shared-ui"
+  ],
+  "specification": {
+    "path": "config/openapi/openapi.yaml",
+    "sha256": "b164e8d296bbd1d8b09c21dfa4865cbd3131674da002f35c0675212471563425",
+    "uniqueOperations": 67
+  },
+  "absentGeneratedPaths": ["management-detail", "submissions/live"],
+  "inputs": [
+    {
+      "path": "build.gradle",
+      "sha256": "cba948c0d4b372bbbffe8154f5203b35a15263d9708adf69dd77bcbe840444db",
+      "excerpts": [
+        {
+          "line": 47,
+          "text": "            classpath \"de.tum.cit.aet:openapi-generator-angular22:1.0.0\""
+        }
+      ]
+    },
+    {
+      "path": "config/openapi/openapi.yaml",
+      "sha256": "b164e8d296bbd1d8b09c21dfa4865cbd3131674da002f35c0675212471563425",
+      "excerpts": [
+        {
+          "line": 240,
+          "text": "      operationId: getLeaderboardSettings"
+        },
+        {
+          "line": 249,
+          "text": "      operationId: updateLeaderboardSettings"
+        },
+        {
+          "line": 304,
+          "text": "      operationId: importRegistrations"
+        },
+        {
+          "line": 592,
+          "text": "      operationId: saveOrSubmitForLiveMode"
+        },
+        {
+          "line": 1232,
+          "text": "      operationId: globalSearch"
+        },
+        {
+          "line": 1296,
+          "text": "      operationId: getQuizTrainingLeaderboard"
+        },
+        {
+          "line": 1322,
+          "text": "      operationId: getCalendarEventsOverlappingMonths"
+        }
+      ]
+    },
+    {
+      "path": "gradle/openapi.gradle",
+      "sha256": "fd5cc9de2e53be444f8343f5a70dbe149fd843c81863c02a41e31243d7914284",
+      "excerpts": [
+        {
+          "line": 32,
+          "text": "                \"-Dspring.profiles.active=test,artemis,core,atlas,scheduling,athena,apollon,theia,dev,localci,localvc\","
+        },
+        {
+          "line": 34,
+          "text": "                \"-Dspringdoc.packages-to-scan=de.tum.cit.aet.artemis.tutorialgroup.web,de.tum.cit.aet.artemis.hyperion.web,de.tum.cit.aet.artemis.calendar.web,de.tum.cit.aet.artemis.globalsearch.web,de.tum.cit.aet.artemis.quiz.web.openapi\","
+        },
+        {
+          "line": 36,
+          "text": "                \"-Dartemis.weaviate.enabled=true\","
+        },
+        {
+          "line": 37,
+          "text": "                \"-Dartemis.openapi-docs-generation=true\","
+        },
+        {
+          "line": 39,
+          "text": "                \"-Dspringdoc.api-docs.enabled=true\","
+        },
+        {
+          "line": 95,
+          "text": "            useHttpResource  : \"false\","
+        },
+        {
+          "line": 107,
+          "text": "            def inputFile = file(\"${projectRoot}/config/openapi/openapi.yaml\")"
+        },
+        {
+          "line": 108,
+          "text": "            def outputFile = file(\"${projectRoot}/config/openapi/openapi.yaml\")"
+        }
+      ]
+    },
+    {
+      "path": "src/main/java/de/tum/cit/aet/artemis/calendar/web/CalendarResource.java",
+      "sha256": "d6220603e1671f291bfbf3f04d4f637d74f094ac674963c41de06f2583270a97",
+      "excerpts": [
+        {
+          "line": 61,
+          "text": "@Profile(PROFILE_CORE)"
+        },
+        {
+          "line": 64,
+          "text": "@RequestMapping(\"api/calendar/\")"
+        },
+        {
+          "line": 208,
+          "text": "    @GetMapping(\"courses/{courseId}/calendar-events\")"
+        },
+        {
+          "line": 212,
+          "text": "    public ResponseEntity<Map<String, List<CalendarEventDTO>>> getCalendarEventsOverlappingMonths(@PathVariable long courseId, @RequestParam List<String> monthKeys,"
+        }
+      ]
+    },
+    {
+      "path": "src/main/java/de/tum/cit/aet/artemis/course/web/CourseStatsResource.java",
+      "sha256": "0c9e85960186b0d9726755bf0a965550f561a522394133ab4aecfa5427c67974",
+      "excerpts": [
+        {
+          "line": 36,
+          "text": "@Profile(PROFILE_CORE)"
+        },
+        {
+          "line": 39,
+          "text": "@RequestMapping(\"api/course/\")"
+        },
+        {
+          "line": 130,
+          "text": "    @GetMapping(\"courses/{courseId}/management-detail\")"
+        },
+        {
+          "line": 132,
+          "text": "    public ResponseEntity<CourseManagementDetailViewDTO> getCourseDTOForDetailView(@PathVariable Long courseId) {"
+        }
+      ]
+    },
+    {
+      "path": "src/main/java/de/tum/cit/aet/artemis/globalsearch/web/GlobalSearchResource.java",
+      "sha256": "760a4851225ec38608d93b84c122157fd68c49635ff891b5d0bab279598a490b",
+      "excerpts": [
+        {
+          "line": 51,
+          "text": "@Conditional(WeaviateEnabled.class)"
+        },
+        {
+          "line": 54,
+          "text": "@RequestMapping(\"api/\")"
+        },
+        {
+          "line": 112,
+          "text": "    @GetMapping(\"search\")"
+        },
+        {
+          "line": 121,
+          "text": "    public ResponseEntity<List<GlobalSearchResultDTO>> globalSearch(@RequestParam(\"q\") @Parameter(description = \"Search query; can be empty to retrieve recent items\") String query,"
+        }
+      ]
+    },
+    {
+      "path": "src/main/java/de/tum/cit/aet/artemis/quiz/web/openapi/QuizSubmissionResource.java",
+      "sha256": "6f4976aac0ba582b489b85547a5b9a111fe886e2963e73451f4e63a24eaaeea4",
+      "excerpts": [
+        {
+          "line": 61,
+          "text": "@Profile(PROFILE_CORE)"
+        },
+        {
+          "line": 65,
+          "text": "@RequestMapping(\"api/quiz/\")"
+        },
+        {
+          "line": 112,
+          "text": "    @PostMapping(\"exercises/{exerciseId}/submissions/live\")"
+        },
+        {
+          "line": 114,
+          "text": "    public ResponseEntity<QuizSubmissionBeforeEvaluationDTO> saveOrSubmitForLiveMode(@PathVariable Long exerciseId,"
+        }
+      ]
+    },
+    {
+      "path": "src/main/java/de/tum/cit/aet/artemis/quiz/web/openapi/QuizTrainingResource.java",
+      "sha256": "648798c63a0a542748644abd05189234b9c0de368629336948dae9ab26098df2",
+      "excerpts": [
+        {
+          "line": 60,
+          "text": "@Profile(PROFILE_CORE)"
+        },
+        {
+          "line": 64,
+          "text": "@RequestMapping(\"api/quiz/\")"
+        },
+        {
+          "line": 164,
+          "text": "    @GetMapping(\"courses/{courseId}/training/leaderboard\")"
+        },
+        {
+          "line": 166,
+          "text": "    public ResponseEntity<LeaderboardWithCurrentUserEntryDTO> getQuizTrainingLeaderboard(@PathVariable long courseId) {"
+        },
+        {
+          "line": 184,
+          "text": "    @PutMapping(\"leaderboard-settings\")"
+        },
+        {
+          "line": 186,
+          "text": "    public ResponseEntity<Void> updateLeaderboardSettings(@Valid @RequestBody LeaderboardSettingDTO leaderboardSettingDTO) {"
+        },
+        {
+          "line": 232,
+          "text": "    @GetMapping(\"leaderboard-settings\")"
+        },
+        {
+          "line": 234,
+          "text": "    public ResponseEntity<LeaderboardSettingDTO> getLeaderboardSettings() {"
+        }
+      ]
+    },
+    {
+      "path": "src/main/java/de/tum/cit/aet/artemis/tutorialgroup/web/TutorialGroupResource.java",
+      "sha256": "2ece6b04736c189b35cb5ecfe6b3548d5a8c3ea68cf9eba90e0217519682ff50",
+      "excerpts": [
+        {
+          "line": 79,
+          "text": "@Conditional(TutorialGroupEnabled.class)"
+        },
+        {
+          "line": 83,
+          "text": "@RequestMapping(\"api/tutorialgroup/\")"
+        },
+        {
+          "line": 503,
+          "text": "    @PostMapping(\"courses/{courseId}/tutorial-groups/{tutorialGroupId}/import-registrations\")"
+        },
+        {
+          "line": 505,
+          "text": "    public ResponseEntity<List<TutorialGroupStudentImportDataDTO>> importRegistrations(@PathVariable long courseId, @PathVariable long tutorialGroupId,"
+        }
+      ]
+    },
+    {
+      "path": "src/main/resources/config/application.yml",
+      "sha256": "d0674e141c9da19f8ca4e10fa63ec1841b4ea9821f6cb7b9f59ea036185e36eb",
+      "excerpts": [
+        {
+          "line": 373,
+          "text": "springdoc:"
+        },
+        {
+          "line": 376,
+          "text": "    enabled: false"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/admin/metrics/metrics.model.ts",
+      "sha256": "a3bb6156e908b119d9d8a6d8f2bddae3037be4a9695d23b7d67374d566a24089",
+      "excerpts": [
+        {
+          "line": 83,
+          "text": "export enum HttpMethod {"
+        },
+        {
+          "line": 85,
+          "text": "    Get = 'GET',"
+        },
+        {
+          "line": 86,
+          "text": "    Put = 'PUT',"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/calendar/shared/service/calendar.service.ts",
+      "sha256": "86acf3399bbb85ec29e2e614a89915355d9c37778b943fd344909413a9504faf",
+      "excerpts": [
+        {
+          "line": 9,
+          "text": "import { CalendarApi } from 'app/openapi/api/calendar-api';"
+        },
+        {
+          "line": 15,
+          "text": "    private readonly apiService = inject(CalendarApi);"
+        },
+        {
+          "line": 61,
+          "text": "            this.reloadEvents();"
+        },
+        {
+          "line": 86,
+          "text": "            this.loadEventsForCurrentMonth(currentCourseId, firstDayOfCurrentMonth).subscribe();"
+        },
+        {
+          "line": 99,
+          "text": "        return this.apiService.getCalendarEventsOverlappingMonths(courseId, monthKeys, timeZone, language).pipe("
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/core/navbar/global-search/components/modal/global-search-modal.component.ts",
+      "sha256": "2b399f9e47325bd7d4303df85e36c9d7402520f828815b91aeafdc089c75a758",
+      "excerpts": [
+        {
+          "line": 275,
+          "text": "                            this.searchService.globalSearch(searchQuery, types, excludeTypes, courseIdsParam, excludeCourseIdsParam).pipe("
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/course/manage/detail/course-detail.component.ts",
+      "sha256": "65b860bfdc003bce80efc149fc8c969be8f9c2a3df7b40a2b937dc0c908535d8",
+      "excerpts": [
+        {
+          "line": 155,
+          "text": "            this.fetchCourseStatistics(courseId);"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/course/manage/services/course-management.service.ts",
+      "sha256": "c6591e8f2b944f9a273b9468a969c7f405e6a897a11971c229b40f180839c574",
+      "excerpts": [
+        {
+          "line": 104,
+          "text": "    private resourceUrl = 'api/course/courses';"
+        },
+        {
+          "line": 196,
+          "text": "    getCourseStatisticsForDetailView(courseId: number): Observable<HttpResponse<CourseManagementDetailViewDto>> {"
+        },
+        {
+          "line": 198,
+          "text": "            .get<CourseManagementDetailViewDto>(`${this.resourceUrl}/${courseId}/management-detail`, { observe: 'response' })"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+      "sha256": "ef7132433d8e2d6e8073f510688e20523376ffc27ccc59c1d02e1c3d00613014",
+      "excerpts": [
+        {
+          "line": 8,
+          "text": "    private readonly httpClient: HttpClient = inject(HttpClient);"
+        },
+        {
+          "line": 10,
+          "text": "    protected baseUrl: string = 'api';"
+        },
+        {
+          "line": 63,
+          "text": "                this.httpClient.request(method, `${this.baseUrl}/${url}`, {"
+        },
+        {
+          "line": 120,
+          "text": "        return await this.request<T>(HttpMethod.Get, url, options);"
+        },
+        {
+          "line": 244,
+          "text": "        return await this.request<T>(HttpMethod.Put, url, { body, headers: options?.headers, params: options?.params, responseType: options?.responseType });"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/openapi/.openapi-generator/VERSION",
+      "sha256": "5a7c67b4051c6e29b6de0aaaccb970bd88df4b5c1441cc91ec48a9aa4d0f4683",
+      "excerpts": [
+        {
+          "line": 1,
+          "text": "7.21.0"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/openapi/api/calendar-api.ts",
+      "sha256": "ffb9c93d08973a31ef827f107225b6e710344631da54a3a4f469577b139eeda7",
+      "excerpts": [
+        {
+          "line": 66,
+          "text": "    getCalendarEventsOverlappingMonths(courseId: number, monthKeys: Array<string>, timeZone: string, language: 'ENGLISH' | 'GERMAN'): Observable<{ [key: string]: Array<CalendarEvent>; }> {"
+        },
+        {
+          "line": 79,
+          "text": "        return this.http.get<{ [key: string]: Array<CalendarEvent>; }>(url);"
+        },
+        {
+          "line": 80,
+          "text": "    }"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/openapi/api/global-search-api.ts",
+      "sha256": "685f89ac3d854c6b62389e5b07abbb9e129271999bbc37fa0ca59fb0d2ef9a5e",
+      "excerpts": [
+        {
+          "line": 35,
+          "text": "    globalSearch(q: string, types?: string, excludeTypes?: string, courseIds?: Array<number>, excludeCourseIds?: Array<number>, limit?: number): Observable<Array<GlobalSearchResult>> {"
+        },
+        {
+          "line": 56,
+          "text": "        const url = `${this.basePath}/api/search${queryString ? `?${queryString}` : ''}`;"
+        },
+        {
+          "line": 57,
+          "text": "        return this.http.get<Array<GlobalSearchResult>>(url);"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/openapi/api/quiz-training-api.ts",
+      "sha256": "36f6a6067b4e2563360bc4d6af3a1d2633b2ee8cad0b27604df88e2567f3418b",
+      "excerpts": [
+        {
+          "line": 33,
+          "text": "    getLeaderboardSettings(): Observable<LeaderboardSetting> {"
+        },
+        {
+          "line": 34,
+          "text": "        const url = `${this.basePath}/api/quiz/leaderboard-settings`;"
+        },
+        {
+          "line": 35,
+          "text": "        return this.http.get<LeaderboardSetting>(url);"
+        },
+        {
+          "line": 72,
+          "text": "    getQuizTrainingLeaderboard(courseId: number): Observable<LeaderboardWithCurrentUserEntry> {"
+        },
+        {
+          "line": 73,
+          "text": "        const url = `${this.basePath}/api/quiz/courses/${courseId}/training/leaderboard`;"
+        },
+        {
+          "line": 74,
+          "text": "        return this.http.get<LeaderboardWithCurrentUserEntry>(url);"
+        },
+        {
+          "line": 111,
+          "text": "    updateLeaderboardSettings(leaderboardSetting: LeaderboardSetting): Observable<void> {"
+        },
+        {
+          "line": 112,
+          "text": "        const url = `${this.basePath}/api/quiz/leaderboard-settings`;"
+        },
+        {
+          "line": 113,
+          "text": "        return this.http.put<void>(url, leaderboardSetting);"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/openapi/api/tutorial-group-api.ts",
+      "sha256": "cc73b0b0b0c6c1288dde72c95dafa57ebe90b373f5ca27470dfe290962f1baa2",
+      "excerpts": [
+        {
+          "line": 180,
+          "text": "    importRegistrations(courseId: number, tutorialGroupId: number, tutorialGroupStudentImportData: Array<TutorialGroupStudentImportData>): Observable<Array<TutorialGroupStudentImportData>> {"
+        },
+        {
+          "line": 181,
+          "text": "        const url = `${this.basePath}/api/tutorialgroup/courses/${courseId}/tutorial-groups/${tutorialGroupId}/import-registrations`;"
+        },
+        {
+          "line": 182,
+          "text": "        return this.http.post<Array<TutorialGroupStudentImportData>>(url, tutorialGroupStudentImportData);"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/quiz/overview/course-training/course-training-quiz/leaderboard/service/leaderboard-service.ts",
+      "sha256": "f07321dd7e8b0847c33550f07496b095c7d80e80bc811dc9c5846035ed40ab12",
+      "excerpts": [
+        {
+          "line": 6,
+          "text": "export class LeaderboardService extends BaseApiHttpService {"
+        },
+        {
+          "line": 8,
+          "text": "        return this.get<LeaderboardDTO>(`quiz/courses/${courseId}/training/leaderboard`);"
+        },
+        {
+          "line": 12,
+          "text": "        return this.put<void>(`quiz/leaderboard-settings`, leaderboardSettings);"
+        },
+        {
+          "line": 16,
+          "text": "        return await this.get<LeaderboardSettingsDTO>(`quiz/leaderboard-settings`);"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/quiz/overview/course-training/course-training.component.ts",
+      "sha256": "ac1ea55fb8224b4047ca236b328600a064ae2b5e903b28e3a3ffe3ad794860e5",
+      "excerpts": [
+        {
+          "line": 164,
+          "text": "            .subscribe(() => void this.loadLeaderboard(Number(this.courseId())));"
+        },
+        {
+          "line": 206,
+          "text": "            await this.leaderboardService.updateSettings(leaderboardSettings);"
+        },
+        {
+          "line": 221,
+          "text": "            const settings = await this.leaderboardService.getSettings();"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/quiz/overview/participation/quiz-participation.component.ts",
+      "sha256": "47dfb70fe5b66871caf68155fabb5ba4ac9ac0b7539008d4fe0cf6899f4b9b73",
+      "excerpts": [
+        {
+          "line": 1056,
+          "text": "                    this.quizParticipationService.saveOrSubmitForLiveMode(quizSubmission, this.quizId, true).subscribe({"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/quiz/overview/service/quiz-participation.service.ts",
+      "sha256": "37124f18b090aa27255c9cfa0c9573fda7ccdc28edba2b8e2c0d65fdf961ee74",
+      "excerpts": [
+        {
+          "line": 32,
+          "text": "    saveOrSubmitForLiveMode(quizSubmission: QuizSubmission, exerciseId: number, submit: boolean): Observable<EntityResponseType> {"
+        },
+        {
+          "line": 37,
+          "text": "            .post<QuizSubmission>(`api/quiz/exercises/${exerciseId}/submissions/live`, copy, { observe: 'response', params: { submit } })"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/shared-ui/user-import/dialog/users-import-dialog.component.ts",
+      "sha256": "e14583aaa071f5fe40398313299da16a0611fe3240d0af163be7def0f08d7b0e",
+      "excerpts": [
+        {
+          "line": 144,
+          "text": ""
+        },
+        {
+          "line": 146,
+          "text": "            this.tutorialGroupApiService.importRegistrations(courseId!, tutorialGroup.id!, this.usersToImport()).subscribe({"
+        },
+        {
+          "line": 150,
+          "text": "                },"
+        },
+        {
+          "line": 154,
+          "text": "            this.courseManagementService.addUsersToCourseRole(courseId!, this.usersToImport(), courseGroup).subscribe({"
+        }
+      ]
+    },
+    {
+      "path": "src/main/webapp/app/tutorialgroup/manage/tutorial-registrations-import-modal/tutorial-registrations-import-modal.component.ts",
+      "sha256": "a1dbae3ee119357ad810b657a881ad4df7a0dd6a715fd5861ac0864f4d814ac3",
+      "excerpts": [
+        {
+          "line": 122,
+          "text": "        this.tutorialGroupApiService.importRegistrations(this.courseId(), this.tutorialGroupId(), this.parsedStudents()).subscribe({"
+        }
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "calendar",
+      "operation": {
+        "method": "GET",
+        "path": "/api/calendar/courses/{courseId}/calendar-events"
+      },
+      "module": "calendar",
+      "server": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/calendar/web/CalendarResource.java",
+        "line": 212,
+        "symbol": "CalendarResource.getCalendarEventsOverlappingMonths"
+      },
+      "classMapping": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/calendar/web/CalendarResource.java",
+        "line": 64,
+        "symbol": "CalendarResource"
+      },
+      "specification": {
+        "state": "present",
+        "location": {
+          "path": "config/openapi/openapi.yaml",
+          "line": 1322,
+          "symbol": "getCalendarEventsOverlappingMonths"
+        }
+      },
+      "generatedTransport": "available",
+      "generatedMethods": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/openapi/api/calendar-api.ts",
+            "line": 66,
+            "symbol": "CalendarApi.getCalendarEventsOverlappingMonths"
+          },
+          "transport": "observable"
+        }
+      ],
+      "adoption": "generated-detected",
+      "webRelevance": "relevant",
+      "callers": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/calendar/shared/service/calendar.service.ts",
+            "line": 99,
+            "symbol": "CalendarService.loadEventsForCurrentMonth"
+          },
+          "area": "calendar",
+          "transport": "generated",
+          "kind": "wrapper-implementation",
+          "via": []
+        },
+        {
+          "location": {
+            "path": "src/main/webapp/app/calendar/shared/service/calendar.service.ts",
+            "line": 61,
+            "symbol": "CalendarService.constructor"
+          },
+          "area": "calendar",
+          "transport": "generated",
+          "kind": "production",
+          "via": [
+            {
+              "path": "src/main/webapp/app/calendar/shared/service/calendar.service.ts",
+              "line": 99
+            },
+            {
+              "path": "src/main/webapp/app/openapi/api/calendar-api.ts",
+              "line": 66
+            }
+          ]
+        }
+      ],
+      "uncertainty": [
+        "Controller has @Profile(PROFILE_CORE); PROFILE_CORE is core.",
+        "Only the listed call sites were reconciled; exclusive generated/manual use and runtime migration are unassessed.",
+        "The committed specification and generated output have no verified generation-run binding to this source revision."
+      ]
+    },
+    {
+      "id": "cross-module-search",
+      "operation": {
+        "method": "GET",
+        "path": "/api/search"
+      },
+      "module": "globalsearch",
+      "server": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/globalsearch/web/GlobalSearchResource.java",
+        "line": 121,
+        "symbol": "GlobalSearchResource.globalSearch"
+      },
+      "classMapping": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/globalsearch/web/GlobalSearchResource.java",
+        "line": 54,
+        "symbol": "GlobalSearchResource"
+      },
+      "specification": {
+        "state": "present",
+        "location": {
+          "path": "config/openapi/openapi.yaml",
+          "line": 1232,
+          "symbol": "globalSearch"
+        }
+      },
+      "generatedTransport": "available",
+      "generatedMethods": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/openapi/api/global-search-api.ts",
+            "line": 35,
+            "symbol": "GlobalSearchApi.globalSearch"
+          },
+          "transport": "observable"
+        }
+      ],
+      "adoption": "generated-detected",
+      "webRelevance": "relevant",
+      "callers": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/core/navbar/global-search/components/modal/global-search-modal.component.ts",
+            "line": 275,
+            "symbol": "GlobalSearchModalComponent.constructor"
+          },
+          "area": "core",
+          "transport": "generated",
+          "kind": "production",
+          "via": []
+        }
+      ],
+      "uncertainty": [
+        "Controller has @Conditional(WeaviateEnabled.class); deployment property evaluation is unknown. The generated symbol is globalSearch, not search.",
+        "Only the listed call sites were reconciled; exclusive generated/manual use and runtime migration are unassessed.",
+        "The committed specification and generated output have no verified generation-run binding to this source revision."
+      ]
+    },
+    {
+      "id": "tutorial-import",
+      "operation": {
+        "method": "POST",
+        "path": "/api/tutorialgroup/courses/{courseId}/tutorial-groups/{tutorialGroupId}/import-registrations"
+      },
+      "module": "tutorialgroup",
+      "server": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/tutorialgroup/web/TutorialGroupResource.java",
+        "line": 505,
+        "symbol": "TutorialGroupResource.importRegistrations"
+      },
+      "classMapping": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/tutorialgroup/web/TutorialGroupResource.java",
+        "line": 83,
+        "symbol": "TutorialGroupResource"
+      },
+      "specification": {
+        "state": "present",
+        "location": {
+          "path": "config/openapi/openapi.yaml",
+          "line": 304,
+          "symbol": "importRegistrations"
+        }
+      },
+      "generatedTransport": "available",
+      "generatedMethods": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/openapi/api/tutorial-group-api.ts",
+            "line": 180,
+            "symbol": "TutorialGroupApi.importRegistrations"
+          },
+          "transport": "observable"
+        }
+      ],
+      "adoption": "generated-detected",
+      "webRelevance": "relevant",
+      "callers": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/shared-ui/user-import/dialog/users-import-dialog.component.ts",
+            "line": 146,
+            "symbol": "UsersImportDialogComponent.importUsers"
+          },
+          "area": "shared-ui",
+          "transport": "generated",
+          "kind": "production",
+          "via": []
+        },
+        {
+          "location": {
+            "path": "src/main/webapp/app/tutorialgroup/manage/tutorial-registrations-import-modal/tutorial-registrations-import-modal.component.ts",
+            "line": 122,
+            "symbol": "TutorialRegistrationsImportModalComponent.importParsedStudents"
+          },
+          "area": "tutorialgroup",
+          "transport": "generated",
+          "kind": "production",
+          "via": []
+        }
+      ],
+      "uncertainty": [
+        "Controller has @Conditional(TutorialGroupEnabled.class). Other shared-dialog branches call handwritten course, exam and admin services and are not tutorial-group call sites.",
+        "Only the listed call sites were reconciled; exclusive generated/manual use and runtime migration are unassessed.",
+        "The committed specification and generated output have no verified generation-run binding to this source revision."
+      ]
+    },
+    {
+      "id": "course-management-detail",
+      "operation": {
+        "method": "GET",
+        "path": "/api/course/courses/{courseId}/management-detail"
+      },
+      "module": "course",
+      "server": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/course/web/CourseStatsResource.java",
+        "line": 132,
+        "symbol": "CourseStatsResource.getCourseDTOForDetailView"
+      },
+      "classMapping": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/course/web/CourseStatsResource.java",
+        "line": 39,
+        "symbol": "CourseStatsResource"
+      },
+      "specification": {
+        "state": "missing"
+      },
+      "generatedTransport": "missing",
+      "generatedMethods": [],
+      "adoption": "manual",
+      "webRelevance": "relevant",
+      "callers": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/course/manage/services/course-management.service.ts",
+            "line": 198,
+            "symbol": "CourseManagementService.getCourseStatisticsForDetailView"
+          },
+          "area": "course",
+          "transport": "manual",
+          "kind": "wrapper-implementation",
+          "via": []
+        },
+        {
+          "location": {
+            "path": "src/main/webapp/app/course/manage/detail/course-detail.component.ts",
+            "line": 155,
+            "symbol": "CourseDetailComponent.ngOnInit"
+          },
+          "area": "course",
+          "transport": "manual",
+          "kind": "production",
+          "via": [
+            {
+              "path": "src/main/webapp/app/course/manage/services/course-management.service.ts",
+              "line": 196
+            }
+          ]
+        }
+      ],
+      "uncertainty": [
+        "Controller has @Profile(PROFILE_CORE). Specification absence is checked against the complete committed YAML, not the excerpt. No matching URL was found in the committed generated tree.",
+        "Only the listed call sites were reconciled; exclusive generated/manual use and runtime migration are unassessed.",
+        "The committed specification and generated output have no verified generation-run binding to this source revision."
+      ]
+    },
+    {
+      "id": "quiz-live-submission",
+      "operation": {
+        "method": "POST",
+        "path": "/api/quiz/exercises/{exerciseId}/submissions/live"
+      },
+      "module": "quiz",
+      "server": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/quiz/web/openapi/QuizSubmissionResource.java",
+        "line": 114,
+        "symbol": "QuizSubmissionResource.saveOrSubmitForLiveMode"
+      },
+      "classMapping": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/quiz/web/openapi/QuizSubmissionResource.java",
+        "line": 65,
+        "symbol": "QuizSubmissionResource"
+      },
+      "specification": {
+        "state": "present",
+        "location": {
+          "path": "config/openapi/openapi.yaml",
+          "line": 592,
+          "symbol": "saveOrSubmitForLiveMode"
+        }
+      },
+      "generatedTransport": "missing",
+      "generatedMethods": [],
+      "adoption": "manual",
+      "webRelevance": "relevant",
+      "callers": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/quiz/overview/service/quiz-participation.service.ts",
+            "line": 37,
+            "symbol": "QuizParticipationService.saveOrSubmitForLiveMode"
+          },
+          "area": "quiz",
+          "transport": "manual",
+          "kind": "wrapper-implementation",
+          "via": []
+        },
+        {
+          "location": {
+            "path": "src/main/webapp/app/quiz/overview/participation/quiz-participation.component.ts",
+            "line": 1056,
+            "symbol": "QuizParticipationComponent.submitExercise"
+          },
+          "area": "quiz",
+          "transport": "manual",
+          "kind": "production",
+          "via": [
+            {
+              "path": "src/main/webapp/app/quiz/overview/service/quiz-participation.service.ts",
+              "line": 32
+            }
+          ]
+        }
+      ],
+      "uncertainty": [
+        "Controller has @Profile(PROFILE_CORE). Missing generated transport was checked across the committed output tree. The cause of the generation gap is unknown.",
+        "Only the listed call sites were reconciled; exclusive generated/manual use and runtime migration are unassessed.",
+        "The committed specification and generated output have no verified generation-run binding to this source revision."
+      ]
+    },
+    {
+      "id": "inherited-leaderboard-get",
+      "operation": {
+        "method": "GET",
+        "path": "/api/quiz/courses/{courseId}/training/leaderboard"
+      },
+      "module": "quiz",
+      "server": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/quiz/web/openapi/QuizTrainingResource.java",
+        "line": 166,
+        "symbol": "QuizTrainingResource.getQuizTrainingLeaderboard"
+      },
+      "classMapping": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/quiz/web/openapi/QuizTrainingResource.java",
+        "line": 64,
+        "symbol": "QuizTrainingResource"
+      },
+      "specification": {
+        "state": "present",
+        "location": {
+          "path": "config/openapi/openapi.yaml",
+          "line": 1296,
+          "symbol": "getQuizTrainingLeaderboard"
+        }
+      },
+      "generatedTransport": "available",
+      "generatedMethods": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/openapi/api/quiz-training-api.ts",
+            "line": 72,
+            "symbol": "QuizTrainingApi.getQuizTrainingLeaderboard"
+          },
+          "transport": "observable"
+        }
+      ],
+      "adoption": "manual",
+      "webRelevance": "relevant",
+      "callers": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/quiz/overview/course-training/course-training-quiz/leaderboard/service/leaderboard-service.ts",
+            "line": 8,
+            "symbol": "LeaderboardService.getQuizTrainingLeaderboard"
+          },
+          "area": "quiz",
+          "transport": "manual",
+          "kind": "wrapper-implementation",
+          "via": [
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 120,
+              "symbol": "BaseApiHttpService.get"
+            },
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 63,
+              "symbol": "BaseApiHttpService.request"
+            }
+          ]
+        },
+        {
+          "location": {
+            "path": "src/main/webapp/app/quiz/overview/course-training/course-training.component.ts",
+            "line": 164,
+            "symbol": "CourseTrainingComponent.constructor"
+          },
+          "area": "quiz",
+          "transport": "manual",
+          "kind": "production",
+          "via": [
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 120,
+              "symbol": "BaseApiHttpService.get"
+            },
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 63,
+              "symbol": "BaseApiHttpService.request"
+            }
+          ]
+        }
+      ],
+      "uncertainty": [
+        "The wrapper implementation is shared infrastructure in foundation and must not count as another endpoint-specific production call. Generated method presence alone does not establish mixed use.",
+        "Only the listed call sites were reconciled; exclusive generated/manual use and runtime migration are unassessed.",
+        "The committed specification and generated output have no verified generation-run binding to this source revision."
+      ]
+    },
+    {
+      "id": "inherited-settings-put",
+      "operation": {
+        "method": "PUT",
+        "path": "/api/quiz/leaderboard-settings"
+      },
+      "module": "quiz",
+      "server": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/quiz/web/openapi/QuizTrainingResource.java",
+        "line": 186,
+        "symbol": "QuizTrainingResource.updateLeaderboardSettings"
+      },
+      "classMapping": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/quiz/web/openapi/QuizTrainingResource.java",
+        "line": 64,
+        "symbol": "QuizTrainingResource"
+      },
+      "specification": {
+        "state": "present",
+        "location": {
+          "path": "config/openapi/openapi.yaml",
+          "line": 249,
+          "symbol": "updateLeaderboardSettings"
+        }
+      },
+      "generatedTransport": "available",
+      "generatedMethods": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/openapi/api/quiz-training-api.ts",
+            "line": 111,
+            "symbol": "QuizTrainingApi.updateLeaderboardSettings"
+          },
+          "transport": "observable"
+        }
+      ],
+      "adoption": "manual",
+      "webRelevance": "relevant",
+      "callers": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/quiz/overview/course-training/course-training-quiz/leaderboard/service/leaderboard-service.ts",
+            "line": 12,
+            "symbol": "LeaderboardService.updateSettings"
+          },
+          "area": "quiz",
+          "transport": "manual",
+          "kind": "wrapper-implementation",
+          "via": [
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 244,
+              "symbol": "BaseApiHttpService.put"
+            },
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 63,
+              "symbol": "BaseApiHttpService.request"
+            }
+          ]
+        },
+        {
+          "location": {
+            "path": "src/main/webapp/app/quiz/overview/course-training/course-training.component.ts",
+            "line": 206,
+            "symbol": "CourseTrainingComponent.onSaveDialog"
+          },
+          "area": "quiz",
+          "transport": "manual",
+          "kind": "production",
+          "via": [
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 244,
+              "symbol": "BaseApiHttpService.put"
+            },
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 63,
+              "symbol": "BaseApiHttpService.request"
+            }
+          ]
+        }
+      ],
+      "uncertainty": [
+        "HttpMethod.Put is PUT. The default baseUrl is api; preserve this inherited endpoint call and its wrapper chain.",
+        "Only the listed call sites were reconciled; exclusive generated/manual use and runtime migration are unassessed.",
+        "The committed specification and generated output have no verified generation-run binding to this source revision."
+      ]
+    },
+    {
+      "id": "inherited-settings-get",
+      "operation": {
+        "method": "GET",
+        "path": "/api/quiz/leaderboard-settings"
+      },
+      "module": "quiz",
+      "server": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/quiz/web/openapi/QuizTrainingResource.java",
+        "line": 234,
+        "symbol": "QuizTrainingResource.getLeaderboardSettings"
+      },
+      "classMapping": {
+        "path": "src/main/java/de/tum/cit/aet/artemis/quiz/web/openapi/QuizTrainingResource.java",
+        "line": 64,
+        "symbol": "QuizTrainingResource"
+      },
+      "specification": {
+        "state": "present",
+        "location": {
+          "path": "config/openapi/openapi.yaml",
+          "line": 240,
+          "symbol": "getLeaderboardSettings"
+        }
+      },
+      "generatedTransport": "available",
+      "generatedMethods": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/openapi/api/quiz-training-api.ts",
+            "line": 33,
+            "symbol": "QuizTrainingApi.getLeaderboardSettings"
+          },
+          "transport": "observable"
+        }
+      ],
+      "adoption": "manual",
+      "webRelevance": "relevant",
+      "callers": [
+        {
+          "location": {
+            "path": "src/main/webapp/app/quiz/overview/course-training/course-training-quiz/leaderboard/service/leaderboard-service.ts",
+            "line": 16,
+            "symbol": "LeaderboardService.getSettings"
+          },
+          "area": "quiz",
+          "transport": "manual",
+          "kind": "wrapper-implementation",
+          "via": [
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 120,
+              "symbol": "BaseApiHttpService.get"
+            },
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 63,
+              "symbol": "BaseApiHttpService.request"
+            }
+          ]
+        },
+        {
+          "location": {
+            "path": "src/main/webapp/app/quiz/overview/course-training/course-training.component.ts",
+            "line": 221,
+            "symbol": "CourseTrainingComponent.showInfoDialog"
+          },
+          "area": "quiz",
+          "transport": "manual",
+          "kind": "production",
+          "via": [
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 120,
+              "symbol": "BaseApiHttpService.get"
+            },
+            {
+              "path": "src/main/webapp/app/foundation/service/base-api-http.service.ts",
+              "line": 63,
+              "symbol": "BaseApiHttpService.request"
+            }
+          ]
+        }
+      ],
+      "uncertainty": [
+        "GET and PUT on the same path are separate operations.",
+        "Only the listed call sites were reconciled; exclusive generated/manual use and runtime migration are unassessed.",
+        "The committed specification and generated output have no verified generation-run binding to this source revision."
+      ]
+    }
+  ],
+  "limitations": [
+    "Expectations are source evidence, not a fabricated collected snapshot. Listed production sites are a sample; wrapper implementations must not be counted as additional consumers.",
+    "Potential profiles and conditional routes are retained; deployed activation and exclusive adoption remain unverified.",
+    "Generation, raw/derived pruning, wire compatibility, runtime flows and enforcement have no revision-bound evidence."
+  ]
+}

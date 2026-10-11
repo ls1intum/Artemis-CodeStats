@@ -10,7 +10,7 @@ import {
   sourceLocationSchema,
 } from '../../src/features/openapi/model'
 import { scopeReport } from '../../src/features/openapi/scope'
-import { analyzerVersion, defaultMapping, sha256 } from './generate'
+import { sha256 } from './generate'
 
 const baseline = z
   .object({
@@ -71,13 +71,12 @@ const manifest = manifestSchema.parse(
   ),
 )
 
-test('retained real report is validated, bound to its manifest and tracked mapping configuration', async () => {
+test('historical real report retains its recorded analyzer and manifest identity', () => {
   assert.equal(snapshot.provenance.artemisCommit, baseline.artemisCommit)
-  assert.equal(snapshot.provenance.analyzerVersion, analyzerVersion)
-  assert.equal(
-    snapshot.provenance.moduleMapping.sha256,
-    sha256(await readFile(defaultMapping)),
-  )
+  const entry = manifest.snapshots.find(
+    (entry) => entry.artemisCommit === baseline.artemisCommit,
+  )!
+  assert.equal(snapshot.provenance.analyzerVersion, entry.analyzerVersion)
   assert.match(snapshot.provenance.fingerprint!, /^[a-f0-9]{64}$/)
   assert.equal(
     manifest.snapshots.find(

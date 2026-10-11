@@ -137,6 +137,17 @@ course specification coverage, missing quiz generated transport and inherited ha
 These are source expectations, not fabricated collected results or assumptions about newer revisions.
 Consult the [manifest](../public/openapi/index.json) for retained snapshots and their input identity.
 
+Acceptance was audited on **2026-10-11** at Artemis
+`1e68e12f48e2992df7ba2fdc3046a025381e5e0b`. The [acceptance expectations](../report/openapi/fixtures/acceptance.json)
+reconcile eight source examples and all 39 discovered areas, distinguishing production consumers from
+forwarding implementations. Invalid directory/empty-file source anchors were fixed; both retained
+OpenAPI reports and all 531 UI snapshots reproduced byte for byte.
+
+The audit passed lint, formatting, report type checking and build. Unit tests: 143 passed, one GitHub
+author lookup skipped without a token. Focused browser checks: 32 passed. Full browser suite: 57 passed,
+one Firefox clipboard check skipped; archived dashboards also passed with the clock set to 2035.
+Generation provenance, pruning, runtime migration and enforcement remain unverified.
+
 ## Collection and reproduction
 
 Use **Node 24, npm and a JDK 17+**. Required JavaParser/Gson JARs are tracked in `report/server/lib/`.

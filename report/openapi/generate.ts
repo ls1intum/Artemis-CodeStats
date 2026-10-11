@@ -62,7 +62,7 @@ import { readManifest, readSnapshot, sha256 } from './artifacts'
 
 export { sha256 } from './artifacts'
 
-export const analyzerVersion = 'openapi-inventory-9'
+export const analyzerVersion = 'openapi-inventory-10'
 const directory = path.dirname(fileURLToPath(import.meta.url))
 export const defaultMapping = path.join(directory, 'module-mapping.json')
 export const defaultEvidence = path.join(directory, 'evidence.json')
@@ -110,6 +110,15 @@ export function inventorySnapshot({
   assessmentEvidence?: AssessmentEvidence
 }): Snapshot {
   const diagnostics: Diagnostic[] = []
+  const sourceAnchor = (input: Provenance['inputs'][number]) =>
+    modules
+      .flatMap((module) => module.roots)
+      .find((location) => location.inputId === input.id) ??
+    (['server-source', 'production-client', 'generated-client'].includes(
+      input.kind,
+    )
+      ? mappingLocation
+      : inputAnchor(input))
   const diagnostic = (
     stage: Diagnostic['stage'],
     moduleIds: string[],
@@ -133,6 +142,16 @@ export function inventorySnapshot({
   }
   const known = new Map<string, Operation>()
   const candidates = new Map<string, Set<string>>()
+  for (const module of modules)
+    if (module.limitation)
+      diagnostic(
+        'modules',
+        [module.id],
+        [],
+        module.roots,
+        module.limitation,
+        'Provide committed nonempty source evidence for this area or review the configured source roots before assessing its inventory.',
+      )
   for (const issue of server.issues) {
     const owner = ownerOf(issue.path, mapping, mappingLocation)
     diagnostic(
@@ -343,7 +362,7 @@ export function inventorySnapshot({
         'provenance',
         [],
         [],
-        [inputAnchor(provenance.inputs.find((item) => item.id === 'server')!)],
+        [sourceAnchor(provenance.inputs.find((item) => item.id === 'server')!)],
         `${input.id}: ${input.content.reason}`,
         'Supply an available committed input path/ref and regenerate; unavailable artifacts cannot establish absence or coverage.',
       )
@@ -356,7 +375,7 @@ export function inventorySnapshot({
         'provenance',
         [],
         [],
-        [inputAnchor(input)],
+        [sourceAnchor(input)],
         `${input.id} storage revision ${input.revision.commit} differs from Artemis ${provenance.artemisCommit}`,
         'Supply inputs at the analyzed revision or establish independently verified generation provenance; percentages remain withheld.',
       )
@@ -413,7 +432,7 @@ export function inventorySnapshot({
       )
     const anchor =
       adoption.evidence[0] ??
-      inputAnchor(provenance.inputs.find((input) => input.id === 'client')!)
+      sourceAnchor(provenance.inputs.find((input) => input.id === 'client')!)
     diagnostic(
       'adoption',
       [],
@@ -445,7 +464,7 @@ export function inventorySnapshot({
         : adoption.evidence.length
           ? [adoption.evidence[0]]
           : [
-              inputAnchor(
+              sourceAnchor(
                 provenance.inputs.find((input) => input.id === 'client')!,
               ),
             ],
@@ -626,14 +645,14 @@ export function inventorySnapshot({
       (file) =>
         ownerOf(file.path, mapping, mappingLocation).moduleId === module.id,
     )
-    const scanEvidence = serverFiles.length
-      ? [{ inputId: 'server', path: serverFiles[0].path, line: 1 }]
-      : module.roots
+    const scanEvidence = module.roots
     const evidence = scoped.length
       ? [scoped[0].variants[0].handler]
       : scanEvidence
     return {
-      ...module,
+      id: module.id,
+      role: module.role,
+      roots: module.roots,
       inventory: scoped.length
         ? {
             state: 'inventoried',
@@ -759,13 +778,21 @@ export async function generateReport(
     await mkdir(tree)
     execFileSync('tar', ['-xf', archive, '-C', tree])
     const fileHashes = new Map<string, string>()
+    const evidenceFiles = new Set<string>()
     for (const file of extractedFiles) {
       if (!(await lstat(path.join(tree, file))).isFile())
         throw new Error(
           `Committed input must be a regular file: ${file}; resolve symlink/submodule provenance explicitly`,
         )
-      fileHashes.set(file, sha256(await readFile(path.join(tree, file))))
+      const bytes = await readFile(path.join(tree, file))
+      fileHashes.set(file, sha256(bytes))
+      if (bytes.length) evidenceFiles.add(file)
     }
+    const modules = discoverModules(extractedFiles, mapping, evidenceFiles)
+    const serverAnchor =
+      modules
+        .flatMap((module) => module.roots)
+        .find((location) => location.inputId === 'server') ?? mappingLocation
     const treeHash = (root: string) =>
       sha256(
         [...fileHashes]
@@ -1021,12 +1048,12 @@ export async function generateReport(
         {
           reason:
             'Potential committed mappings include profile/conditional variants; no deployment activation or runtime route completeness is established',
-          evidence: [inputAnchor(inputs[0])],
+          evidence: [serverAnchor],
         },
         {
           reason:
             'The denominator counts explicitly declared annotation methods only. Framework-provided implicit HEAD/OPTIONS, servlet/filter/security routes and third-party endpoints require a scoped runtime export.',
-          evidence: [inputAnchor(inputs[0])],
+          evidence: [serverAnchor],
         },
         ...metadataPaths.map((file) => ({
           reason: `Committed ${file} records configuration declarations, not proof of a generation run or enforced production policy`,
@@ -1162,7 +1189,7 @@ export async function generateReport(
       provenance,
       assessmentEvidence,
       mapping,
-      modules: discoverModules(extractedFiles, mapping),
+      modules,
       server,
       specification: spec.parsed,
       rawSpecification: raw?.parsed,
