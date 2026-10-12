@@ -76,6 +76,10 @@ const openApiRoute = createRoute({
     () => import('@/features/openapi/dashboard'),
     'OpenApiDashboard',
   ),
+  // Replace stale controls immediately while another revision is loading so a
+  // second navigation cannot cancel the load and reuse its unfinished match.
+  pendingMs: 0,
+  pendingMinMs: 0,
 })
 
 const dtoUsageRoute = createRoute({

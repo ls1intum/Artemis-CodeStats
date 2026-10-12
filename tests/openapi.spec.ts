@@ -67,6 +67,152 @@ const section = (page: Page, title: string) =>
     .locator('../..')
 const pinned = new RegExp(`/blob/${'a'.repeat(40)}/.*#L\\d+$`)
 
+test('overview separates operation counts and production calls with compact summaries and sortable modules', async ({
+  page,
+}) => {
+  const snapshot = openApiFixture()
+  snapshot.operations[2].specification = {
+    state: 'missing',
+    reason: 'Synthetic missing contract',
+    evidence: snapshot.modules[0].roots,
+  }
+  await mockReport(page, snapshot)
+  await page.goto('./#/openapi')
+  await loaded(page)
+  const operations = section(page, 'Operation coverage')
+  const calls = section(page, 'Detected production calls')
+  await expect(operations.locator('[data-chart]')).toBeVisible()
+  await expect(calls.locator('[data-chart]')).toBeVisible()
+  await expect(operations.getByRole('table')).toContainText('Unassessed')
+  await expect(calls).toContainText('Generated')
+  await expect(calls).toContainText('Handwritten')
+  await expect(calls).toContainText('2 (partial)')
+  await expect(calls).toContainText('1 (partial)')
+  await calls.locator('.recharts-bar-rectangle').nth(1).hover()
+  await expect(calls.locator('.recharts-tooltip-wrapper')).toContainText(
+    'Handwritten',
+  )
+  await expect(
+    section(page, 'Inventory and analysis coverage'),
+  ).not.toContainText('Independent synthetic source observations')
+  await expect(
+    page.getByRole('heading', { name: 'Percentage eligibility', exact: true }),
+  ).toHaveCount(0)
+  const table = section(page, 'All module assessments').getByRole('table')
+  await expect(table.locator('tbody tr')).toHaveCount(4)
+  await expect(table).toContainText('1 mixed operation')
+  const specificationSort = table.getByRole('button', {
+    name: /sort by missing specification operations/,
+  })
+  await specificationSort.click()
+  await expect(table.locator('tbody tr').first()).toContainText('alpha')
+  await specificationSort.click()
+  await expect(table.locator('tbody tr').first()).toContainText('beta')
+  const manualSort = table.getByRole('button', {
+    name: /sort by handwritten calls/,
+  })
+  await manualSort.click()
+  await expect(table.locator('tbody tr').first()).toContainText('alpha')
+  await manualSort.click()
+  await expect(table.locator('tbody tr').first()).toContainText('beta')
+  await page
+    .getByRole('button', { name: 'Analysis details', exact: true })
+    .click()
+  await expect(page).toHaveURL(/view=evidence/)
+  await expect(section(page, 'Measurement evidence')).toContainText(
+    'Unique operations',
+  )
+  await expect(section(page, 'Revision and provenance')).toContainText(
+    'unknown',
+  )
+})
+
+test('unavailable call evidence is not a zero bar and shared records remain separate and searchable', async ({
+  page,
+}) => {
+  const snapshot = openApiFixture(true)
+  snapshot.modules[1].measurements.generatedCallSites = {
+    state: 'unknown',
+    reason: 'Synthetic unavailable call assessment',
+  }
+  await mockReport(page, snapshot)
+  await page.goto('./#/openapi?module=beta')
+  await loaded(page)
+  const calls = section(page, 'Detected production calls')
+  await expect(calls).toContainText('unknown')
+  await expect(calls.locator('[data-chart]')).toHaveCount(0)
+  await expect(
+    section(page, 'Next steps').locator('details[open]'),
+  ).toHaveCount(0)
+  const shared = section(page, 'Shared analysis limitations')
+  await expect(shared).toContainText('1 record')
+  await expect(shared).not.toContainText('Dynamic target cannot be attributed')
+  await shared.locator('summary').click()
+  await expect(shared).toContainText('Dynamic target cannot be attributed')
+  await shared
+    .getByLabel('Search analysis and relevance limitations', { exact: true })
+    .fill('unmatched search')
+  await expect(shared).not.toContainText('Dynamic target cannot be attributed')
+  await shared
+    .getByLabel('Search analysis and relevance limitations', { exact: true })
+    .fill('Dynamic target')
+  await expect(shared).toContainText('Dynamic target cannot be attributed')
+  await expect(shared.getByRole('link').first()).toHaveAttribute('href', pinned)
+  await expect(
+    section(page, 'Migration and protection prerequisites'),
+  ).toContainText('blocked')
+})
+
+test('calendar shows module work separately from shared analysis without a giant prerequisite list', async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(60_000)
+  await page.setViewportSize({ width: 1440, height: 1100 })
+  await page.goto(
+    './#/openapi?module=calendar&snapshot=' + acceptance.artemisCommit,
+  )
+  await loaded(page)
+  await expect(
+    section(page, 'All module assessments').locator('tbody tr'),
+  ).toHaveCount(1)
+  await expect(
+    section(page, 'Migration and protection prerequisites'),
+  ).toContainText('blocked')
+  await expect(page.getByText(/^Candidate prerequisites/)).toHaveCount(0)
+  const work = section(page, 'Next steps')
+  await expect(work).toContainText(
+    'Analysis and relevance limitations (12 records)',
+  )
+  await expect(work).toContainText('Verification (2 records)')
+  const shared = section(page, 'Shared analysis limitations')
+  await expect(shared).toContainText(
+    'Analysis and relevance limitations (779 records)',
+  )
+  await expect(shared.locator('details[open]')).toHaveCount(0)
+  await expect(
+    page.getByRole('heading', {
+      name: 'Shared analysis limitations',
+      exact: true,
+    }),
+  ).toHaveCount(1)
+  await shared.locator('summary').click()
+  await expect(
+    shared.getByLabel('Search analysis and relevance limitations'),
+  ).toBeVisible()
+  await expect(shared.getByRole('link').first()).toHaveAttribute(
+    'href',
+    new RegExp('/blob/' + acceptance.artemisCommit + '/.*#L\\d+$'),
+  )
+  await page
+    .getByRole('link', { name: 'Show all modules', exact: true })
+    .click()
+  await expect(
+    section(page, 'All module assessments').locator('tbody tr'),
+  ).toHaveCount(39)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.screenshot({ path: testInfo.outputPath('overview.png') })
+})
+
 for (const expected of acceptance.cases)
   test(`independent source acceptance: ${expected.id} renders contracts, callers and pinned chains`, async ({
     page,
@@ -116,12 +262,17 @@ for (const expected of acceptance.cases)
       for (const via of caller.via)
         await expect(row.locator(`a[href="${href(via)}"]`)).toBeVisible()
     }
+    await expect(
+      section(page, 'Inventory and analysis coverage'),
+    ).toContainText('Partial static observations')
+    await page.getByRole('tab', { name: 'Evidence', exact: true }).click()
     await expect(section(page, 'Percentage eligibility')).toContainText(
       'incomplete-analysis',
     )
     await expect(section(page, 'Revision and provenance')).toContainText(
       'unknown',
     )
+    await page.getByRole('tab', { name: 'Endpoints', exact: true }).click()
     if (expected.id === 'inherited-settings-get')
       await detail.screenshot({ path: testInfo.outputPath('endpoint.png') })
   })
@@ -157,6 +308,7 @@ test('active navigation and retained report cover every discovered module under 
   await expect(section(page, 'Inventory and analysis coverage')).toContainText(
     snapshot.operations.length.toLocaleString('en-US'),
   )
+  await page.getByRole('tab', { name: 'Evidence', exact: true }).click()
   await expect(section(page, 'Revision and provenance')).toContainText(
     'unknown',
   )
@@ -185,6 +337,7 @@ test('active navigation and retained report cover every discovered module under 
     await page
       .getByLabel('OpenAPI snapshot')
       .selectOption(historical.artemisCommit)
+    await page.getByRole('tab', { name: 'Evidence', exact: true }).click()
     await expect(section(page, 'Revision and provenance')).toContainText(
       historical.artemisCommit,
     )
@@ -228,12 +381,8 @@ test('module filters scope every summary and view while preserving cross-area ca
         .locator('..')
         .getByText(count, { exact: true }),
     ).toBeVisible()
-  await expect(section(page, 'Independent operation states')).toContainText(
-    'mixed',
-  )
-  await expect(section(page, 'Percentage eligibility')).toContainText(
-    'unassessed',
-  )
+  await expect(table).toContainText('1 mixed operation')
+  await expect(section(page, 'Operation coverage')).toHaveCount(0)
   await page.getByRole('tab', { name: 'Callers', exact: true }).click()
   await expect(section(page, 'Caller evidence')).toContainText(
     'Core.alpha-manual',
@@ -250,6 +399,10 @@ test('module filters scope every summary and view while preserving cross-area ca
     .selectOption('wrapper-implementation')
   await expect(section(page, 'Caller evidence')).toContainText('BaseHttp.get')
   await page.getByRole('tab', { name: 'Next steps', exact: true }).click()
+  await section(page, 'Next steps')
+    .locator('summary')
+    .filter({ hasText: 'Handwritten calls' })
+    .click()
   await expect(section(page, 'Next steps')).toContainText(
     'Replace this endpoint-specific handwritten transport',
   )
@@ -302,10 +455,12 @@ test('module filters scope every summary and view while preserving cross-area ca
   const readiness = section(page, 'Migration and protection prerequisites')
   await expect(readiness).toContainText('candidate')
   await expect(readiness).not.toContainText('alpha')
-  await readiness.getByText(/^Candidate prerequisites/).click()
-  await expect(readiness).toContainText('wire-compatibility')
-  await expect(readiness).toContainText('runtime-flow')
-  await expect(readiness).toContainText('enforcement')
+  const next = section(page, 'Next steps')
+  await next.locator('summary').filter({ hasText: 'Verification' }).click()
+  await next.locator('summary').filter({ hasText: 'Enforcement' }).click()
+  await expect(next).toContainText('wire-compatibility')
+  await expect(next).toContainText('runtime-flow')
+  await expect(next).toContainText('enforcement')
   await page.reload()
   await loaded(page)
   await expect(
@@ -357,9 +512,16 @@ test('no-REST and limited modules have evidence, and invalid filters offer recov
   await expect(section(page, 'Endpoints')).toContainText(
     'No inventoried operations',
   )
-  await expect(section(page, 'Percentage eligibility')).toContainText(
+  await page.getByRole('tab', { name: 'Overview', exact: true }).click()
+  await expect(section(page, 'Operation coverage')).toContainText(
+    'No owned REST operations',
+  )
+  await expect(section(page, 'Detected production calls')).toContainText(
     'not-applicable',
   )
+  await expect(
+    section(page, 'Operation coverage').locator('[data-chart]'),
+  ).toHaveCount(0)
   await page
     .getByRole('combobox', { name: 'OpenAPI module' })
     .selectOption('limited')
@@ -405,8 +567,8 @@ test('shared unassigned calls stay visible without becoming module counts or exc
   await expect(
     section(page, 'Shared unresolved production calls'),
   ).toContainText('Core.dynamic')
-  await expect(section(page, 'Percentage eligibility')).toContainText(
-    'unassessed',
+  await expect(section(page, 'Inventory and analysis coverage')).toContainText(
+    'Shared uncertainty',
   )
   await page.getByRole('tab', { name: 'Overview', exact: true }).click()
   await expect(
@@ -482,11 +644,13 @@ test('OpenAPI controls and scoped evidence pass accessibility checks', async ({
   await loaded(page)
   const { default: AxeBuilder } = await import('@axe-core/playwright')
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  await page.getByRole('tab', { name: 'Overview', exact: true }).click()
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
 })
 
 test('small-screen views reflow and keyboard entry preserves the deep link', async ({
   page,
-}) => {
+}, testInfo) => {
   await mockReport(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('./#/openapi?module=alpha&operation=GET%20%2Fapi%2Falpha')
@@ -504,4 +668,21 @@ test('small-screen views reflow and keyboard entry preserves the deep link', asy
   await page.keyboard.press('Enter')
   await expect(page.locator('main')).toBeFocused()
   await expect(page).toHaveURL(/operation=/)
+  await page.getByRole('tab', { name: 'Overview', exact: true }).click()
+  await expect(section(page, 'Operation coverage')).toBeVisible()
+  await expect(section(page, 'Detected production calls')).toBeVisible()
+  expect(
+    await section(page, 'All module assessments')
+      .getByRole('table')
+      .evaluate((table) => table.getBoundingClientRect().height),
+  ).toBeLessThan(320)
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true)
+  await page.screenshot({
+    path: testInfo.outputPath('overview-mobile.png'),
+    fullPage: true,
+  })
 })

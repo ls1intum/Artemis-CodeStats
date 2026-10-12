@@ -21,6 +21,11 @@ unassigned callers remain visible as uncertainty rather than being added to a mo
 counts. Source links use the recorded input revision and line. Invalid filters or artifacts offer
 recovery controls instead of displaying misleading totals.
 
+Overview compares known operation coverage and detected production call sites in separate charts.
+Remaining work is grouped into expandable evidence records; categories can overlap and are not an
+estimated task count. Shared limitations appear separately and still constrain module readiness.
+Detailed measurement reasons, percentage eligibility and provenance are available in Evidence.
+
 ## Measurement definitions
 
 Modules are discovered from the committed server and client trees, including shared infrastructure

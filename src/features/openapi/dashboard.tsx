@@ -9,16 +9,16 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { scopeReport } from './scope'
-import { CallerList, Section, StepList } from './presentation'
+import { CallerList, Section } from './presentation'
 import {
-  Endpoints,
-  EvidenceView,
-  ModuleDetail,
+  MeasurementDetails,
   Modules,
   Overview,
-  Provenance,
-  Readiness,
-} from './views'
+  SnapshotSummary,
+} from './overview'
+import { SharedWork, Work } from './work'
+import { partitionWork } from './summary'
+import { Endpoints, EvidenceView, ModuleDetail, Provenance } from './views'
 
 const views = [
   'overview',
@@ -189,12 +189,19 @@ export function OpenApiDashboard() {
               </Link>
             </p>
           )}
-          {module && <ModuleDetail module={module} snapshot={snapshot} />}
-          <Overview snapshot={snapshot} scope={scope} module={module} />
+          <SnapshotSummary
+            snapshot={snapshot}
+            scope={scope}
+            module={module}
+            onEvidence={() => update({ view: 'evidence' })}
+          />
           <Tabs
             value={view}
             onValueChange={(view) =>
-              update({ view: view === 'overview' ? undefined : view })
+              update({
+                view:
+                  view === 'overview' && !search.operation ? undefined : view,
+              })
             }
           >
             <TabsList className="flex h-auto flex-wrap">
@@ -204,25 +211,38 @@ export function OpenApiDashboard() {
                 </TabsTrigger>
               ))}
             </TabsList>
-            <TabsContent value="overview">
-              <Readiness
+            <TabsContent value="overview" className="grid gap-6">
+              {module && <ModuleDetail module={module} snapshot={snapshot} />}
+              <Overview snapshot={snapshot} scope={scope} module={module} />
+              <Modules
+                snapshot={snapshot}
+                modules={scope.modules}
+                onSelect={(module) => update({ module, operation: undefined })}
+              />
+              <Work
                 key={module?.id ?? 'all'}
                 scope={scope}
                 snapshot={snapshot}
               />
             </TabsContent>
             <TabsContent value="modules" className="grid gap-6">
+              {module && <ModuleDetail module={module} snapshot={snapshot} />}
               <Modules
+                snapshot={snapshot}
                 modules={scope.modules}
                 onSelect={(module) => update({ module, operation: undefined })}
               />
-              <Readiness
-                key={module?.id ?? 'all'}
-                scope={scope}
-                snapshot={snapshot}
-              />
+              {module ? (
+                <Work key={module.id} scope={scope} snapshot={snapshot} />
+              ) : (
+                <SharedWork
+                  snapshot={snapshot}
+                  steps={partitionWork(snapshot, scope.nextSteps).shared}
+                />
+              )}
             </TabsContent>
             <TabsContent value="endpoints">
+              {module && <ModuleDetail module={module} snapshot={snapshot} />}
               <Endpoints
                 key={module?.id ?? 'all'}
                 scope={scope}
@@ -246,6 +266,9 @@ export function OpenApiDashboard() {
               />
             </TabsContent>
             <TabsContent value="evidence" className="grid gap-6">
+              {module && <ModuleDetail module={module} snapshot={snapshot} />}
+              <MeasurementDetails snapshot={snapshot} module={module} />
+              <Provenance snapshot={snapshot} />
               <EvidenceView
                 key={module?.id ?? 'all'}
                 scope={scope}
@@ -255,7 +278,6 @@ export function OpenApiDashboard() {
           </Tabs>
         </>
       )}
-      <Provenance snapshot={snapshot} />
     </main>
   )
 }
@@ -309,51 +331,6 @@ function Callers({
           />
         </Section>
       )}
-    </div>
-  )
-}
-
-function Work({
-  scope,
-  snapshot,
-}: {
-  scope: ReturnType<typeof scopeReport>
-  snapshot: Parameters<typeof scopeReport>[0]
-}) {
-  const [category, setCategory] = useState('all')
-  return (
-    <div className="grid gap-6">
-      <Section
-        title="Next steps"
-        description="Actions come from collected evidence and include shared analysis limitations. Follow the linked source before changing the contract or client."
-      >
-        <label className="flex items-center gap-3 text-sm">
-          Work category
-          <select
-            aria-label="Work category"
-            className={selectClass}
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-          >
-            <option value="all">All categories</option>
-            {[...new Set(scope.nextSteps.map((step) => step.category))]
-              .sort()
-              .map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-          </select>
-        </label>
-        <StepList
-          key={category}
-          steps={scope.nextSteps.filter(
-            (step) => category === 'all' || step.category === category,
-          )}
-          provenance={snapshot.provenance}
-        />
-      </Section>
-      <Readiness scope={scope} snapshot={snapshot} />
     </div>
   )
 }
