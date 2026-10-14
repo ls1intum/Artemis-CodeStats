@@ -705,7 +705,8 @@ export function reconcileGenerated(
     ? {
         state: 'missing',
         methodIds: [],
-        evidence: inventory.evidence,
+        evidence: inventory.evidence.slice(0, 1),
+        scanEvidenceId: 'generated-source-scan',
         reason:
           'No implementation for this identity in the complete parsed committed generated-output scope; the generation cause is unknown',
       }

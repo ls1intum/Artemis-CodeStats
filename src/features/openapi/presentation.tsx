@@ -9,7 +9,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import type { Caller, NextStep, Provenance, SourceLocation } from './model'
+import type {
+  Caller,
+  NextStep,
+  Provenance,
+  Snapshot,
+  SourceLocation,
+} from './model'
 import { sourceUrl } from './source'
 
 export function Section({
@@ -183,6 +189,7 @@ export function Assessment({
   title,
   value,
   provenance,
+  generatedSourceScan,
 }: {
   title: string
   value: {
@@ -191,8 +198,10 @@ export function Assessment({
     basis?: string
     analysis?: string
     evidence?: SourceLocation[]
+    scanEvidenceId?: string
   }
   provenance: Provenance
+  generatedSourceScan?: Snapshot['generatedSourceScan']
 }) {
   return (
     <div className="grid gap-2 rounded-md border p-3">
@@ -203,6 +212,18 @@ export function Assessment({
       </div>
       <p className="text-sm">{value.reason ?? value.basis}</p>
       <Evidence provenance={provenance} locations={value.evidence} />
+      {value.scanEvidenceId === generatedSourceScan?.id &&
+        generatedSourceScan && (
+          <details>
+            <summary className="cursor-pointer text-sm">
+              Generated-source scan evidence
+            </summary>
+            <Evidence
+              provenance={provenance}
+              locations={generatedSourceScan.evidence}
+            />
+          </details>
+        )}
     </div>
   )
 }

@@ -66,7 +66,7 @@ import { readManifest, readSnapshot, sha256 } from './artifacts'
 
 export { sha256 } from './artifacts'
 
-export const analyzerVersion = 'openapi-inventory-11'
+export const analyzerVersion = 'openapi-inventory-12'
 const directory = path.dirname(fileURLToPath(import.meta.url))
 export const defaultMapping = path.join(directory, 'module-mapping.json')
 export const defaultEvidence = path.join(directory, 'evidence.json')
@@ -774,6 +774,13 @@ export function inventorySnapshot({
     modules: assessments,
     operations,
     generatedMethods: generated?.methods ?? [],
+    ...(generated && {
+      generatedSourceScan: {
+        id: 'generated-source-scan',
+        complete: generated.complete,
+        evidence: generated.evidence,
+      },
+    }),
     callers: adoption?.callers ?? [],
     exceptions: [],
     diagnostics: diagnostics.sort((a, b) => compare(a.id, b.id)),

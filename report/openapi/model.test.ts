@@ -151,6 +151,43 @@ function sample(): Snapshot {
   })
 }
 
+test('shared missing-transport scan references require complete generated input evidence, while historical inline evidence remains valid', () => {
+  const snapshot = sample()
+  const anchor = { inputId: 'generated', path: 'generated/api.ts', line: 1 }
+  snapshot.provenance.inputs.push({
+    id: 'generated',
+    kind: 'generated-client',
+    path: 'generated',
+    revision: { state: 'known', commit },
+    content: { state: 'available', sha256: hash },
+  })
+  snapshot.operations[0].generatedTransport = {
+    state: 'missing',
+    methodIds: [],
+    evidence: [anchor],
+    reason: 'No implementation found in the generated-source scan',
+  }
+  snapshotSchema.parse(snapshot)
+  snapshot.operations[0].generatedTransport.scanEvidenceId =
+    'generated-source-scan'
+  assert.equal(snapshotSchema.safeParse(snapshot).success, false)
+  snapshot.generatedSourceScan = {
+    id: 'generated-source-scan',
+    complete: true,
+    evidence: [anchor],
+  }
+  snapshotSchema.parse(snapshot)
+  snapshot.generatedSourceScan.complete = false
+  assert.equal(snapshotSchema.safeParse(snapshot).success, false)
+  snapshot.generatedSourceScan.complete = true
+  snapshot.generatedSourceScan.evidence = []
+  assert.equal(snapshotSchema.safeParse(snapshot).success, false)
+  snapshot.generatedSourceScan.evidence = [location]
+  assert.equal(snapshotSchema.safeParse(snapshot).success, false)
+  snapshot.generatedSourceScan.evidence = [{ ...anchor, line: 2 }]
+  assert.equal(snapshotSchema.safeParse(snapshot).success, false)
+})
+
 test('call-site counts conserve records independently of unique operations and exclude nonproduction/non-REST calls', () => {
   const snapshot = sample()
   const measured = (value: number) => ({

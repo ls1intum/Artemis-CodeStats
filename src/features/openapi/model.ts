@@ -76,13 +76,14 @@ export const generatedTransportStateSchema = z.union([
       methodIds: ids,
       evidence,
       reason: text,
+      scanEvidenceId: z.literal('generated-source-scan').optional(),
     })
     .strict()
     .refine(
       (value) =>
         value.state === 'missing'
           ? value.methodIds.length === 0
-          : value.methodIds.length > 0,
+          : value.methodIds.length > 0 && !value.scanEvidenceId,
       'Available/ambiguous transport needs methods; missing transport has none',
     ),
   unavailableSchema,
@@ -590,6 +591,18 @@ export const snapshotSchema = z
     modules: z.array(moduleAssessmentSchema).min(1),
     operations: z.array(operationSchema),
     generatedMethods: z.array(generatedMethodSchema),
+    generatedSourceScan: z
+      .object({
+        id: z.literal('generated-source-scan'),
+        complete: z.boolean(),
+        evidence: z.array(sourceLocationSchema),
+      })
+      .strict()
+      .refine(
+        (scan) => !scan.complete || scan.evidence.length > 0,
+        'A complete generated-source scan needs source evidence',
+      )
+      .optional(),
     callers: z.array(callerSchema),
     diagnostics: z.array(diagnosticSchema),
     exceptions: z.array(exceptionSchema),
@@ -616,6 +629,12 @@ export const snapshotSchema = z
     const exceptions = index(snapshot.exceptions, 'exception')
     index(snapshot.diagnostics, 'diagnostic')
     const nextSteps = index(snapshot.nextSteps ?? [], 'next step')
+    if (
+      snapshot.generatedSourceScan?.evidence.some(
+        (location) => inputs.get(location.inputId)?.kind !== 'generated-client',
+      )
+    )
+      fail('Generated-source scan evidence must belong to generated input')
     const references = (
       values: string[],
       known: Map<string, unknown>,
@@ -658,6 +677,25 @@ export const snapshotSchema = z
         'module',
       )
       if ('methodIds' in operation.generatedTransport) {
+        if (
+          operation.generatedTransport.scanEvidenceId &&
+          (snapshot.generatedSourceScan?.id !==
+            operation.generatedTransport.scanEvidenceId ||
+            !snapshot.generatedSourceScan.complete ||
+            operation.generatedTransport.evidence.some(
+              (location) =>
+                !snapshot.generatedSourceScan?.evidence.some(
+                  (scanned) =>
+                    scanned.inputId === location.inputId &&
+                    scanned.path === location.path &&
+                    scanned.line === location.line &&
+                    scanned.symbol === location.symbol,
+                ),
+            ))
+        )
+          fail(
+            `Missing transport needs complete shared scan evidence: ${operation.id}`,
+          )
         references(
           operation.generatedTransport.methodIds,
           methods,

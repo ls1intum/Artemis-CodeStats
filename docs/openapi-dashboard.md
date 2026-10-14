@@ -51,6 +51,10 @@ Generated use is `generated-detected` until complete committed-source analysis s
 with both generated and handwritten callers is `mixed`; available generated methods alone do not
 make manual usage mixed. `no-calls` requires complete analysis and does not establish migration.
 
+New snapshots store generated-source scan evidence once. Missing-transport assessments reference
+that shared scan and retain a source anchor; the full scan remains available in endpoint details
+and Evidence. Historical snapshots with inline scan evidence remain readable.
+
 Unique operations and production call sites are counted separately. Several callers can share one
 operation; GET and PUT on the same path are different operations. Forwarding implementations remain
 chain evidence without duplicating their consumers' call-site counts. Tests, mocks, fixtures and

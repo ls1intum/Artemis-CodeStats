@@ -575,6 +575,61 @@ test('endpoint deep links preserve independent states, conditional variants, tra
   )
 })
 
+test('missing transport retains the complete shared source scan in endpoint details and Evidence', async ({
+  page,
+}) => {
+  const snapshot = openApiFixture()
+  const scan = {
+    id: 'generated-source-scan' as const,
+    complete: true,
+    evidence: Array.from({ length: 6 }, (_, index) => ({
+      inputId: 'generated',
+      path: `generated/model-${index}.ts`,
+      line: 1,
+    })),
+  }
+  snapshot.generatedSourceScan = scan
+  const operation = snapshot.operations.find(
+    (operation) => operation.id === 'GET /api/alpha/unknown',
+  )!
+  operation.generatedTransport = {
+    state: 'missing',
+    methodIds: [],
+    evidence: [scan.evidence[0]],
+    scanEvidenceId: scan.id,
+    reason: 'No implementation in the complete generated-source scan',
+  }
+  await mockReport(page, snapshot)
+  await page.goto(
+    './#/openapi?module=alpha&operation=GET%20%2Fapi%2Falpha%2Funknown',
+  )
+  await loaded(page)
+  const transport = section(page, operation.id)
+    .getByRole('heading', { name: 'Generated transport', exact: true })
+    .locator('..')
+  await expect(transport).toContainText('missing')
+  await transport
+    .getByText('Generated-source scan evidence', { exact: true })
+    .click()
+  await transport.getByText('Source evidence (6)', { exact: true }).click()
+  await expect(
+    transport.getByLabel('Source locations').getByRole('link'),
+  ).toHaveCount(6)
+  await expect(transport.getByRole('link').last()).toHaveAttribute(
+    'href',
+    pinned,
+  )
+  await page.getByRole('tab', { name: 'Evidence', exact: true }).click()
+  const inventory = section(page, 'Generated transport inventory')
+  await inventory
+    .getByText('Generated-source scan: 6 files · complete', { exact: true })
+    .click()
+  await inventory.getByText('Source evidence (6)', { exact: true }).click()
+  await expect(
+    inventory.getByLabel('Source locations').getByRole('link'),
+  ).toHaveCount(6)
+})
+
 test('no-REST and limited modules have evidence, and invalid filters offer recovery', async ({
   page,
 }) => {
@@ -743,6 +798,16 @@ test('small-screen views reflow and keyboard entry preserves the deep link', asy
   await page.keyboard.press('Enter')
   await expect(page.locator('main')).toBeFocused()
   await expect(page).toHaveURL(/operation=/)
+  for (const [tab, heading] of [
+    ['Modules', 'All module assessments'],
+    ['Endpoints', 'GET /api/alpha'],
+    ['Callers', 'Caller evidence'],
+    ['Next steps', 'Next steps'],
+    ['Evidence', 'Percentage eligibility'],
+  ]) {
+    await page.getByRole('tab', { name: tab, exact: true }).click()
+    await expect(section(page, heading)).toBeVisible()
+  }
   await page.getByRole('tab', { name: 'Overview', exact: true }).click()
   await expect(section(page, 'Operation coverage')).toBeVisible()
   await expect(section(page, 'Detected production calls')).toBeVisible()

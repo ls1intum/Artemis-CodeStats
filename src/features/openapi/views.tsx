@@ -97,6 +97,7 @@ export function Endpoints({
                 title={title}
                 value={value}
                 provenance={snapshot.provenance}
+                generatedSourceScan={snapshot.generatedSourceScan}
               />
             ))}
           </div>
@@ -273,6 +274,21 @@ export function EvidenceView({
         </PagedList>
       </Section>
       <Section title="Generated transport inventory">
+        {snapshot.generatedSourceScan && (
+          <details>
+            <summary className="cursor-pointer text-sm">
+              Generated-source scan:{' '}
+              {snapshot.generatedSourceScan.evidence.length} files ·{' '}
+              {snapshot.generatedSourceScan.complete
+                ? 'complete'
+                : 'incomplete analysis'}
+            </summary>
+            <Evidence
+              provenance={snapshot.provenance}
+              locations={snapshot.generatedSourceScan.evidence}
+            />
+          </details>
+        )}
         <GeneratedMethods
           snapshot={snapshot}
           methods={scope.generatedMethods}

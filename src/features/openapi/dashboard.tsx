@@ -206,7 +206,7 @@ export function OpenApiDashboard() {
           >
             <TabsList className="flex h-auto flex-wrap">
               {views.map((view) => (
-                <TabsTrigger key={view} value={view}>
+                <TabsTrigger key={view} value={view} className="h-auto">
                   {labels[view]}
                 </TabsTrigger>
               ))}

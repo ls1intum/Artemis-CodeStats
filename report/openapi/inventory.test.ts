@@ -622,6 +622,10 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
       'import { HttpClient } from "@angular/common/http"; import { inject } from "@angular/core"; export class FakeApi { private readonly http = inject(HttpClient); read() { return this.http.get("/api/alias/all"); } }',
     )
     await writeFile(
+      path.join(repo, 'client/openapi/model.ts'),
+      'export interface Alpha { value: string; }',
+    )
+    await writeFile(
       path.join(repo, 'raw.yaml'),
       specContent + '  /api/pruned:\n    get: {}\n',
     )
@@ -667,6 +671,23 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
     snapshotSchema.parse(first.snapshot)
     manifestSchema.parse(first.manifest)
     assert.equal(first.snapshot.generatedMethods.length, 2)
+    const scan = first.snapshot.generatedSourceScan!
+    assert.equal(scan.complete, true)
+    assert.deepEqual(
+      scan.evidence.map((location) => location.path),
+      ['client/openapi/api.ts', 'client/openapi/model.ts'],
+    )
+    const missingTransports = first.snapshot.operations.flatMap((operation) =>
+      operation.generatedTransport.state === 'missing'
+        ? [operation.generatedTransport]
+        : [],
+    )
+    assert.ok(missingTransports.length > 1)
+    for (const transport of missingTransports) {
+      assert.equal(transport.scanEvidenceId, scan.id)
+      assert.equal(transport.evidence.length, 1)
+      assert.deepEqual(transport.evidence[0], scan.evidence[0])
+    }
     assert.equal(
       first.snapshot.operations.find(
         (operation) => operation.id === 'GET /api/alpha/{id}',
@@ -1152,6 +1173,7 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
       'unknown',
     )
     await rm(generatedFile)
+    await rm(path.join(repo, 'client/openapi/model.ts'))
     git('add', '.')
     git(
       'commit',
