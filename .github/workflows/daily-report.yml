@@ -16,24 +16,30 @@ jobs:
     concurrency:
       group: migration-reports
       cancel-in-progress: false
+    # The SSH credential is gated to main by the report-publisher environment.
+    environment: report-publisher
     permissions:
-      contents: write
+      contents: read
     outputs:
       commit: ${{ steps.publish.outputs.commit }}
+      ui: ${{ steps.collect.outputs.ui }}
+      openapi: ${{ steps.collect.outputs.openapi }}
     runs-on: ubuntu-latest
     if: github.ref_name == github.event.repository.default_branch
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           submodules: true
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
           package-manager-cache: false
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      - continue-on-error: true
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '17'
@@ -44,29 +50,20 @@ jobs:
           git -C artemis fetch origin develop
           git -C artemis checkout --detach origin/develop
           echo "commit=$(git -C artemis rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      - run: npm run typecheck:report
-      - run: npm run report:ui -- --ref "${{ steps.artemis.outputs.commit }}"
+      - name: Collect and validate each dashboard independently
+        id: collect
+        run: npx tsx report/collect-reports.ts "${{ steps.artemis.outputs.commit }}"
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - run: npm run report:openapi -- --ref "${{ steps.artemis.outputs.commit }}"
-      - name: Validate history and reproduce OpenAPI evidence before publication
-        run: npm run report:openapi:verify -- --ref "${{ steps.artemis.outputs.commit }}"
-      - run: npm test
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      - name: Keep the previous pin if neither report could advance
+        if: steps.collect.outputs.ui != 'success' && steps.collect.outputs.openapi != 'success'
+        run: git -C artemis checkout --detach "$(git rev-parse HEAD:artemis)"
       - name: Publish validated reports
         id: publish
         env:
           REPORT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add artemis public/migrations public/openapi
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: refresh migration evidence"
-            git push origin "HEAD:$REPORT_BRANCH"
-          fi
-          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          REPORT_PUBLISH_KEY: ${{ secrets.REPORT_PUBLISH_KEY }}
+        run: bash .github/scripts/publish-reports.sh
 
   deploy:
     needs: generate-report
@@ -77,11 +74,27 @@ jobs:
     uses: ./.github/workflows/deploy-github-pages.yml
     with:
       ref: ${{ needs.generate-report.outputs.commit }}
+      report-only: true
+
+  # Report partial failure without preventing the successful dashboard's deployment.
+  collection-result:
+    needs: [generate-report, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Mark a degraded collection as failed
+        env:
+          UI_RESULT: ${{ needs.generate-report.outputs.ui }}
+          OPENAPI_RESULT: ${{ needs.generate-report.outputs.openapi }}
+        run: |
+          echo "UI collection: $UI_RESULT; OpenAPI collection: $OPENAPI_RESULT"
+          test "$UI_RESULT" = success && test "$OPENAPI_RESULT" = success
 
   # A failing collection must not go unnoticed: one open issue tracks it, with a comment per
   # failed run, and the next successful run closes it.
   alert:
-    needs: [generate-report, deploy]
+    needs: [generate-report, deploy, collection-result]
     if: always() && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -92,7 +105,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       TITLE: UI migration collection is failing
       RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      FAILED: ${{ needs.generate-report.result != 'success' || needs.deploy.result != 'success' }}
+      FAILED: ${{ needs.generate-report.result != 'success' || needs.deploy.result != 'success' || needs['collection-result'].result != 'success' }}
     steps:
       - name: Open, update or close the tracking issue
         run: |

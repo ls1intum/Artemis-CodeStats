@@ -1,3 +1,4 @@
+import { CollectionStatusBanner } from '@/components/collection-status'
 import { Close as PopoverClose } from '@radix-ui/react-popover'
 import { Outlet, Link, useRouterState } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
@@ -117,6 +118,7 @@ export function RootLayout() {
           .
         </aside>
       )}
+      <CollectionStatusBanner />
       <Outlet />
       <Toaster />
       <footer className="border-t bg-card px-6 py-6 text-xs text-muted-foreground">

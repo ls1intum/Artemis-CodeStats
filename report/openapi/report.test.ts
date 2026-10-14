@@ -6,11 +6,12 @@ import {
   manifestSchema,
   inputSchema,
   operationIdentitySchema,
-  snapshotSchema,
   sourceLocationSchema,
 } from '../../src/features/openapi/model'
 import { scopeReport } from '../../src/features/openapi/scope'
 import { sha256 } from './generate'
+import { readSnapshot } from './artifacts'
+import { fileURLToPath } from 'node:url'
 
 const baseline = z
   .object({
@@ -55,13 +56,6 @@ const baseline = z
       ),
     ),
   )
-const bytes = await readFile(
-  new URL(
-    `../../public/openapi/${baseline.artemisCommit}.json`,
-    import.meta.url,
-  ),
-)
-const snapshot = snapshotSchema.parse(JSON.parse(bytes.toString()))
 const manifest = manifestSchema.parse(
   JSON.parse(
     await readFile(
@@ -69,6 +63,12 @@ const manifest = manifestSchema.parse(
       'utf8',
     ),
   ),
+)
+const { bytes, snapshot } = await readSnapshot(
+  fileURLToPath(new URL('../../public/openapi/', import.meta.url)),
+  manifest.snapshots.find(
+    (entry) => entry.artemisCommit === baseline.artemisCommit,
+  )!,
 )
 
 test('historical real report retains its recorded analyzer and manifest identity', () => {

@@ -162,7 +162,7 @@ completion claims.
 
 The baseline and acceptance fixtures intentionally remain tied to those revisions. Their counts
 describe those snapshots, not the latest dashboard data. The manifest identifies the latest retained
-snapshot; report verification checks the snapshot matching the current `HEAD:artemis` pin.
+snapshot; report verification checks the newest retained OpenAPI snapshot. Each dashboard can retain a different last-good revision after a collection failure.
 
 ## Collection and reproduction
 
@@ -192,10 +192,15 @@ Collection adds/replaces the requested revision and preserves earlier entries/fi
 revision with different configuration replaces that entry. Historical snapshots retain their original
 analyzer evidence; isolated reproduction checks the pinned snapshot against the current collector.
 
-`report:openapi:verify` defaults to `HEAD:artemis`, repository `artemis`, output `public/openapi` and
-UI manifest `public/migrations/index.json`. It validates every retained artifact, rejects missing or
-unlisted files and conflicting known input revisions, checks the UI pin, then freshly rebuilds the
-pinned OpenAPI snapshot in isolation and compares its bytes and manifest entry. It never repairs data.
+`report:openapi:verify` defaults to the newest retained OpenAPI revision, repository `artemis` and
+output `public/openapi`. It validates every retained artifact, rejects missing or unlisted files,
+then rebuilds the newest snapshot in isolation and compares decoded bytes and identity. It never
+repairs data. `--ui-manifest` enables an optional strict cross-dashboard revision check.
+
+New artifacts use `<commit>.json.gz`. The manifest SHA-256 covers the decoded canonical JSON,
+not the compression bytes. Node and browsers decode gzip before the same schema, identity and
+integrity checks. Plain `.json` history is also supported. Lossless compression reduces the current
+multi-megabyte reports to about 1 MB each; no caller or diagnostic evidence is removed.
 
 To reproduce from a sibling checkout without changing public artifacts:
 
@@ -216,13 +221,29 @@ contains only that revision, so compare its snapshot rather than the whole histo
 
 ## CI and verification
 
-The [collection workflow](../.github/workflows/daily-report.yml) fetches `origin/develop`, passes one
-explicit SHA to both collectors, and validates/reproduces OpenAPI before staging the submodule and
-both report directories. Unchanged runs avoid empty commits. Publication passes the exact resulting
-commit to verification and deployment; the existing freshness guard prevents stale deployment.
+The [collection workflow](../.github/workflows/daily-report.yml) fetches `origin/develop` and attempts
+both dashboards at that explicit SHA in separate child processes and temporary output directories.
+UI validates every base/patch and summary; OpenAPI validates history and independently reproduces
+its newest report. Only a successful producer replaces its published directory. Failed collection,
+validation, partial writes or timeouts leave that dashboard's previous files unchanged. The other
+producer can still publish. `public/collection-status.json` records each result and last-good revision;
+the shared banner shows failures with a collection-log link. Repeated identical results create no
+heartbeat-only commits. If both producers fail, the previous submodule pin is retained.
 
-[PR CI](../.github/workflows/ci.yml) checks the branch head, reruns UI collection at the committed pin,
-independently reproduces OpenAPI and checks both artifact directories including untracked files.
+After protected SSH publication, report-only deployment builds the already-reviewed application
+without rerunning unrelated producer tests. Each live dashboard is verified independently against
+its own expected last-good manifest. A separate result job marks partial collection failure after
+deployment and keeps the tracking issue open. The independent health monitor checks both upstream
+lags separately, detects failed collection status, and can request recovery. Scheduled runs retry both
+producers automatically. Shared checkout, dependency or build failures can still block a new deploy;
+GitHub Pages keeps the previous deployment, and the health monitor/issue reports the failure.
+
+Dashboard components and loaders are lazy-loaded behind separate route error boundaries. A failed
+report or route chunk does not remove shared navigation or prevent loading the other dashboard.
+An unavailable optional status file does not stop either report.
+
+[PR CI](../.github/workflows/ci.yml) retains all quality gates: branch-head UI regeneration at its own
+latest revision, independent OpenAPI reproduction, source acceptance, and an artifact diff check.
 It also runs the standard checks and full Chromium/Firefox browser suite. Local checks are:
 
 ```sh

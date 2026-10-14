@@ -2,7 +2,6 @@ import { execFileSync } from 'node:child_process'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { manifestSchema as uiManifestSchema } from '../../src/features/migrations/model'
 import { generateReport, type GenerateOptions } from './generate'
 import { readSnapshot, validateArtifacts } from './artifacts'
 
@@ -28,6 +27,8 @@ export async function verifyReport(
   )
     throw new Error('OpenAPI inputs do not match the pinned Artemis revision')
   if (options.uiManifest) {
+    const { manifestSchema: uiManifestSchema } =
+      await import('../../src/features/migrations/model')
     const ui = uiManifestSchema.parse(
       JSON.parse(await readFile(options.uiManifest, 'utf8')),
     )
@@ -45,10 +46,12 @@ export async function verifyReport(
       output: temporary,
       rebuild: true,
     })
-    const actual = await readFile(path.join(temporary, `${commit}.json`))
+    const reproducedEntry = reproduced.manifest.snapshots[0]
+    const { bytes: actual } = await readSnapshot(temporary, reproducedEntry)
     if (
       !bytes.equals(actual) ||
-      JSON.stringify(entry) !== JSON.stringify(reproduced.manifest.snapshots[0])
+      JSON.stringify({ ...entry, file: undefined }) !==
+        JSON.stringify({ ...reproducedEntry, file: undefined })
     )
       throw new Error(
         'Stale OpenAPI artifacts: regenerate from the pinned revision and current collector inputs',

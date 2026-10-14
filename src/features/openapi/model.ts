@@ -1,6 +1,8 @@
 import { z } from 'zod'
 
 export const schemaVersion = 1
+export const snapshotFileMatches = (file: string, revision: string) =>
+  file === `${revision}.json` || file === `${revision}.json.gz`
 const text = z.string().trim().min(1)
 const count = z.number().int().nonnegative()
 const commit = z.string().regex(/^[a-f0-9]{40}$/)

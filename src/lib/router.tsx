@@ -8,15 +8,12 @@ import {
   defaultStringifySearch,
 } from '@tanstack/react-router'
 import { RootLayout } from '@/routes/__root'
-import { MigrationDashboard } from '@/features/migrations/dashboard'
 import { z } from 'zod'
-import { views } from '@/features/migrations/model'
-import { loadMigrationReport } from '@/features/migrations/load-report'
+import { views } from '@/lib/dashboard-views'
 import {
   MigrationError,
   MigrationPending,
 } from '@/features/migrations/route-feedback'
-import { loadOpenApiReport } from '@/features/openapi/load-report'
 import { OpenApiError, OpenApiPending } from '@/features/openapi/route-feedback'
 
 const searchSchema = z.object({
@@ -26,11 +23,20 @@ const searchSchema = z.object({
   module: z.string().optional().catch(undefined),
 })
 
+// Preserve invalid primitive filters for the dashboard's recovery UI. Never coerce objects:
+// user-controlled toString properties can throw before a route error boundary exists.
+const openApiSearchValue = z.preprocess((value) => {
+  if (value === undefined || typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean')
+    return String(value)
+  return '[invalid value]'
+}, z.string().optional())
+
 const openApiSearchSchema = z.object({
-  view: z.coerce.string().optional(),
-  module: z.coerce.string().optional(),
-  operation: z.coerce.string().optional(),
-  snapshot: z.coerce.string().optional(),
+  view: openApiSearchValue,
+  module: openApiSearchValue,
+  operation: openApiSearchValue,
+  snapshot: openApiSearchValue,
 })
 
 const rootRoute = createRootRoute({
@@ -40,14 +46,20 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: MigrationDashboard,
+  component: lazyRouteComponent(
+    () => import('@/features/migrations/dashboard'),
+    'MigrationDashboard',
+  ),
   validateSearch: (search) => searchSchema.parse(search),
   loaderDeps: ({ search }) => ({
     snapshot: search.snapshot,
     compare: search.compare,
   }),
-  loader: ({ deps, abortController }) =>
-    loadMigrationReport(deps, abortController.signal),
+  loader: async ({ deps, abortController }) =>
+    (await import('@/features/migrations/load-report')).loadMigrationReport(
+      deps,
+      abortController.signal,
+    ),
   staleTime: Infinity,
   pendingComponent: MigrationPending,
   errorComponent: MigrationError,
@@ -67,8 +79,11 @@ const openApiRoute = createRoute({
   path: '/openapi',
   validateSearch: (search) => openApiSearchSchema.parse(search),
   loaderDeps: ({ search }) => ({ snapshot: search.snapshot }),
-  loader: ({ deps, abortController }) =>
-    loadOpenApiReport(deps, abortController.signal),
+  loader: async ({ deps, abortController }) =>
+    (await import('@/features/openapi/load-report')).loadOpenApiReport(
+      deps,
+      abortController.signal,
+    ),
   staleTime: Infinity,
   pendingComponent: OpenApiPending,
   errorComponent: OpenApiError,

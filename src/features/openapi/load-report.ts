@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { manifestSchema, schemaVersion, snapshotSchema } from './model'
+import {
+  manifestSchema,
+  schemaVersion,
+  snapshotSchema,
+  snapshotFileMatches,
+} from './model'
 
 function validate<T>(value: unknown, schema: z.ZodType<T>, file: string): T {
   if (
@@ -24,14 +29,32 @@ export async function loadOpenApiReport(
   requested: { snapshot?: string },
   signal: AbortSignal,
   baseUrl = import.meta.env?.BASE_URL ?? '/',
+  request: typeof fetch = fetch,
 ) {
   const read = async (file: string, cache: RequestCache) => {
-    const response = await fetch(`${baseUrl}openapi/${file}`, { signal, cache })
+    const response = await request(`${baseUrl}openapi/${file}`, {
+      signal,
+      cache,
+    })
     if (!response.ok)
       throw new Error(
         `OpenAPI report unavailable (HTTP ${response.status}). Collect and publish public/openapi/ artifacts, then retry.`,
       )
-    return response.text()
+    if (!file.endsWith('.gz')) return response.text()
+    const bytes = await response.arrayBuffer()
+    // Some hosts decode Content-Encoding themselves; GitHub Pages serves .gz files raw.
+    const header = new Uint8Array(bytes)
+    if (header[0] !== 0x1f || header[1] !== 0x8b)
+      return new TextDecoder().decode(bytes)
+    try {
+      return await new Response(
+        new Response(bytes).body!.pipeThrough(new DecompressionStream('gzip')),
+      ).text()
+    } catch {
+      throw new Error(
+        'Invalid compressed OpenAPI report. Publish matching artifacts, then retry.',
+      )
+    }
   }
   const json = (bytes: string, file: string): unknown => {
     try {
@@ -58,7 +81,7 @@ export async function loadOpenApiReport(
     throw new Error(
       'The requested OpenAPI revision is not in the report history. Clear the snapshot filter to load the latest report.',
     )
-  if (entry.file !== `${entry.artemisCommit}.json`)
+  if (!snapshotFileMatches(entry.file, entry.artemisCommit))
     throw new Error(
       'OpenAPI report identity mismatch: snapshot filename does not match its revision.',
     )

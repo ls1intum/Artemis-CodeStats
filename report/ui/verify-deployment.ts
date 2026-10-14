@@ -74,9 +74,8 @@ if (
   if (!site) throw new Error('DASHBOARD_URL is required')
   for (let attempt = 1; ; attempt++) {
     try {
-      console.log(
-        `Verified deployed report: ${await verifyDeployment(site, expected)}`,
-      )
+      const commit = await verifyDeployment(site, expected)
+      console.log(`Verified deployed UI reports: ${commit}`)
       break
     } catch (error) {
       if (attempt >= 12) throw error

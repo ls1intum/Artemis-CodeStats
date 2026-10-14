@@ -256,3 +256,48 @@ test('source links use the evidenced storage revision and line, never a guessed 
     undefined,
   )
 })
+
+test('compressed and already HTTP-decoded snapshots retain the same JSON digest and identity', async (t) => {
+  const { gzipSync } = await import('node:zlib')
+  const snapshot = openApiFixture()
+  const text = JSON.stringify(snapshot)
+  const entry = {
+    artemisCommit: snapshot.provenance.artemisCommit,
+    file: `${snapshot.provenance.artemisCommit}.json.gz`,
+    sha256: createHash('sha256').update(text).digest('hex'),
+    analyzerVersion: snapshot.provenance.analyzerVersion,
+    analyzedAt: snapshot.provenance.analyzedAt,
+  }
+  const manifest = {
+    schemaVersion: 1,
+    generatedAt: entry.analyzedAt,
+    snapshots: [entry],
+  }
+  for (const encoded of [true, false]) {
+    const request: typeof fetch = async (url) =>
+      new Response(
+        String(url).endsWith('index.json')
+          ? JSON.stringify(manifest)
+          : encoded
+            ? gzipSync(text)
+            : text,
+      )
+    assert.equal(
+      (await loadOpenApiReport({}, new AbortController().signal, '/', request))
+        .snapshot.provenance.artemisCommit,
+      entry.artemisCommit,
+    )
+  }
+  await t.test('corrupt compression never becomes valid evidence', async () => {
+    const request: typeof fetch = async (url) =>
+      new Response(
+        String(url).endsWith('index.json')
+          ? JSON.stringify(manifest)
+          : new Uint8Array([0x1f, 0x8b, 0, 1]),
+      )
+    await assert.rejects(
+      loadOpenApiReport({}, new AbortController().signal, '/', request),
+      /Invalid compressed/,
+    )
+  })
+})

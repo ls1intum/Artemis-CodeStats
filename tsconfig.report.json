@@ -16,6 +16,11 @@
     "src/features/migrations/model.ts",
     "src/features/migrations/format.ts",
     "src/features/migrations/targets.ts",
-    "report/prepare-dto-archive.ts"
+    "report/prepare-dto-archive.ts",
+    "report/collect-reports.ts",
+    "report/collect-reports.test.ts",
+    "report/verify-deployment.ts",
+    "src/lib/collection-status.ts",
+    "report/verify-deployment.test.ts"
   ]
 }

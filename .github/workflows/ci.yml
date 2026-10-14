@@ -7,6 +7,11 @@ on:
         description: Exact report commit to verify and build
         required: false
         type: string
+      report-only:
+        description: Deploy independently validated reports without rerunning producer tests
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -22,20 +27,27 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      - if: ${{ !inputs.report-only }}
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '17'
       - run: npm ci
-      - run: npm run lint
-      - run: npm run format:check
-      - run: npm run typecheck:report
-      - run: npm test
+      - if: ${{ !inputs.report-only }}
+        run: npm run lint
+      - if: ${{ !inputs.report-only }}
+        run: npm run format:check
+      - if: ${{ !inputs.report-only }}
+        run: npm run typecheck:report
+      - if: ${{ !inputs.report-only }}
+        run: npm test
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - run: npm run build
-      - run: npx playwright install --with-deps chromium firefox
-      - run: npm run test:e2e
+      - if: ${{ !inputs.report-only }}
+        run: npx playwright install --with-deps chromium firefox
+      - if: ${{ !inputs.report-only }}
+        run: npm run test:e2e
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
@@ -72,7 +84,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - run: npm ci
-      - run: npm run report:ui -- --ref "$(git rev-parse HEAD:artemis)"
+      - run: npm run report:ui -- --ref "$(node -p 'require("./public/migrations/index.json").snapshots.at(-1).commit')"
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - run: npm run report:openapi:verify

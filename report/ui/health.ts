@@ -1,4 +1,4 @@
-import { manifestSchema } from '../../src/features/migrations/model'
+import { collectionStatusSchema } from '../../src/lib/collection-status'
 
 export const stalledAfter = 45 * 60_000
 export const staleAfter = 3 * 60 * 60_000
@@ -71,43 +71,72 @@ export async function checkHealth(
   if (!upstreamResponse.ok)
     throw new Error(`Artemis head: HTTP ${upstreamResponse.status}`)
   const upstream = await upstreamResponse.json()
+  for (const dashboard of ['ui', 'openapi'] as const) {
+    try {
+      let collected: string
+      if (dashboard === 'ui') {
+        const { manifestSchema } =
+          await import('../../src/features/migrations/model')
+        const response = await request(
+          new URL(`migrations/index.json?health=${now}`, site),
+          { signal: AbortSignal.timeout(15_000) },
+        )
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const live = manifestSchema.parse(await response.json())
+        const { verifyDeployment } = await import('./verify-deployment')
+        collected = await verifyDeployment(site, live, request)
+      } else {
+        const { verifyOpenApiDeployment } =
+          await import('../openapi/verify-deployment')
+        collected = (await verifyOpenApiDeployment(site, undefined, request))
+          .snapshot.provenance.artemisCommit
+      }
+      if (collected !== upstream.sha) {
+        const comparison = await request(
+          `https://api.github.com/repos/ls1intum/Artemis/compare/${collected}...${upstream.sha}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(15_000),
+          },
+        )
+        if (!comparison.ok)
+          throw new Error(`Upstream comparison: HTTP ${comparison.status}`)
+        const compared = await comparison.json()
+        if (compared.status !== 'ahead' || !compared.commits?.length)
+          throw new Error(
+            'Deployed snapshot is not an ancestor of Artemis develop',
+          )
+        if (
+          now - Date.parse(compared.commits[0].commit.committer.date) >
+          staleAfter
+        )
+          problems.push(
+            `Deployed ${dashboard} data is behind Artemis develop (${upstream.sha}): ${site}`,
+          )
+      }
+    } catch (error) {
+      problems.push(
+        `Deployed ${dashboard} report is unavailable or invalid: ${String(error)}`,
+      )
+    }
+  }
+  // Older deployments have no status file; absence must not disable independent checks.
   try {
     const response = await request(
-      new URL(`migrations/index.json?health=${now}`, site),
-      {
-        signal: AbortSignal.timeout(15_000),
-      },
+      new URL(`collection-status.json?health=${now}`, site),
+      { signal: AbortSignal.timeout(15_000) },
     )
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    const live = manifestSchema.parse(await response.json())
-    const collected = live.snapshots.at(-1)!.commit
-    if (collected !== upstream.sha) {
-      // Use the first missing commit. A busy upstream can have a very recent HEAD while
-      // the dashboard has been behind for days; HEAD's date would hide that outage.
-      const comparison = await request(
-        `https://api.github.com/repos/ls1intum/Artemis/compare/${collected}...${upstream.sha}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: AbortSignal.timeout(15_000),
-        },
-      )
-      if (!comparison.ok)
-        throw new Error(`Upstream comparison: HTTP ${comparison.status}`)
-      const compared = await comparison.json()
-      if (compared.status !== 'ahead' || !compared.commits?.length)
-        throw new Error(
-          'Deployed snapshot is not an ancestor of Artemis develop',
-        )
-      if (
-        now - Date.parse(compared.commits[0].commit.committer.date) >
-        staleAfter
-      )
-        problems.push(
-          `Deployed data is behind Artemis develop (${upstream.sha}): ${site}`,
-        )
+    if (response.ok) {
+      const status = collectionStatusSchema.safeParse(await response.json())
+      if (status.success)
+        for (const dashboard of ['ui', 'openapi'] as const)
+          if (status.data.dashboards[dashboard].state === 'failed')
+            problems.push(
+              `${dashboard} collection failed: ${status.data.runUrl}`,
+            )
     }
-  } catch (error) {
-    problems.push(`Deployed report is unavailable or invalid: ${String(error)}`)
+  } catch {
+    /* The report checks above remain authoritative. */
   }
   if (problems.length) {
     const issues = await api('issues?state=open&per_page=100')

@@ -8,11 +8,10 @@ import { parse as parseYaml } from 'yaml'
 import { z } from 'zod'
 import {
   operationIdentitySchema,
-  snapshotSchema,
   sourceLocationSchema,
 } from '../../src/features/openapi/model'
 import { scopeReport } from '../../src/features/openapi/scope'
-import { sha256 } from './artifacts'
+import { sha256, readManifest, readSnapshot } from './artifacts'
 
 const location = sourceLocationSchema.omit({ inputId: true })
 const expectations = z
@@ -80,16 +79,13 @@ const expectations = z
       ),
     ),
   )
-const snapshot = snapshotSchema.parse(
-  JSON.parse(
-    await readFile(
-      new URL(
-        `../../public/openapi/${expectations.artemisCommit}.json`,
-        import.meta.url,
-      ),
-      'utf8',
-    ),
-  ),
+const reportDirectory = path.resolve('public/openapi')
+const reportManifest = await readManifest(reportDirectory)
+const { snapshot } = await readSnapshot(
+  reportDirectory,
+  reportManifest.snapshots.find(
+    (entry) => entry.artemisCommit === expectations.artemisCommit,
+  )!,
 )
 
 test('acceptance report matches independent current source identities, transport and production chains', () => {

@@ -58,10 +58,27 @@ async function mockReport(page: Page, snapshot = fixture) {
     }),
   )
 }
+async function pinnedSnapshot(page: Page): Promise<Snapshot> {
+  const { gunzipSync } = await import('node:zlib')
+  const manifest = await (await page.request.get('./openapi/index.json')).json()
+  const entry = manifest.snapshots.find(
+    (entry: { artemisCommit: string }) =>
+      entry.artemisCommit === acceptance.artemisCommit,
+  )
+  const response = await page.request.get(`./openapi/${entry.file}`)
+  const bytes = await response.body()
+  return JSON.parse(
+    (bytes[0] === 0x1f && bytes[1] === 0x8b
+      ? gunzipSync(bytes)
+      : bytes
+    ).toString(),
+  )
+}
+// Historical evidence requires decompression and full schema validation before it can render.
 const loaded = (page: Page) =>
   expect(
     page.getByRole('heading', { name: 'OpenAPI migration', exact: true }),
-  ).toBeVisible()
+  ).toBeVisible({ timeout: 15_000 })
 const section = (page: Page, title: string) =>
   page
     .getByRole('heading', { name: title, exact: true, level: 2 })
@@ -131,9 +148,7 @@ test('overview separates operation counts and production calls with compact summ
 test('chart tooltips separate labels from counts on desktop and mobile', async ({
   page,
 }, testInfo) => {
-  const snapshot = (await (
-    await page.request.get(`./openapi/${acceptance.artemisCommit}.json`)
-  ).json()) as Snapshot
+  const snapshot = await pinnedSnapshot(page)
   const manual = snapshot.measurements.manualCallSites
   expect(manual.state).toBe('measured')
   if (manual.state !== 'measured')
@@ -830,9 +845,7 @@ test('small-screen views reflow and keyboard entry preserves the deep link', asy
 test('refreshed pinned report clears Java parsing gaps and keeps unresolved adoption explicit', async ({
   page,
 }, testInfo) => {
-  const snapshot = await (
-    await page.request.get(`./openapi/${acceptance.artemisCommit}.json`)
-  ).json()
+  const snapshot = await pinnedSnapshot(page)
   expect(
     snapshot.diagnostics.filter(
       (record: { stage: string; reason: string }) =>
@@ -878,3 +891,138 @@ test('refreshed pinned report clears Java parsing gaps and keeps unresolved adop
   ).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('evidence-mobile.png') })
 })
+
+test('a failed OpenAPI report does not stop UI modernization or navigation', async ({
+  page,
+}) => {
+  await page.route('**/openapi/index.json', (route) =>
+    route.fulfill({ status: 503, body: 'Unavailable' }),
+  )
+  await page.goto('./#/openapi')
+  await expect(
+    page.getByText('OpenAPI data unavailable', { exact: true }),
+  ).toBeVisible()
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('link', { name: 'UI modernization', exact: true })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: /Client UI modernization/ }),
+  ).toBeVisible()
+})
+
+test('a failed UI report does not stop OpenAPI or navigation', async ({
+  page,
+}) => {
+  await mockReport(page)
+  await page.route('**/migrations/index.json', (route) =>
+    route.fulfill({ status: 503, body: 'Unavailable' }),
+  )
+  await page.goto('./#/')
+  await expect(
+    page.getByText('Migration data unavailable', { exact: true }),
+  ).toBeVisible()
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('link', { name: 'OpenAPI migration', exact: true })
+    .click()
+  await loaded(page)
+})
+
+test('malformed search values do not crash shared navigation', async ({
+  page,
+}) => {
+  await mockReport(page)
+  await page.goto(
+    './#/openapi?view=' +
+      encodeURIComponent(JSON.stringify({ toString: null })),
+  )
+  await expect(
+    page.getByText('Invalid OpenAPI filter', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('navigation', { name: 'Main navigation' }),
+  ).toBeVisible()
+})
+
+test('compressed published evidence loads with unchanged integrity checks', async ({
+  page,
+}) => {
+  const { gzipSync } = await import('node:zlib')
+  const { bytes, manifest } = artifact()
+  manifest.snapshots[0].file += '.gz'
+  await page.route('**/openapi/index.json', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(manifest),
+    }),
+  )
+  await page.route('**/openapi/*.json.gz', (route) =>
+    route.fulfill({ contentType: 'application/gzip', body: gzipSync(bytes) }),
+  )
+  await page.goto('./#/openapi')
+  await loaded(page)
+})
+
+test('a failed collection is visible without hiding the last-good dashboard', async ({
+  page,
+}) => {
+  await mockReport(page)
+  await page.route('**/collection-status.json', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        schemaVersion: 1,
+        updatedAt: '2026-10-14T00:00:00Z',
+        attemptedCommit: 'b'.repeat(40),
+        runUrl: 'https://github.com/owner/repo/actions/runs/1',
+        dashboards: {
+          ui: { state: 'success', publishedCommit: 'b'.repeat(40) },
+          openapi: { state: 'failed', publishedCommit: 'a'.repeat(40) },
+        },
+      }),
+    }),
+  )
+  await page.goto('./#/openapi')
+  await loaded(page)
+  await expect(
+    page.getByText('Some reports could not update.', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: 'Check the collection log' }),
+  ).toHaveAttribute('href', 'https://github.com/owner/repo/actions/runs/1')
+})
+
+for (const broken of ['ui', 'openapi'] as const)
+  test(`a missing ${broken} loader chunk does not stop the other dashboard`, async ({
+    page,
+  }) => {
+    await mockReport(page)
+    await page.route('**/assets/load-report-*.js', async (route) => {
+      const response = await route.fetch()
+      const openApi = (await response.text()).includes('OpenAPI')
+      if ((broken === 'openapi') === openApi) await route.abort('failed')
+      else await route.fulfill({ response })
+    })
+    await page.goto(broken === 'ui' ? './#/' : './#/openapi')
+    await expect(
+      page.getByText(
+        broken === 'ui'
+          ? 'Migration data unavailable'
+          : 'OpenAPI data unavailable',
+        { exact: true },
+      ),
+    ).toBeVisible()
+    const navigation = page.getByRole('navigation', { name: 'Main navigation' })
+    await navigation
+      .getByRole('link', {
+        name: broken === 'ui' ? 'OpenAPI migration' : 'UI modernization',
+        exact: true,
+      })
+      .click()
+    if (broken === 'ui') await loaded(page)
+    else
+      await expect(
+        page.getByRole('heading', { name: /Client UI modernization/ }),
+      ).toBeVisible()
+  })

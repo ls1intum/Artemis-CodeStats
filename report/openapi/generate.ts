@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
+import { gzipSync } from 'node:zlib'
 import {
   bindingSchema,
   callSiteBucket,
@@ -66,7 +67,7 @@ import { readManifest, readSnapshot, sha256 } from './artifacts'
 
 export { sha256 } from './artifacts'
 
-export const analyzerVersion = 'openapi-inventory-12'
+export const analyzerVersion = 'openapi-inventory-13'
 const directory = path.dirname(fileURLToPath(import.meta.url))
 export const defaultMapping = path.join(directory, 'module-mapping.json')
 export const defaultEvidence = path.join(directory, 'evidence.json')
@@ -836,6 +837,8 @@ export interface GenerateOptions {
   evidence?: string
   mapping?: string
   rebuild?: boolean
+  // Plain JSON remains available to legacy tools and fixture repositories.
+  compression?: 'gzip' | 'none'
 }
 export async function generateReport(
   options: GenerateOptions,
@@ -1115,18 +1118,19 @@ export async function generateReport(
       )
       .sort()
     const analyzedAt = dates.at(-1)!
-    const snapshotPath = path.join(options.output, `${commit}.json`)
+    const filename = `${commit}.json${options.compression === 'none' ? '' : '.gz'}`
+    const snapshotPath = path.join(options.output, filename)
     const indexPath = path.join(options.output, 'index.json')
     if (!options.rebuild && existsSync(indexPath) && existsSync(snapshotPath)) {
       try {
         const manifest = manifestSchema.parse(
           JSON.parse(await readFile(indexPath, 'utf8')),
         )
-        const bytes = await readFile(snapshotPath)
-        const snapshot = snapshotSchema.parse(JSON.parse(bytes.toString()))
         const entry = manifest.snapshots.find(
           (item) => item.artemisCommit === commit,
         )
+        if (!entry) throw new Error('Missing cached snapshot')
+        const { bytes, snapshot } = await readSnapshot(options.output, entry)
         if (
           snapshot.provenance.fingerprint === fingerprint &&
           snapshot.provenance.artemisCommit === commit &&
@@ -1136,7 +1140,7 @@ export async function generateReport(
           snapshot.provenance.moduleMapping.sha256 === sha256(mappingBytes) &&
           snapshot.provenance.moduleMapping.version === mapping.version &&
           snapshot.provenance.analyzedAt === analyzedAt &&
-          entry?.file === `${commit}.json` &&
+          entry.file === filename &&
           entry.sha256 === sha256(bytes) &&
           entry.analyzerVersion === analyzerVersion &&
           entry.analyzedAt === snapshot.provenance.analyzedAt
@@ -1372,7 +1376,7 @@ export async function generateReport(
       ...history,
       {
         artemisCommit: commit,
-        file: `${commit}.json`,
+        file: filename,
         sha256: sha256(bytes),
         analyzerVersion,
         analyzedAt,
@@ -1388,7 +1392,7 @@ export async function generateReport(
       snapshots: entries,
     })
     await mkdir(options.output, { recursive: true })
-    const atomicWrite = async (file: string, content: string) => {
+    const atomicWrite = async (file: string, content: string | Buffer) => {
       const temp = `${file}.tmp`
       try {
         await writeFile(temp, content)
@@ -1397,8 +1401,15 @@ export async function generateReport(
         await rm(temp, { force: true })
       }
     }
-    await atomicWrite(snapshotPath, bytes)
+    await atomicWrite(
+      snapshotPath,
+      filename.endsWith('.gz') ? gzipSync(bytes, { level: 9 }) : bytes,
+    )
     await atomicWrite(indexPath, JSON.stringify(manifest) + '\n')
+    // A format change replaces only this revision's representation, never its history.
+    for (const other of [`${commit}.json`, `${commit}.json.gz`])
+      if (other !== filename)
+        await rm(path.join(options.output, other), { force: true })
     return { manifest, snapshot, cached: false }
   } finally {
     await rm(temporary, { recursive: true, force: true })

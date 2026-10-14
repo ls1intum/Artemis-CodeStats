@@ -6,14 +6,8 @@ const count = z.number().int().nonnegative()
 const sha = z.string().regex(/^[a-f0-9]{40}$/)
 
 export const statuses = ['locked', 'clean', 'dirty'] as const
-export const views = [
-  'overview',
-  'contributors',
-  'modules',
-  'pages',
-  'next',
-  'inventory',
-] as const
+import { views } from '../../lib/dashboard-views'
+export { views }
 export type View = (typeof views)[number]
 export type Status = (typeof statuses)[number]
 

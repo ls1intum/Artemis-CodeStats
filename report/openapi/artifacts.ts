@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto'
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
+import { gunzipSync } from 'node:zlib'
 import {
   manifestSchema,
   snapshotSchema,
+  snapshotFileMatches,
   type Manifest,
 } from '../../src/features/openapi/model'
 
@@ -20,9 +22,12 @@ export async function readSnapshot(
   output: string,
   entry: Manifest['snapshots'][number],
 ) {
-  if (entry.file !== `${entry.artemisCommit}.json`)
+  if (!snapshotFileMatches(entry.file, entry.artemisCommit))
     throw new Error(`OpenAPI filename/revision mismatch: ${entry.file}`)
-  const bytes = await readFile(path.join(output, entry.file))
+  const stored = await readFile(path.join(output, entry.file))
+  const bytes = entry.file.endsWith('.gz')
+    ? gunzipSync(stored, { maxOutputLength: 64 * 1024 * 1024 })
+    : stored
   if (sha256(bytes) !== entry.sha256)
     throw new Error(`OpenAPI digest mismatch: ${entry.file}`)
   const snapshot = snapshotSchema.parse(JSON.parse(bytes.toString()))

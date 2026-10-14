@@ -21,7 +21,7 @@ import { discoverModules, mappingSchema, ownerOf } from './scope'
 import { createServerExtractor, type ServerExtraction } from './server'
 import { parseSpecification, reconcileSpecification } from './spec'
 import { verifyReport } from './verify'
-import { validateArtifacts } from './artifacts'
+import { readSnapshot, validateArtifacts } from './artifacts'
 
 const fixture = fileURLToPath(new URL('./fixtures/inventory', import.meta.url))
 const mapping = mappingSchema.parse({
@@ -658,6 +658,7 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
     git('commit', '-qm', 'Independent inventory fixture')
     const ref = git('rev-parse', 'HEAD')
     const options = {
+      compression: 'none' as const,
       repo,
       ref,
       output,
@@ -737,6 +738,26 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
       'incomplete-analysis',
     )
     const firstBytes = await readFile(path.join(output, `${ref}.json`), 'utf8')
+    const packedOptions = {
+      ...options,
+      compression: 'gzip' as const,
+      output: path.join(temporary, 'compressed'),
+    }
+    const packed = await generateReport(packedOptions)
+    const packedEntry = packed.manifest.snapshots[0]
+    assert.equal(packedEntry.file, `${ref}.json.gz`)
+    assert.equal(
+      packedEntry.sha256,
+      sha256(firstBytes),
+      'Digest binds decoded JSON, not storage encoding',
+    )
+    assert.equal(
+      (await readSnapshot(packedOptions.output, packedEntry)).bytes.toString(),
+      firstBytes,
+    )
+    assert.equal((await generateReport(packedOptions)).cached, true)
+    assert.equal((await verifyReport(packedOptions)).commit, ref)
+
     assert.equal(sha256(firstBytes), first.manifest.snapshots[0].sha256)
     const cached = await generateReport(options)
     assert.equal(cached.cached, true)

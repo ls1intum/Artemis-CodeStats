@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readManifest, readSnapshot } from '../../../report/openapi/artifacts'
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { openApiFixture } from '../../../tests/fixtures/openapi'
-import type { NextStep, Snapshot } from './model'
+import type { NextStep } from './model'
 import { scopeReport } from './scope'
 import {
   coverageRows,
@@ -142,15 +143,17 @@ test('work partition follows caller bindings and groups preserve every record an
   assert.ok(all.some((record) => record.category === 'verification'))
 })
 
-test('calendar separates shared limitations from its own records without changing readiness or source evidence', () => {
-  const snapshot: Snapshot = JSON.parse(
-    readFileSync(
-      new URL(
-        '../../../public/openapi/1e68e12f48e2992df7ba2fdc3046a025381e5e0b.json',
-        import.meta.url,
-      ),
-      'utf8',
-    ),
+test('calendar separates shared limitations from its own records without changing readiness or source evidence', async () => {
+  const directory = fileURLToPath(
+    new URL('../../../public/openapi/', import.meta.url),
+  )
+  const manifest = await readManifest(directory)
+  const { snapshot } = await readSnapshot(
+    directory,
+    manifest.snapshots.find(
+      (entry) =>
+        entry.artemisCommit === '1e68e12f48e2992df7ba2fdc3046a025381e5e0b',
+    )!,
   )
   const scope = scopeReport(snapshot, 'calendar')
   const record = scope.readiness[0]
