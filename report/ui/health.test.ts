@@ -9,6 +9,8 @@ import {
   type Run,
 } from './health'
 import { verifyDeployment } from './verify-deployment'
+import { openApiFixture } from '../../tests/fixtures/openapi'
+import { createHash } from 'node:crypto'
 import {
   applyPatch,
   storedDetailSchema,
@@ -18,6 +20,23 @@ const manifest = JSON.parse(
   readFileSync('public/migrations/index.json', 'utf8'),
 )
 const latest = manifest.snapshots.at(-1)!
+const openApi = JSON.parse(
+  JSON.stringify(openApiFixture()).replaceAll('a'.repeat(40), latest.commit),
+)
+const openApiBytes = JSON.stringify(openApi)
+const openApiManifest = {
+  schemaVersion: 1,
+  generatedAt: openApi.provenance.analyzedAt,
+  snapshots: [
+    {
+      artemisCommit: latest.commit,
+      file: `${latest.commit}.json`,
+      sha256: createHash('sha256').update(openApiBytes).digest('hex'),
+      analyzerVersion: openApi.provenance.analyzerVersion,
+      analyzedAt: openApi.provenance.analyzedAt,
+    },
+  ],
+}
 const now = Date.parse('2026-10-14T08:00:00Z')
 const run: Run = {
   id: 42,
@@ -83,8 +102,17 @@ function mockHealth({
           },
         ],
       }
+    else if (url.includes('/openapi/index.json')) result = openApiManifest
+    else if (url.includes('/openapi/')) return new Response(openApiBytes)
     else if (url.includes('/migrations/index.json'))
       return new Response(JSON.stringify(broken ? {} : manifest))
+    else if (url.includes('/migrations/'))
+      return new Response(
+        readFileSync(
+          `public/migrations/${new URL(url).pathname.split('/').at(-1)}`,
+          'utf8',
+        ),
+      )
     else if (url.includes('/issues?'))
       result = issue
         ? [{ title: 'UI migration collection is failing', number: 7 }]
@@ -139,7 +167,7 @@ test('health detects stale or invalid deployed evidence, but does not replace he
           now,
         )
       ).length,
-      1,
+      2,
     )
     assert(calls.some((c) => c.url.endsWith('/issues/7/comments')))
     assert(!calls.some((c) => c.url.endsWith('/dispatches')))
@@ -234,9 +262,84 @@ test('workflow locks do not hold collection while Pages waits; health runs indep
     'utf8',
   )
   assert.match(deploy, /group: pages\n[\s\S]*?cancel-in-progress: true/)
-  assert.match(deploy, /report\/ui\/verify-deployment.ts/)
+  assert.match(deploy, /report\/verify-deployment.ts/)
   const health = readFileSync('.github/workflows/report-health.yml', 'utf8')
   assert.match(health, /actions: write/)
   assert.match(health, /issues: write/)
   assert(!health.includes('needs:'))
+})
+
+test('a healthy UI manifest cannot hide a missing or corrupt OpenAPI deployment', async () => {
+  const { request, calls } = mockHealth()
+  const missing: typeof fetch = (url, options) =>
+    String(url).includes('/openapi/')
+      ? Promise.resolve(new Response('', { status: 404 }))
+      : request(url, options)
+  const problems = await checkHealth(
+    'owner/repo',
+    'test-token',
+    'https://site.test/',
+    missing,
+    now,
+  )
+  assert.equal(problems.length, 1)
+  assert.match(problems[0], /openapi report is unavailable/)
+  assert(
+    calls.some(
+      (call) => call.url.endsWith('/issues') && call.method === 'POST',
+    ),
+  )
+  assert(
+    calls.some(
+      (call) => call.url.endsWith('/dispatches') && call.method === 'POST',
+    ),
+  )
+})
+
+test('a broken UI deployment cannot stop OpenAPI health checks', async () => {
+  const { request, calls } = mockHealth()
+  const missing: typeof fetch = (url, options) =>
+    String(url).includes('/migrations/')
+      ? Promise.resolve(new Response('', { status: 503 }))
+      : request(url, options)
+  const problems = await checkHealth(
+    'owner/repo',
+    'test-token',
+    'https://site.test/',
+    missing,
+    now,
+  )
+  assert.equal(problems.length, 1)
+  assert.match(problems[0], /ui report is unavailable/)
+  assert(calls.some((call) => call.url.includes('/openapi/index.json')))
+})
+
+test('a failed collection is detected immediately even while its last-good report remains valid', async () => {
+  const { request } = mockHealth()
+  const failed: typeof fetch = (url, options) =>
+    String(url).includes('/collection-status.json')
+      ? Promise.resolve(
+          new Response(
+            JSON.stringify({
+              schemaVersion: 1,
+              updatedAt: new Date(now).toISOString(),
+              attemptedCommit: latest.commit,
+              runUrl: 'https://github.com/owner/repo/actions/runs/1',
+              dashboards: {
+                ui: { state: 'success', publishedCommit: latest.commit },
+                openapi: { state: 'failed', publishedCommit: latest.commit },
+              },
+            }),
+          ),
+        )
+      : request(url, options)
+  const problems = await checkHealth(
+    'owner/repo',
+    'test-token',
+    'https://site.test/',
+    failed,
+    now,
+  )
+  assert.equal(problems.length, 1)
+  assert.match(problems[0], /openapi collection failed/)
 })

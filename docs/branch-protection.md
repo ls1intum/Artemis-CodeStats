@@ -31,10 +31,10 @@ workflows cannot access this environment's credential.
 
 The publisher also checks the workflow ref before using the key. It disables persisted checkout
 credentials, pins SSH host keys through GitHub's HTTPS metadata endpoint, gives the temporary
-private-key file mode `0600`, stages only `artemis` and `public/migrations`, and removes the key
+private-key file mode `0600`, stages only `artemis`, `public/migrations`, `public/openapi` and `public/collection-status.json`, and removes the key
 on exit. An unchanged collection checks SSH access but makes no commit or push. A changed
-collection pushes its validated report with that key, then runs the existing full verification
-and exact-commit Pages deployment.
+collection pushes its independently validated reports with that key, then builds and deploys that
+exact commit. Pull requests retain full unit, source-reproduction and browser verification.
 
 Deploy-key pushes trigger push workflows, unlike `GITHUB_TOKEN` pushes. The Pages push trigger
 therefore ignores report-only changes; the collector itself publishes those through the

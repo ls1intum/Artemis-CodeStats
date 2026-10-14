@@ -7,6 +7,8 @@ on:
     # validated commit through workflow_call; do not start a competing Pages run.
     paths-ignore:
       - 'public/migrations/**'
+      - 'public/openapi/**'
+      - 'public/collection-status.json'
       - 'artemis'
   workflow_dispatch:
   workflow_call:
@@ -16,6 +18,11 @@ on:
         required: true
         type: string
 
+      report-only:
+        description: Report publication uses independent producer validation
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
 
@@ -29,6 +36,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       ref: ${{ inputs.ref || github.sha }}
+      report-only: ${{ inputs.report-only || false }}
   deploy:
     needs: verify
     permissions:
@@ -79,6 +87,6 @@ jobs:
         run: npm ci
       - name: Verify the published report and its snapshot files
         if: steps.freshness.outputs.current == 'true'
-        run: npx tsx report/ui/verify-deployment.ts
+        run: npx tsx report/verify-deployment.ts
         env:
           DASHBOARD_URL: ${{ steps.deployment.outputs.page_url }}

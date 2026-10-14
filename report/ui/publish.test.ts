@@ -90,6 +90,8 @@ test('publisher uses main-only SSH credentials, stages only evidence and publish
     'add',
     'artemis',
     'public/migrations',
+    'public/openapi',
+    'public/collection-status.json',
   ])
   assert.deepEqual(recorded.find((call) => call.args[0] === 'push').args, [
     'push',

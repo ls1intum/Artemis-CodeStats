@@ -28,9 +28,9 @@ git ls-remote --exit-code "$remote" "refs/heads/$REPORT_BRANCH" > /dev/null
 
 git config user.name 'github-actions[bot]'
 git config user.email 'github-actions[bot]@users.noreply.github.com'
-git add artemis public/migrations
+git add artemis public/migrations public/openapi public/collection-status.json
 if ! git diff --cached --quiet; then
-  git commit -m 'chore: refresh UI migration evidence'
+  git commit -m 'chore: refresh migration evidence'
   git push "$remote" "HEAD:$REPORT_BRANCH"
 fi
 printf 'commit=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"

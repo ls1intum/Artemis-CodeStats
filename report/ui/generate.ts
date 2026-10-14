@@ -48,6 +48,7 @@ export async function generateReports({
   output,
   baseline,
   packageAdoption,
+  ref = 'HEAD',
   rebuild = false,
   lookupLogin = process.env.GITHUB_TOKEN
     ? githubLoginLookup(process.env.GITHUB_TOKEN)
@@ -57,6 +58,7 @@ export async function generateReports({
   output: string
   baseline: string
   packageAdoption: string
+  ref?: string
   rebuild?: boolean
   // Resolves the GitHub login behind a commit; without one only noreply addresses yield logins.
   lookupLogin?: LoginLookup
@@ -71,7 +73,7 @@ export async function generateReports({
     throw new Error(
       'Initialize the Artemis submodule first: git submodule update --init artemis',
     )
-  const head = git('rev-parse', 'HEAD')
+  const head = git('rev-parse', '--verify', `${ref}^{commit}`)
   git('merge-base', '--is-ancestor', baseline, head)
   git('merge-base', '--is-ancestor', packageAdoption, head)
   const format = '--format=%H%x1f%P%x1f%cI%x1f%s%x1f%an%x1f%ae'

@@ -7,6 +7,11 @@ on:
         description: Exact report commit to verify and build
         required: false
         type: string
+      report-only:
+        description: Deploy independently validated reports without rerunning producer tests
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -22,16 +27,27 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - if: ${{ !inputs.report-only }}
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
       - run: npm ci
-      - run: npm run lint
-      - run: npm run format:check
-      - run: npm run typecheck:report
-      - run: npm test
+      - if: ${{ !inputs.report-only }}
+        run: npm run lint
+      - if: ${{ !inputs.report-only }}
+        run: npm run format:check
+      - if: ${{ !inputs.report-only }}
+        run: npm run typecheck:report
+      - if: ${{ !inputs.report-only }}
+        run: npm test
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - run: npm run build
-      - run: npx playwright install --with-deps chromium firefox
-      - run: npm run test:e2e
+      - if: ${{ !inputs.report-only }}
+        run: npx playwright install --with-deps chromium firefox
+      - if: ${{ !inputs.report-only }}
+        run: npm run test:e2e
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
@@ -45,8 +61,8 @@ jobs:
         with:
           path: dist
 
-  # The committed reports must be what the generator produces from the pinned Artemis revision:
-  # an incremental run with the workflow token (cached summaries, login lookups) changes nothing.
+  # UI history is checked incrementally with cached GitHub identities. OpenAPI is rebuilt in
+  # isolation, including its current analyzer/configuration inputs, without changing evidence.
   # Checked at the branch head, not the merge ref, whose submodule pin may already be newer.
   reports:
     if: github.event_name == 'pull_request'
@@ -63,14 +79,23 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
       - run: npm ci
-      - run: npm run report:ui
+      - run: npm run report:ui -- --ref "$(node -p 'require("./public/migrations/index.json").snapshots.at(-1).commit')"
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      - run: npm run report:openapi:verify
+      - name: Independent OpenAPI source acceptance
+        run: node --import tsx --test report/openapi/acceptance.test.ts
+        env:
+          OPENAPI_AUDIT_REPO: artemis
       - name: Reports are up to date
         run: |
-          git status --porcelain public/migrations
-          test -z "$(git status --porcelain public/migrations)"
+          git status --porcelain --untracked-files=all public/migrations public/openapi
+          test -z "$(git status --porcelain --untracked-files=all public/migrations public/openapi)"
           node -e '
             const m = require("./public/migrations/index.json")
             const missing = m.snapshots.filter((s) => !s.author.login)

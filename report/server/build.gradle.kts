@@ -15,7 +15,7 @@ repositories {
 
 dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
-    implementation("com.github.javaparser:javaparser-core:3.26.2")
+    implementation("com.github.javaparser:javaparser-core:3.28.2")
 }
 
 application {

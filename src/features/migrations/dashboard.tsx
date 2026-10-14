@@ -150,6 +150,7 @@ export function MigrationDashboard() {
           Showing the <strong>{module}</strong> module only: every number, trend
           and table below counts its units.{' '}
           <Link
+            from="/"
             to="/"
             search={(previous) => ({ ...previous, module: undefined })}
             className="underline underline-offset-4"
