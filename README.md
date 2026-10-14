@@ -25,16 +25,20 @@ Their data is preserved; their collection has stopped.
 
 ## Active: OpenAPI migration
 
-The OpenAPI reporting feature has a [measurement contract, pinned evidence baseline and
-server, specification, generated-transport and production-call inventories](docs/openapi-dashboard.md). Run `npm run report:openapi --
---repo /path/to/Artemis --ref <commit> --output /tmp/openapi-report` with Node 24, npm and
-a JDK 17+. The retained report is in `public/openapi/`. Direct calls and supported wrapper,
-inheritance and adapter chains are assessed, with scoped next steps and readiness prerequisites.
+The **OpenAPI migration** dashboard at `/#/openapi` provides Overview, Modules, Endpoints,
+Callers, Next steps and Evidence views. It measures specification coverage against an independent
+server-operation inventory, generated transport availability and actual production adoption
+separately. Module filters follow server ownership and retain callers from other client areas.
+Direct calls and supported wrapper, inheritance and adapter chains are assessed, with source
+links, scoped next steps and readiness prerequisites. Module, view, operation and snapshot
+selections can be shared in the URL.
+
+Retained snapshots are stored in `public/openapi/`; the manifest identifies their Artemis
+revisions and analyzer versions. See the [OpenAPI methodology](docs/openapi-dashboard.md) for
+measurement definitions, pinned source expectations, limitations and reproduction instructions.
 Optional exceptions, verification, enforcement and web-relevance records are configured in
 `report/openapi/evidence.json` (or `--evidence <file>`). Missing or stale evidence cannot
-establish runtime migration or protection. The active **OpenAPI migration** dashboard at
-`/#/openapi` shows all module assessments, endpoint details, cross-area callers, scoped next steps,
-and revision-bound evidence. Module, view, endpoint and snapshot selections can be shared in the URL.
+establish runtime migration or protection.
 
 ## Develop and verify
 
@@ -52,6 +56,10 @@ npm run test:e2e -- --workers=2
 ```
 
 `npm run test:e2e` serves the production build at `http://127.0.0.1:4173/Artemis-CodeStats/`.
+
+To include the committed-source acceptance audit, initialize the Artemis submodule with
+`git submodule update --init artemis` and run `OPENAPI_AUDIT_REPO=artemis npm test`.
+Without that variable, the audit is skipped.
 
 ## Refresh reports
 

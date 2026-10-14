@@ -152,13 +152,17 @@ course specification coverage, missing quiz generated transport and inherited ha
 These are source expectations, not fabricated collected results or assumptions about newer revisions.
 Consult the [manifest](../public/openapi/index.json) for retained snapshots and their input identity.
 
-Current [acceptance expectations](../report/openapi/fixtures/acceptance.json) independently pin eight
-source examples and all 39 discovered areas to Artemis `1e68e12f48e2992df7ba2fdc3046a025381e5e0b`.
+The pinned [acceptance expectations](../report/openapi/fixtures/acceptance.json) independently cover eight
+source examples and all 39 discovered areas at Artemis `1e68e12f48e2992df7ba2fdc3046a025381e5e0b`.
 At that revision, the updated parser removes all 25 previous Java parse failures. Six module
 inventories still have constrained/dynamic route limitations; 608 unresolved production call sites
 and unassessed web relevance keep global adoption incomplete. Generation provenance, pruning,
 runtime migration and enforcement remain unverified. These are evidence limitations, not dashboard
 completion claims.
+
+The baseline and acceptance fixtures intentionally remain tied to those revisions. Their counts
+describe those snapshots, not the latest dashboard data. The manifest identifies the latest retained
+snapshot; report verification checks the snapshot matching the current `HEAD:artemis` pin.
 
 ## Collection and reproduction
 
@@ -222,15 +226,21 @@ independently reproduces OpenAPI and checks both artifact directories including 
 It also runs the standard checks and full Chromium/Firefox browser suite. Local checks are:
 
 ```sh
+npm ci
+git submodule update --init artemis
 npm run lint
 npm run format:check
 npm run typecheck:report
-npm test
+OPENAPI_AUDIT_REPO=artemis npm test
 npm run build
 npm run report:openapi:verify
 npx playwright install chromium firefox
-npm run test:e2e -- --workers=2
+npm run test:e2e -- --workers=1
 ```
+
+`OPENAPI_AUDIT_REPO` enables the committed-source acceptance audit, which is skipped without it.
+Use another read-only Artemis Git repository path if the submodule is unavailable. The browser
+example uses one worker locally; CI uses two workers with retries.
 
 Tests cover schemas, extraction fixtures, pinned source expectations, exclusions, wrappers, scope,
 evidence bindings, cache invalidation, history/integrity, isolated reproduction and dashboard behavior.
