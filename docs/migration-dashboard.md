@@ -206,6 +206,17 @@ npm run report:ui             # incremental; --rebuild after changing the analyz
   deployment. Concurrent `main` updates reject the push; the next run catches up. A remote-HEAD
   guard skips deployments overtaken by a newer default-branch revision and fails closed when
   the lookup fails.
+- Collection has a **job-level** lock, independent of Pages. New deployments replace obsolete
+  deployments, including ones waiting before a runner starts. The archive includes complete lint
+  rule directories, so shared matcher imports work in snapshot and contributor analysis.
+- Pages publication checks the live manifest against the exact verified commit and loads the
+  latest snapshot plus its default comparison, including their patch bases. CDN propagation is
+  retried for a bounded period; missing, stale or invalid files fail publication.
+- An independent hourly health workflow (`report-health.yml`, minute 47) cancels collector runs
+  older than 45 minutes, including waiting deployments. It compares the deployed manifest with
+  Artemis develop; a mismatch older than three hours, or an unavailable/invalid report, opens
+  or updates the tracking issue. It requests recovery when no healthy collector is active.
+  Its workflow token has `actions: write` and `issues: write`; no personal token is needed.
 - A failed run opens the issue "UI migration collection is failing" (or comments on it) and the
   next successful run closes it. The dashboard shows a red banner once the newest collected
   Artemis commit is more than three days old. Both exist because the collector failed silently
@@ -219,4 +230,6 @@ npm run report:ui             # incremental; --rebuild after changing the analyz
 
 References: [GitHub schedule behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule),
 [token-trigger restrictions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow),
-[reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows).
+[reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows),
+[workflow and job concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency),
+[force-cancel API](https://docs.github.com/en/rest/actions/workflow-runs#force-cancel-a-workflow-run).

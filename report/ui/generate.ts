@@ -65,6 +65,7 @@ export async function generateReports({
     execFileSync('git', ['-C', repo, ...args], {
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
+      timeout: 120_000,
     }).trim()
   if (!existsSync(join(repo, '.git')))
     throw new Error(
