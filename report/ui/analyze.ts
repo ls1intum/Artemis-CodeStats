@@ -262,7 +262,9 @@ export function analyzedPaths(
       : [legacyKitDir]),
     'src/main/webapp/tailwind.css',
     'eslint.config.mjs',
-    ...rulePaths,
+    // Rules can import shared matchers. Archive their directories, not only the entry file,
+    // so both full-tree analysis and pre-squash credit analysis can load those imports.
+    ...new Set(rulePaths.map((path) => dirname(path))),
     ...packages,
   )
     .split('\n')

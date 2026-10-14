@@ -69,3 +69,14 @@ test(
     )
   },
 )
+
+test('login requests have a deadline and interrupted JSON defers credit safely', async () => {
+  let signal: AbortSignal | null | undefined
+  const lookup = githubLoginLookup('token', async (_input, init) => {
+    signal = init?.signal
+    return new Response('{broken', { status: 200 })
+  })
+  assert.equal(await lookup('a'.repeat(40)), undefined)
+  assert(signal instanceof AbortSignal)
+  assert.equal(lookup.unavailable?.(), true)
+})

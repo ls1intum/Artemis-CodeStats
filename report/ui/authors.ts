@@ -38,6 +38,7 @@ export function githubLoginLookup(
       response = await fetcher(
         `https://api.github.com/repos/ls1intum/Artemis/commits/${commit}`,
         {
+          signal: AbortSignal.timeout(15_000),
           headers: {
             Accept: 'application/vnd.github+json',
             Authorization: `Bearer ${token}`,
@@ -57,8 +58,12 @@ export function githubLoginLookup(
     // Server errors say nothing about the account; only a successful answer does.
     if (response.status >= 500) return stop(`HTTP ${response.status}`)
     if (!response.ok) return undefined
-    const body = (await response.json()) as { author?: { login?: string } }
-    return body.author?.login
+    try {
+      const body = (await response.json()) as { author?: { login?: string } }
+      return body.author?.login
+    } catch {
+      return stop('invalid or interrupted API response')
+    }
   }
   lookup.unavailable = () => stopped
   return lookup

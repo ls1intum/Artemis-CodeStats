@@ -80,7 +80,17 @@ test('generator catches up missed commits, preserves source checkout, is idempot
     git('init', '-q')
     git('config', 'user.name', 'Test')
     git('config', 'user.email', 'test@example.com')
-    writeFixture(repo, fixtureFiles)
+    // Exercise git-archive extraction, not only analysis on a fully populated fixture tree.
+    // The real rule now imports class-list.mjs; that helper may itself import another file.
+    const { ['rules/no-bootstrap-classes.mjs']: rule, ...files } = fixtureFiles
+    writeFixture(repo, {
+      ...files,
+      'config/eslint/rules/no-bootstrap-classes.mjs':
+        "export { isBanned, bannedClassesInBindingExpression } from './class-list.mjs'",
+      'config/eslint/rules/class-list.mjs':
+        "export { isBanned, bannedClassesInBindingExpression } from './helpers/matcher.mjs'",
+      'config/eslint/rules/helpers/matcher.mjs': rule,
+    })
     const baseline = commit(1, '<div class="btn"></div>')
     const packageAdoption = commit(2, '<div class="flex"></div>')
     const oldHead = commit(3, '<div class="btn"></div>')

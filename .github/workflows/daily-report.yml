@@ -10,12 +10,12 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: migration-reports
-  cancel-in-progress: false
-
 jobs:
   generate-report:
+    # A waiting Pages deployment must never hold the collector's lock.
+    concurrency:
+      group: migration-reports
+      cancel-in-progress: false
     permissions:
       contents: write
     outputs:
@@ -92,7 +92,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       TITLE: UI migration collection is failing
       RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      FAILED: ${{ needs.generate-report.result == 'failure' || needs.deploy.result == 'failure' }}
+      FAILED: ${{ needs.generate-report.result != 'success' || needs.deploy.result != 'success' }}
     steps:
       - name: Open, update or close the tracking issue
         run: |
