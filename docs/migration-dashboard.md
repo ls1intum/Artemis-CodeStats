@@ -193,8 +193,8 @@ npm run report:ui             # incremental; --rebuild after changing the analyz
 - Hourly at minute 17 (`.github/workflows/daily-report.yml`), plus manual dispatch and an
   optional `repository_dispatch` event `artemis-updated`. The collector fetches
   `origin/develop`, analyzes every missing first-parent commit, runs the tests, commits the
-  submodule pin and reports with `GITHUB_TOKEN`, then verifies, builds and deploys that exact
-  commit to Pages through the reusable verification workflow. No PAT is required.
+  submodule pin and reports with a main-only environment deploy key, then verifies, builds and deploys that exact
+  commit to Pages through the reusable verification workflow. No PAT is required. See [main branch protection](branch-protection.md) for the publication credential and rules.
 - The same `GITHUB_TOKEN` resolves GitHub logins for new commit authors through the public
   Artemis commits API (at most 200 requests per run; a rejected token, a rate limit or a
   network failure ends lookups for that run without failing it, and unresolved commits are

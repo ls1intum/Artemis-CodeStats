@@ -3,6 +3,11 @@ name: Deploy dashboard to Pages
 on:
   push:
     branches: [main]
+    # Deploy-key pushes trigger push events. The collector already deploys its exact
+    # validated commit through workflow_call; do not start a competing Pages run.
+    paths-ignore:
+      - 'public/migrations/**'
+      - 'artemis'
   workflow_dispatch:
   workflow_call:
     inputs:
