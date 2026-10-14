@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
+import type { Snapshot } from '../src/features/openapi/model'
 import { openApiFixture } from './fixtures/openapi'
 
 const fixture = openApiFixture()
@@ -125,6 +126,78 @@ test('overview separates operation counts and production calls with compact summ
   await expect(section(page, 'Revision and provenance')).toContainText(
     'unknown',
   )
+})
+
+test('chart tooltips separate labels from counts on desktop and mobile', async ({
+  page,
+}, testInfo) => {
+  const snapshot = (await (
+    await page.request.get(`./openapi/${acceptance.artemisCommit}.json`)
+  ).json()) as Snapshot
+  const manual = snapshot.measurements.manualCallSites
+  expect(manual.state).toBe('measured')
+  if (manual.state !== 'measured')
+    throw new Error('Pinned report must contain measured production calls')
+  const expectSpacedValue = async (
+    tooltip: Locator,
+    label: string,
+    value: number,
+  ) => {
+    const name = tooltip.getByText(label, { exact: true })
+    const count = name
+      .locator('../..')
+      .getByText(value.toLocaleString('en-US'), { exact: true })
+    await expect(count).toBeVisible()
+    const gap = await name.evaluate((element) => {
+      const label = element.getBoundingClientRect()
+      const value =
+        element.parentElement?.nextElementSibling?.getBoundingClientRect()
+      if (!value) throw new Error('Tooltip count must follow its label')
+      return value.left - label.right
+    })
+    expect(gap).toBeGreaterThanOrEqual(12)
+  }
+  await page.goto('./#/openapi?snapshot=' + acceptance.artemisCommit)
+  await loaded(page)
+  const coverage = section(page, 'Operation coverage')
+  const calls = section(page, 'Detected production calls')
+  for (const [size, width] of [
+    ['desktop', 1440],
+    ['mobile', 390],
+  ] as const) {
+    await page.setViewportSize({ width, height: 1100 })
+    await coverage.locator('.recharts-bar-rectangle').first().hover()
+    const tooltip = coverage.locator('.recharts-tooltip-wrapper')
+    await expect(tooltip).toBeVisible()
+    for (const [label, state] of [
+      ['Present / available', 'present'],
+      ['Missing', 'missing'],
+      ['Ambiguous', 'ambiguous'],
+      ['Unassessed', 'unresolved'],
+    ] as const) {
+      const measurement = snapshot.measurements.specificationCounts![state]
+      if (measurement.state !== 'measured')
+        throw new Error('Pinned specification counts must be measured')
+      await expectSpacedValue(tooltip, label, measurement.value)
+    }
+    await coverage.screenshot({
+      path: testInfo.outputPath(`coverage-tooltip-${size}.png`),
+    })
+    await calls.locator('.recharts-bar-rectangle').nth(1).hover()
+    const callTooltip = calls.locator('.recharts-tooltip-wrapper')
+    await expectSpacedValue(callTooltip, 'Handwritten', manual.value)
+    await expect(
+      callTooltip.getByText('Handwritten', { exact: true }),
+    ).toHaveCount(1)
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true)
+    await calls.screenshot({
+      path: testInfo.outputPath(`calls-tooltip-${size}.png`),
+    })
+  }
 })
 
 test('unavailable call evidence is not a zero bar and shared records remain separate and searchable', async ({

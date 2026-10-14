@@ -265,7 +265,15 @@ export function Overview({
                   tickLine={false}
                   axisLine={false}
                 />
-                <ChartTooltip content={<ChartTooltipContent nameKey="key" />} />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      nameKey="key"
+                      hideLabel
+                      hideIndicator
+                    />
+                  }
+                />
                 <Bar dataKey="value" isAnimationActive={false}>
                   {calls
                     .filter((row) => row.value !== undefined)
