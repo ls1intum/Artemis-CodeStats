@@ -105,15 +105,23 @@ export function assessReadiness(snapshot: Snapshot) {
       )
     if (
       operation.webRelevance.state !== 'server-only' &&
-      operation.adoption.state !== 'generated-only'
+      (!('analysis' in operation.adoption) ||
+        operation.adoption.analysis !== 'complete' ||
+        operation.adoption.state === 'no-calls' ||
+        operation.adoption.state === 'generated-detected')
     )
       add(
         {
           ...base,
           category: 'unresolved-analysis',
-          reason: 'Observed callers do not establish exclusive adoption.',
+          reason:
+            operation.adoption.state === 'no-calls'
+              ? 'No production caller was found for this intended web operation.'
+              : 'Production caller analysis is incomplete.',
           action:
-            'Review the supported-chain limits and unresolved calls before claiming a complete operation adoption assessment.',
+            operation.adoption.state === 'no-calls'
+              ? 'Implement the intended generated production call or review the operation’s web-relevance metadata; absence of calls is not migration.'
+              : 'Resolve the applicable source limitations and input gaps before claiming complete static adoption.',
         },
         `operation:${operation.id}`,
       )

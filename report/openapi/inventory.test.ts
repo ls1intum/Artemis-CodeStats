@@ -222,6 +222,37 @@ test('unknown/dynamic/constrained paths, unconstrained methods and inherited/cus
   )
 })
 
+test('modern unnamed variables, lambda/catch parameters and record patterns parse without hiding mappings or no-REST evidence', async () => {
+  const modern = await extractor.extract(
+    fileURLToPath(new URL('./fixtures/java-modern', import.meta.url)),
+    'server',
+  )
+  assert.ok(modern.files.every((file) => file.parsed))
+  assert.deepEqual(modern.issues, [])
+  assert.deepEqual(
+    modern.mappings.map((entry) => [entry.symbol, entry.methods, entry.paths]),
+    [['fixture.modern.Resource.read', ['GET'], ['/api/modern']]],
+  )
+  const snapshot = inventorySnapshot({
+    provenance,
+    mapping,
+    modules: discoverModules(
+      modern.files.map((file) => file.path),
+      mapping,
+    ),
+    server: modern,
+    specRevisionMatches: true,
+  })
+  assert.equal(
+    snapshot.modules.find((module) => module.id === 'modern')!.inventory.state,
+    'inventoried',
+  )
+  assert.equal(
+    snapshot.modules.find((module) => module.id === 'quiet')!.inventory.state,
+    'no-rest',
+  )
+})
+
 test('parse failure prevents no-REST/complete claims and is retained with source evidence', async () => {
   const temporary = await mkdtemp(path.join(tmpdir(), 'openapi-broken-'))
   try {
@@ -1202,5 +1233,265 @@ test('isolated committed collection validates artifacts, regeneration, cache, pr
     assertMissingTransportCalls(absentOutput)
   } finally {
     await rm(temporary, { recursive: true, force: true })
+  }
+})
+
+const staticGenerated = {
+  path: 'client/openapi/api.ts',
+  content: `import { HttpClient } from '@angular/common/http';
+    import { inject } from '@angular/core';
+    export class Api {
+      http = inject(HttpClient);
+      alpha() { return this.http.get('/api/alpha'); }
+      beta() { return this.http.get('/api/beta'); }
+    }`,
+}
+const staticImports = `import { HttpClient } from '@angular/common/http';
+  import { inject } from '@angular/core'; import { Api } from 'app/openapi/api';`
+const staticProvenance: Provenance = {
+  ...provenance,
+  inputs: [
+    ...provenance.inputs,
+    {
+      id: 'generated',
+      kind: 'generated-client',
+      path: 'client/openapi',
+      revision: { state: 'known', commit },
+      content: { state: 'available', sha256: hash },
+    },
+  ],
+}
+const staticServer: ServerExtraction = {
+  files: ['alpha', 'beta', 'quiet'].map((id) => ({
+    path: `server/${id}/Resource.java`,
+    line: 1,
+    symbol: id,
+    parsed: true,
+  })),
+  mappings: ['alpha', 'beta'].map((id) => ({
+    path: `server/${id}/Resource.java`,
+    line: 1,
+    symbol: `${id}.read`,
+    paths: [`/api/${id}`],
+    methods: ['GET'],
+    declaredPaths: [`/api/${id}`],
+    conditions: [],
+    attributes: {},
+  })),
+  issues: [],
+}
+const staticReport = (
+  content: string,
+  extra: {
+    provenance?: Provenance
+    assessmentEvidence?: Parameters<
+      typeof inventorySnapshot
+    >[0]['assessmentEvidence']
+  } = {},
+) =>
+  inventorySnapshot({
+    provenance: staticProvenance,
+    mapping,
+    modules: discoverModules(
+      [
+        ...staticServer.files.map((file) => file.path),
+        'client/shared-ui/consumer.ts',
+      ],
+      mapping,
+    ),
+    server: staticServer,
+    specRevisionMatches: true,
+    specification: parseSpecification(
+      'openapi: 3.0.3\npaths:\n  /api/alpha:\n    get: {}\n  /api/beta:\n    get: {}\n',
+      'specification',
+      'openapi.yaml',
+    ),
+    generatedSources: [staticGenerated],
+    clientSources: [
+      staticGenerated,
+      {
+        path: 'client/shared-ui/consumer.ts',
+        content: staticImports + content,
+      },
+    ],
+    ...extra,
+  })
+const generatedConsumer = `class Consumer { api = inject(Api); read() { this.api.alpha(); this.api.beta(); } }`
+const moduleAdoption = (
+  snapshot: ReturnType<typeof staticReport>,
+  id: string,
+) =>
+  snapshot.modules.find((module) => module.id === id)!.measurements
+    .productionAdoption
+
+test('complete committed-source adoption unlocks eligible percentages and candidates, without claiming runtime verification', () => {
+  const snapshot = staticReport(generatedConsumer)
+  const adoption = snapshot.measurements.productionAdoption
+  assert.equal(adoption.state, 'eligible')
+  if (adoption.state === 'eligible')
+    assert.deepEqual([adoption.numerator, adoption.denominator], [2, 2])
+  assert.ok(
+    snapshot.operations.every(
+      (operation) => operation.adoption.state === 'generated-only',
+    ),
+  )
+  assert.equal(snapshot.measurements.generatedCallSites.state, 'measured')
+  if (snapshot.measurements.generatedCallSites.state === 'measured')
+    assert.equal(
+      snapshot.measurements.generatedCallSites.completeness,
+      'complete',
+    )
+  for (const id of ['alpha', 'beta']) {
+    assert.equal(
+      snapshot.readiness!.find((record) => record.moduleId === id)!.migration,
+      'candidate',
+    )
+    assert.equal(
+      snapshot.readiness!.find((record) => record.moduleId === id)!.protection,
+      'candidate',
+    )
+  }
+  assert.deepEqual(snapshot.verification ?? [], [])
+  assert.deepEqual(snapshot.enforcement ?? [], [])
+  assert.equal(moduleAdoption(snapshot, 'quiet').state, 'not-applicable')
+  assert.equal(moduleAdoption(snapshot, 'shared-ui').state, 'not-applicable')
+  assert.equal(snapshot.provenance.generation.state, 'unknown')
+})
+
+test('complete manual and mixed assessments remain adoption work, rather than artificial analysis gaps', () => {
+  const snapshot =
+    staticReport(`class Consumer { api = inject(Api); http = inject(HttpClient);
+    read() { this.api.alpha(); this.http.get('/api/alpha'); this.http.get('/api/beta'); } }`)
+  assert.deepEqual(
+    snapshot.operations.map((operation) => operation.adoption.state),
+    ['mixed', 'manual'],
+  )
+  assert.ok(
+    snapshot.operations.every(
+      (operation) =>
+        'analysis' in operation.adoption &&
+        operation.adoption.analysis === 'complete',
+    ),
+  )
+  const percentage = snapshot.measurements.productionAdoption
+  assert.equal(percentage.state, 'eligible')
+  if (percentage.state === 'eligible')
+    assert.deepEqual([percentage.numerator, percentage.denominator], [0, 2])
+  assert.ok(
+    snapshot.nextSteps!.some((step) => step.category === 'manual-transport'),
+  )
+  assert.ok(
+    !snapshot.nextSteps!.some(
+      (step) => step.category === 'unresolved-analysis',
+    ),
+  )
+})
+
+test('bound source limitations affect candidate server ownership; unbound dynamic calls and syntax failures constrain every scope', () => {
+  const snapshot = staticReport(`class Consumer { api = inject(Api);
+    branch(flag: boolean) { return flag ? this.api.beta() : this.api.beta(); }
+    read() { this.api.alpha(); this.branch(true); } }`)
+  assert.equal(moduleAdoption(snapshot, 'alpha').state, 'eligible')
+  assert.equal(moduleAdoption(snapshot, 'beta').state, 'incomplete-analysis')
+  assert.equal(
+    snapshot.measurements.productionAdoption.state,
+    'incomplete-analysis',
+  )
+  for (const content of [
+    generatedConsumer +
+      `class Dynamic { http = inject(HttpClient); read(url: string) { this.http.get(url); } }`,
+    generatedConsumer + 'class Broken { read( {',
+  ]) {
+    const partial = staticReport(content)
+    for (const id of ['alpha', 'beta'])
+      assert.equal(moduleAdoption(partial, id).state, 'incomplete-analysis')
+    assert.ok(
+      partial.operations.every(
+        (operation) => operation.adoption.state !== 'generated-only',
+      ),
+    )
+  }
+})
+
+test('missing and mismatched production inputs withhold adoption; positive static calls cannot substitute for their evidence', () => {
+  for (const inputs of [
+    staticProvenance.inputs.map((input) =>
+      input.kind === 'production-client'
+        ? { ...input, kind: 'configuration' as const }
+        : input,
+    ),
+    staticProvenance.inputs.map((input) =>
+      input.kind === 'production-client'
+        ? {
+            ...input,
+            revision: { state: 'known' as const, commit: 'c'.repeat(40) },
+          }
+        : input,
+    ),
+  ]) {
+    const snapshot = staticReport(generatedConsumer, {
+      provenance: { ...staticProvenance, inputs },
+    })
+    assert.equal(snapshot.measurements.productionAdoption.state, 'unknown')
+    assert.ok(
+      snapshot.operations.every(
+        (operation) => operation.adoption.state === 'generated-detected',
+      ),
+    )
+  }
+})
+
+test('no detected calls leaves relevance unassessed; matched relevance metadata participates in denominator calculation', () => {
+  const content = `class Consumer { api = inject(Api); read() { this.api.alpha(); } }`
+  const absent = staticReport(content)
+  assert.equal(absent.operations[1].adoption.state, 'no-calls')
+  assert.equal(absent.operations[1].webRelevance.state, 'unassessed')
+  assert.equal(
+    absent.measurements.productionAdoption.state,
+    'incomplete-analysis',
+  )
+  const binding = {
+    artemisCommit: commit,
+    inputHashes: Object.fromEntries(
+      staticProvenance.inputs.map((input) => [input.id, hash]),
+    ),
+  }
+  for (const state of ['relevant', 'server-only'] as const) {
+    const snapshot = staticReport(content, {
+      assessmentEvidence: {
+        version: 1,
+        exceptions: [],
+        verification: [],
+        enforcement: [],
+        webRelevance: [
+          {
+            operationId: 'GET /api/beta',
+            state,
+            binding,
+            evidence: [
+              { inputId: 'server', path: 'server/beta/Resource.java', line: 1 },
+            ],
+            reason: 'Synthetic revision-bound supporting metadata',
+          },
+        ],
+      },
+    })
+    const adoption = snapshot.measurements.productionAdoption
+    assert.equal(adoption.state, 'eligible')
+    if (adoption.state === 'eligible')
+      assert.deepEqual(
+        [adoption.numerator, adoption.denominator],
+        [1, state === 'relevant' ? 2 : 1],
+      )
+    assert.equal(
+      moduleAdoption(snapshot, 'beta').state,
+      state === 'server-only' ? 'not-applicable' : 'eligible',
+    )
+    if (state === 'relevant')
+      assert.equal(
+        snapshot.readiness!.find((record) => record.moduleId === 'beta')!
+          .migration,
+        'blocked',
+      )
   }
 })

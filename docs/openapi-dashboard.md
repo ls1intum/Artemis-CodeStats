@@ -47,7 +47,7 @@ not resolved arbitrarily.
 | Verification           | Separate revision-bound compilation, wire-compatibility and runtime-flow evidence.                                                                                                         |
 | Enforcement            | Recorded rule enablement, scope, coverage, exclusions and exceptions. CodeStats reports enforcement; it does not implement Artemis rules.                                                  |
 
-Generated use is `generated-detected` until complete analysis supports `generated-only`. An operation
+Generated use is `generated-detected` until complete committed-source analysis supports `generated-only`. An operation
 with both generated and handwritten callers is `mixed`; available generated methods alone do not
 make manual usage mixed. `no-calls` requires complete analysis and does not establish migration.
 
@@ -91,7 +91,8 @@ Zod schemas, router and shared UI components.
 
 - **Server inventory:** a separate JavaParser pass finds potential Spring mappings independently of
   springdoc. It supports class/method composition, path arrays, explicit methods and resolvable string
-  constants. Profiles, conditional controllers and mapping restrictions remain evidence. Parse failures,
+  constants. JavaParser 3.28.2 supports Artemis's unnamed variables, lambda/catch parameters and
+  record patterns. Profiles, conditional controllers and mapping restrictions remain evidence. Parse failures,
   dynamic/constrained paths, custom or inherited mappings and programmatic registration produce
   limitations. Implicit HEAD/OPTIONS and framework/third-party routes are outside this static inventory.
 - **Specification:** YAML/JSON parsing checks relevant references and joins method/path identities to
@@ -104,7 +105,12 @@ Zod schemas, router and shared UI components.
 - **Production callers:** syntax/symbol analysis covers import aliases, Angular injection, ordinary URL
   expressions, inherited helpers, stable receiver aliases and supported adapter/wrapper chains.
   Computed dispatch, recursion, multiple terminal branches, mutation and unsupported expressions remain
-  unresolved. This bounded analysis does not infer exclusive generated use or absence of calls.
+  unresolved. Complete static assessment requires matching inputs, a complete inventory/transport scan
+  and no applicable unresolved calls or parse diagnostics. Bound limitations affect their candidate
+  server operations; unbound limitations constrain every REST scope. Complete manual/mixed usage
+  remains migration work, rather than an analysis gap. `generated-only` and `no-calls` describe the
+  committed source scope, never runtime behavior. Matching relevance metadata is applied before
+  calculating adoption denominators.
 
 Source inventory describes potential routes, not a proven deployment route set. Profile/package
 selection can limit the emitted specification. Runtime activation, wire compatibility and user flows
@@ -142,16 +148,13 @@ course specification coverage, missing quiz generated transport and inherited ha
 These are source expectations, not fabricated collected results or assumptions about newer revisions.
 Consult the [manifest](../public/openapi/index.json) for retained snapshots and their input identity.
 
-Acceptance was audited on **2026-10-11** at Artemis
-`1e68e12f48e2992df7ba2fdc3046a025381e5e0b`. The [acceptance expectations](../report/openapi/fixtures/acceptance.json)
-reconcile eight source examples and all 39 discovered areas, distinguishing production consumers from
-forwarding implementations. Invalid directory/empty-file source anchors were fixed; both retained
-OpenAPI reports and all 531 UI snapshots reproduced byte for byte.
-
-The audit passed lint, formatting, report type checking and build. Unit tests: 143 passed, one GitHub
-author lookup skipped without a token. Focused browser checks: 32 passed. Full browser suite: 57 passed,
-one Firefox clipboard check skipped; archived dashboards also passed with the clock set to 2035.
-Generation provenance, pruning, runtime migration and enforcement remain unverified.
+Current [acceptance expectations](../report/openapi/fixtures/acceptance.json) independently pin eight
+source examples and all 39 discovered areas to Artemis `1e68e12f48e2992df7ba2fdc3046a025381e5e0b`.
+At that revision, the updated parser removes all 25 previous Java parse failures. Six module
+inventories still have constrained/dynamic route limitations; 608 unresolved production call sites
+and unassessed web relevance keep global adoption incomplete. Generation provenance, pruning,
+runtime migration and enforcement remain unverified. These are evidence limitations, not dashboard
+completion claims.
 
 ## Collection and reproduction
 

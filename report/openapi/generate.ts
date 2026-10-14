@@ -47,7 +47,11 @@ import {
   type Specification,
 } from './spec'
 import { analyzeGenerated, reconcileGenerated } from './generated'
-import { analyzeAdoption, reconcileAdoption } from './adoption'
+import {
+  adoptionAnalysisComplete,
+  analyzeAdoption,
+  reconcileAdoption,
+} from './adoption'
 import {
   applyEvidence,
   assessmentEvidenceSchema,
@@ -62,7 +66,7 @@ import { readManifest, readSnapshot, sha256 } from './artifacts'
 
 export { sha256 } from './artifacts'
 
-export const analyzerVersion = 'openapi-inventory-10'
+export const analyzerVersion = 'openapi-inventory-11'
 const directory = path.dirname(fileURLToPath(import.meta.url))
 export const defaultMapping = path.join(directory, 'module-mapping.json')
 export const defaultEvidence = path.join(directory, 'evidence.json')
@@ -416,7 +420,24 @@ export function inventorySnapshot({
             mapping.generatedRoot ?? `${mapping.clientRoot}/openapi`,
         })
   if (adoption) {
-    for (const operation of operations) reconcileAdoption(operation, adoption)
+    for (const operation of operations)
+      reconcileAdoption(
+        operation,
+        adoption,
+        !!generated?.complete &&
+          inputsMatch([
+            'server-source',
+            'production-client',
+            'generated-client',
+            'configuration',
+          ]) &&
+          operation.ownership.state === 'resolved' &&
+          !diagnostics.some(
+            (item) =>
+              ['server', 'modules'].includes(item.stage) &&
+              item.moduleIds.some((id) => ownersOf(operation).includes(id)),
+          ),
+      )
     for (const issue of adoption.issues)
       diagnostic(
         'adoption',
@@ -430,22 +451,27 @@ export function inventorySnapshot({
         issue.reason,
         issue.nextStep,
       )
-    const anchor =
-      adoption.evidence[0] ??
-      sourceAnchor(provenance.inputs.find((input) => input.id === 'client')!)
-    diagnostic(
-      'adoption',
-      [],
-      [],
-      [anchor],
-      'Supported source-chain analysis: direct and aliased receivers, inherited helpers and single-terminal adapters are assessed. Dynamic dispatch, callbacks, mutable arguments, multiple terminal branches and unseen runtime registrations can still hide callers. No caller does not establish server-only status or migration.',
-      'Reconcile unsupported source chains and web relevance with explicit evidence before claiming exclusive adoption or complete candidate analysis.',
-    )
   }
+  const sourceAnalysisComplete = (scoped: Operation[], complete: boolean) =>
+    !!adoption &&
+    !!generated?.complete &&
+    complete &&
+    inputsMatch([
+      'server-source',
+      'production-client',
+      'generated-client',
+      'configuration',
+    ]) &&
+    adoptionAnalysisComplete(
+      adoption,
+      scoped.map((operation) => operation.id),
+    )
+
   const callerCount = (
     bucket: 'generated' | 'manual' | 'unresolved',
     scoped: Operation[],
     global: boolean,
+    complete: boolean,
   ) => {
     if (!adoption) return unassessed('Production caller analysis has not run')
     const callers = callersForOperations(
@@ -456,9 +482,11 @@ export function inventorySnapshot({
     return {
       state: 'measured' as const,
       value: callers.length,
-      completeness: 'incomplete-analysis' as const,
+      completeness: sourceAnalysisComplete(scoped, complete)
+        ? ('complete' as const)
+        : ('incomplete-analysis' as const),
       basis:
-        'Disjoint source-site partition: resolved generated REST / resolved manual REST / unresolved production transport. Shared scoping follows candidate server ownership independently of caller area; unbound sites are global-only. Wrapper implementation records are excluded; unsupported chains remain incomplete.',
+        'Disjoint source-site partition: resolved generated REST / resolved manual REST / unresolved production transport. Shared scoping follows candidate server ownership independently of caller area; unbound sites are global-only. Wrapper implementation records are excluded; applicable unresolved chains or incomplete inputs/inventory keep counts partial.',
       evidence: callers.length
         ? callers.map((caller) => caller.location)
         : adoption.evidence.length
@@ -546,6 +574,22 @@ export function inventorySnapshot({
           'Unique independent server identities classified against actual generated implementations; incomplete counts are lower bounds',
       }
     }
+    const relevant = scoped.filter(
+      (operation) => operation.webRelevance.state === 'relevant',
+    )
+    const adoptionComplete =
+      sourceAnalysisComplete(scoped, complete) &&
+      scoped.every(
+        (operation) =>
+          operation.ownership.state === 'resolved' &&
+          ['relevant', 'server-only'].includes(operation.webRelevance.state),
+      ) &&
+      relevant.every(
+        (operation) =>
+          'analysis' in operation.adoption &&
+          operation.adoption.analysis === 'complete' &&
+          operation.adoption.state !== 'generated-detected',
+      )
     return {
       uniqueOperations: measured(scoped.length),
       specificationCounts: {
@@ -592,9 +636,9 @@ export function inventorySnapshot({
                 ? 'Evidenced scope has no potential REST operations'
                 : 'Incomplete inventory, unresolved ownership/specification, or unavailable/mismatched inputs prevent a complete denominator',
           },
-      generatedCallSites: callerCount('generated', scoped, global),
-      manualCallSites: callerCount('manual', scoped, global),
-      unresolvedCallSites: callerCount('unresolved', scoped, global),
+      generatedCallSites: callerCount('generated', scoped, global, complete),
+      manualCallSites: callerCount('manual', scoped, global, complete),
+      unresolvedCallSites: callerCount('unresolved', scoped, global, complete),
       generatedTransportCoverage: generatedEligible
         ? {
             state: 'eligible',
@@ -620,15 +664,53 @@ export function inventorySnapshot({
                 ? 'Evidenced scope has no potential REST operations'
                 : 'Unavailable output, unsupported implementations, incomplete server inventory or ambiguous identities prevent a complete generated-transport percentage',
           },
-      productionAdoption: adoption
-        ? {
-            state: 'incomplete-analysis',
-            reason:
-              'Direct callers and supported source chains are assessed; unresolved dispatch, dynamic cases and unassessed web relevance prevent an exclusive-adoption denominator.',
-          }
-        : unassessed(
-            'Production caller analysis and web-relevance assessment have not run',
-          ),
+      productionAdoption:
+        complete && scoped.length === 0
+          ? {
+              state: 'not-applicable',
+              reason:
+                'Evidenced scope has no potential REST operations; client-only callers retain their server ownership attribution',
+            }
+          : !adoption
+            ? unassessed(
+                'Production caller analysis and web-relevance assessment have not run',
+              )
+            : !inputsMatch([
+                  'server-source',
+                  'production-client',
+                  'generated-client',
+                  'configuration',
+                ])
+              ? {
+                  state: 'unknown',
+                  reason:
+                    'Available revision-matching server, production-client, generated-client and configuration inputs are required',
+                }
+              : adoptionComplete
+                ? relevant.length
+                  ? {
+                      state: 'eligible',
+                      numerator: relevant.filter(
+                        (operation) =>
+                          operation.adoption.state === 'generated-only',
+                      ).length,
+                      denominator: relevant.length,
+                      denominatorComplete: true,
+                      analysisComplete: true,
+                      basis:
+                        'Exclusive generated usage / established web-relevant operations in the complete committed-source assessment; manual, mixed and intended uses without calls stay in the denominator. This does not establish runtime migration.',
+                      evidence,
+                    }
+                  : {
+                      state: 'not-applicable',
+                      reason:
+                        'Explicit supporting evidence establishes that every operation in this scope is server-only',
+                    }
+                : {
+                    state: 'incomplete-analysis',
+                    reason:
+                      'Applicable unresolved source analysis, incomplete inventory/transport analysis or unassessed web relevance prevents a complete static adoption denominator. See the scoped evidence and remaining records.',
+                  },
     }
   }
   const assessments: ModuleAssessment[] = modules.map((module) => {
@@ -708,6 +790,28 @@ export function inventorySnapshot({
       path: 'report/openapi/evidence.json',
       line: 1,
     })
+  // Bound relevance metadata can complete a denominator. Recompute after applying it,
+  // retaining unresolved-source and independent-inventory gates.
+  for (const module of snapshot.modules) {
+    const scoped = snapshot.operations.filter((operation) =>
+      ownersOf(operation).includes(module.id),
+    )
+    const inventoryComplete =
+      module.inventory.state === 'no-rest' ||
+      (module.inventory.state === 'inventoried' &&
+        module.inventory.completeness === 'complete')
+    module.measurements = measurements(
+      scoped,
+      inventoryComplete,
+      module.inventory.evidence,
+    )
+  }
+  snapshot.measurements = measurements(
+    snapshot.operations,
+    complete,
+    [assessments[0].roots[0]],
+    true,
+  )
   assessReadiness(snapshot)
   snapshot.diagnostics.sort((a, b) => compare(a.id, b.id))
   return snapshotSchema.parse(snapshot)
@@ -1045,6 +1149,16 @@ export async function generateReport(
       inputs,
       moduleMapping: { version: mapping.version, sha256: sha256(mappingBytes) },
       assumptions: [
+        {
+          reason:
+            'Production adoption completeness describes committed TypeScript source under the configured roots. Detected unsupported dispatch and parse failures constrain their bound operations, or all scopes when unbound. No-calls never establishes server-only relevance; runtime activation and migration require separate evidence.',
+          evidence: [
+            modules
+              .flatMap((module) => module.roots)
+              .find((location) => location.inputId === 'client') ??
+              mappingLocation,
+          ],
+        },
         {
           reason:
             'Potential committed mappings include profile/conditional variants; no deployment activation or runtime route completeness is established',

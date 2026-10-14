@@ -186,7 +186,7 @@ test('calendar shows module work separately from shared analysis without a giant
   await expect(work).toContainText('Verification (2 records)')
   const shared = section(page, 'Shared analysis limitations')
   await expect(shared).toContainText(
-    'Analysis and relevance limitations (779 records)',
+    'Analysis and relevance limitations (778 records)',
   )
   await expect(shared.locator('details[open]')).toHaveCount(0)
   await expect(
@@ -448,9 +448,11 @@ test('module filters scope every summary and view while preserving cross-area ca
   await expect(section(page, 'Enforcement evidence')).toContainText(
     'Enforcement unknown',
   )
-  await expect(section(page, 'Percentage eligibility')).toContainText(
-    '100% (1/1)',
-  )
+  await expect(
+    section(page, 'Percentage eligibility')
+      .getByText('Production adoption', { exact: true })
+      .locator('..'),
+  ).toContainText('100% (1/1)')
   await page.getByRole('tab', { name: 'Overview', exact: true }).click()
   const readiness = section(page, 'Migration and protection prerequisites')
   await expect(readiness).toContainText('candidate')
@@ -685,4 +687,56 @@ test('small-screen views reflow and keyboard entry preserves the deep link', asy
     path: testInfo.outputPath('overview-mobile.png'),
     fullPage: true,
   })
+})
+
+test('refreshed pinned report clears Java parsing gaps and keeps unresolved adoption explicit', async ({
+  page,
+}, testInfo) => {
+  const snapshot = await (
+    await page.request.get(`./openapi/${acceptance.artemisCommit}.json`)
+  ).json()
+  expect(
+    snapshot.diagnostics.filter(
+      (record: { stage: string; reason: string }) =>
+        record.stage === 'server' && record.reason.startsWith('JavaParser'),
+    ),
+  ).toEqual([])
+  for (const id of [
+    'assessment',
+    'exercise',
+    'hyperion',
+    'iris',
+    'localci',
+    'localvc',
+    'quiz',
+  ]) {
+    expect(
+      snapshot.modules.find((module: { id: string }) => module.id === id)
+        .inventory.completeness,
+    ).toBe('complete')
+  }
+  await page.setViewportSize({ width: 1440, height: 1100 })
+  await page.goto(
+    './#/openapi?view=evidence&snapshot=' + acceptance.artemisCommit,
+  )
+  await loaded(page)
+  const eligibility = section(page, 'Percentage eligibility')
+  await expect(
+    eligibility.getByText('Production adoption', { exact: true }).locator('..'),
+  ).toContainText('incomplete-analysis')
+  await expect(eligibility).toContainText(
+    'Applicable unresolved source analysis',
+  )
+  await expect(section(page, 'Revision and provenance')).toContainText(
+    'unknown',
+  )
+  await page.screenshot({ path: testInfo.outputPath('evidence-desktop.png') })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await eligibility.scrollIntoViewIfNeeded()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('evidence-mobile.png') })
 })

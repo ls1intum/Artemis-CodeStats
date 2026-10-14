@@ -83,7 +83,10 @@ export function PagedList<T extends { id: string }>({
     Math.max(0, Math.ceil(filtered.length / 20) - 1),
   )
   return (
-    <div className="grid min-w-0 gap-3" aria-label={title}>
+    <div
+      className="grid min-w-0 gap-3 [overflow-wrap:anywhere]"
+      aria-label={title}
+    >
       <Input
         aria-label={`Search ${title.toLowerCase()}`}
         placeholder={`Search ${title.toLowerCase()}`}
@@ -110,7 +113,7 @@ export function PagedList<T extends { id: string }>({
         ))}
       </ul>
       {filtered.length > 20 && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
             disabled={page === 0}

@@ -270,6 +270,7 @@ function percentageSample(): Snapshot {
   for (const kind of [
     'specification',
     'generated-client',
+    'production-client',
     'configuration',
   ] as const)
     snapshot.provenance.inputs.push({
@@ -534,7 +535,7 @@ test('percentages reconcile independently and incomplete adoption cannot be adve
     false,
     'specification cannot define its own denominator',
   )
-  const adoption = sample()
+  const adoption = percentageSample()
   adoption.measurements.productionAdoption = eligible
   assert.equal(
     snapshotSchema.safeParse(adoption).success,
@@ -1013,5 +1014,59 @@ test('eligible specification and transport percentages require every relevant in
       false,
       `${field}: no required input kinds`,
     )
+  }
+})
+
+test('complete adoption and call-site counts reject applicable unbound callers and parse diagnostics', () => {
+  const complete = percentageSample()
+  complete.operations[0].adoption = {
+    state: 'generated-only',
+    callerIds: ['call'],
+    analysis: 'complete',
+    evidence,
+    reason: 'Complete static source assessment',
+  }
+  complete.modules[0].measurements.productionAdoption = eligible
+  assert.equal(snapshotSchema.safeParse(complete).success, true)
+  for (const limitation of ['caller', 'parse-diagnostic']) {
+    const snapshot = structuredClone(complete)
+    if (limitation === 'caller')
+      snapshot.callers.push({
+        ...snapshot.callers[0],
+        id: 'unbound',
+        transport: 'unresolved',
+        traffic: 'unresolved',
+        mapping: 'unresolved',
+        generatedMethodId: undefined,
+        operationIds: [],
+      })
+    else
+      snapshot.diagnostics.push({
+        id: 'parse',
+        stage: 'adoption',
+        severity: 'warning',
+        operationIds: [],
+        moduleIds: [],
+        evidence,
+        reason: 'Unparsed production source',
+        nextStep: 'Repair source analysis',
+      })
+    assert.equal(snapshotSchema.safeParse(snapshot).success, false, limitation)
+    snapshot.operations[0].adoption = {
+      state: 'generated-detected',
+      callerIds: ['call'],
+      evidence,
+      reason: 'Applicable shared source limitation',
+      analysis: 'incomplete-analysis',
+    }
+    snapshot.modules[0].measurements.productionAdoption = unassessed
+    snapshot.modules[0].measurements.manualCallSites = {
+      state: 'measured',
+      value: 0,
+      completeness: 'complete',
+      basis: 'Invalid completeness claim',
+      evidence,
+    }
+    assert.equal(snapshotSchema.safeParse(snapshot).success, false, limitation)
   }
 })

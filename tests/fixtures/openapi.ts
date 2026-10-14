@@ -109,12 +109,17 @@ export function openApiFixture(includeUnassigned = false): Snapshot {
       evidence: [generated],
     },
     adoption: {
-      state: owner === 'alpha' ? 'mixed' : 'generated-only',
+      state:
+        owner === 'alpha'
+          ? 'mixed'
+          : includeUnassigned
+            ? 'generated-detected'
+            : 'generated-only',
       callerIds:
         owner === 'alpha'
           ? ['alpha-generated', 'alpha-manual']
           : ['beta-generated'],
-      analysis: 'complete',
+      analysis: includeUnassigned ? 'incomplete-analysis' : 'complete',
       reason: 'Synthetic source reconciliation',
       evidence: [client],
     },
@@ -347,6 +352,14 @@ export function openApiFixture(includeUnassigned = false): Snapshot {
       reason: 'Dynamic target cannot be attributed to an operation',
     })
     snapshot.modules[1].measurements.productionAdoption = unknown
+    for (const field of [
+      'generatedCallSites',
+      'manualCallSites',
+      'unresolvedCallSites',
+    ] as const) {
+      const count = snapshot.modules[1].measurements[field]
+      if (count.state === 'measured') count.completeness = 'incomplete-analysis'
+    }
   }
   assessReadiness(snapshot)
   return snapshotSchema.parse(snapshot)

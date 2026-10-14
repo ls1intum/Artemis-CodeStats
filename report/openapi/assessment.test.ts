@@ -540,6 +540,11 @@ test('known ownership scopes analysis blockers; unbound production transport con
   )
   snapshotSchema.parse(snapshot)
   snapshot.callers[1].operationIds = []
+  snapshot.operations[0].adoption = {
+    ...snapshot.operations[0].adoption,
+    state: 'generated-detected',
+    analysis: 'incomplete-analysis',
+  } as Snapshot['operations'][number]['adoption']
   assessReadiness(snapshot)
   assert.ok(
     snapshot.readiness!.every((record) => record.migration === 'blocked'),
@@ -608,6 +613,11 @@ test('caller-only exceptions and their prerequisites share server scope; unbound
   )
   snapshotSchema.parse(snapshot)
   snapshot.callers[1].operationIds = []
+  snapshot.operations[0].adoption = {
+    ...snapshot.operations[0].adoption,
+    state: 'generated-detected',
+    analysis: 'incomplete-analysis',
+  } as Snapshot['operations'][number]['adoption']
   assessReadiness(snapshot)
   for (const module of snapshot.modules) {
     const scoped = scopeReport(snapshot, module.id)

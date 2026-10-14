@@ -13,7 +13,7 @@ export const extractorSource = fileURLToPath(
 )
 export const extractorLibraries = [
   'gson-2.11.0.jar',
-  'javaparser-core-3.26.2.jar',
+  'javaparser-core-3.28.2.jar',
 ].map((name) =>
   fileURLToPath(new URL(`../server/lib/${name}`, import.meta.url)),
 )

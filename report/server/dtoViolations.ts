@@ -44,7 +44,7 @@ const EXTRACTOR_DIR = path.join(process.cwd(), "report", "server");
 const OUTPUT_DIR = path.join(process.cwd(), "data", "server", "dtoViolations");
 
 // Required JARs for the static analyzer
-const JAVAPARSER_VERSION = "3.26.2";
+const JAVAPARSER_VERSION = "3.28.2";
 const GSON_VERSION = "2.11.0";
 const MAVEN_CENTRAL = "https://repo1.maven.org/maven2";
 

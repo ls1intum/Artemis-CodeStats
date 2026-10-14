@@ -159,8 +159,8 @@ test('calendar separates shared limitations from its own records without changin
     record.prerequisiteIds.includes(step.id),
   )
   const parts = partitionWork(snapshot, prerequisites)
-  assert.equal(prerequisites.length, 793)
-  assert.equal(parts.shared.length, 778)
+  assert.equal(prerequisites.length, 792)
+  assert.equal(parts.shared.length, 777)
   assert.equal(parts.attributed.length, 15)
   const groups = workGroups(parts.shared)
   assert.equal(groups.length, 1)

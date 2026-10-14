@@ -1,6 +1,7 @@
 import path from 'node:path'
 import ts from 'typescript'
 import {
+  callSiteBucket,
   operationIdentitySchema,
   type Caller,
   type GeneratedMethod,
@@ -1365,10 +1366,30 @@ export function analyzeAdoption(
   return result
 }
 
+// Unbound limitations can conceal a caller of any operation. Bound limitations affect
+// only their candidate identities; caller area is never substituted for server ownership.
+export function adoptionAnalysisComplete(
+  inventory: AdoptionInventory,
+  operationIds: string[],
+): boolean {
+  const applies = (ids: string[]) =>
+    !ids.length || ids.some((id) => operationIds.includes(id))
+  return (
+    !inventory.issues.some((issue) => applies(issue.operationIds)) &&
+    !inventory.callers.some(
+      (caller) =>
+        callSiteBucket(caller) === 'unresolved' && applies(caller.operationIds),
+    )
+  )
+}
+
 export function reconcileAdoption(
   operation: Operation,
   inventory: AdoptionInventory,
+  inputsComplete = true,
 ): void {
+  const complete =
+    inputsComplete && adoptionAnalysisComplete(inventory, [operation.id])
   const callers = inventory.callers.filter(
     (caller) =>
       caller.kind === 'production' &&
@@ -1376,11 +1397,20 @@ export function reconcileAdoption(
       caller.operationIds.includes(operation.id),
   )
   if (!callers.length) {
-    operation.adoption = {
-      state: 'unassessed',
-      reason:
-        'No supported production caller was bound. Unsupported dispatch and dynamic URLs remain unassessed; absence is not migration or server-only evidence.',
-    }
+    operation.adoption = complete
+      ? {
+          state: 'no-calls',
+          callerIds: [],
+          analysis: 'complete',
+          evidence: [inventory.evidence[0] ?? operation.variants[0].handler],
+          reason:
+            'Complete committed-source assessment found no production REST calls for this identity; this does not establish server-only relevance or runtime migration.',
+        }
+      : {
+          state: 'incomplete-analysis',
+          reason:
+            'No production caller was bound, but unresolved source analysis or unavailable/mismatched inputs can hide calls. Absence is not migration or server-only evidence.',
+        }
     return
   }
   if (callers.some((caller) => caller.mapping === 'resolved'))
@@ -1411,13 +1441,16 @@ export function reconcileAdoption(
             generated && manual
               ? 'mixed'
               : generated
-                ? 'generated-detected'
+                ? complete
+                  ? 'generated-only'
+                  : 'generated-detected'
                 : 'manual',
           callerIds: callers.map((caller) => caller.id),
-          analysis: 'incomplete-analysis',
+          analysis: complete ? 'complete' : 'incomplete-analysis',
           evidence: callers.map((caller) => caller.location),
-          reason:
-            'Production calls and supported source chains were detected. Unsupported dispatch/dynamic cases constrain exclusive adoption; static calls do not establish runtime migration or protection.',
+          reason: complete
+            ? 'All detected production REST calls for this identity resolve within the committed-source assessment, with no applicable source limitations. This establishes static usage only; runtime migration and protection require separate evidence.'
+            : 'Production calls were detected, but applicable unresolved source analysis or unavailable/mismatched inputs prevent exclusive adoption. Static calls do not establish runtime migration or protection.',
         }
       : {
           state: 'incomplete-analysis',

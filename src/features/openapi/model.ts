@@ -636,6 +636,19 @@ export const snapshotSchema = z
         }
       }
     }
+    const adoptionLimited = (operationIds: string[]) =>
+      snapshot.callers.some(
+        (caller) =>
+          callSiteBucket(caller) === 'unresolved' &&
+          (!caller.operationIds.length ||
+            caller.operationIds.some((id) => operationIds.includes(id))),
+      ) ||
+      snapshot.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.stage === 'adoption' &&
+          (!diagnostic.operationIds.length ||
+            diagnostic.operationIds.some((id) => operationIds.includes(id))),
+      )
     for (const operation of snapshot.operations) {
       references(
         operation.ownership.state === 'resolved'
@@ -697,7 +710,10 @@ export const snapshotSchema = z
             caller?.transport === 'unresolved' ||
             caller?.mapping !== 'resolved',
         )
-        if (adoption.analysis === 'complete' && unresolved)
+        if (
+          adoption.analysis === 'complete' &&
+          (unresolved || adoptionLimited([operation.id]))
+        )
           fail(
             `Complete adoption analysis contains unresolved callers: ${operation.id}`,
           )
@@ -833,14 +849,6 @@ export const snapshotSchema = z
       module.inventory.state === 'no-rest' ||
       (module.inventory.state === 'inventoried' &&
         module.inventory.completeness === 'complete')
-    const unresolvedCalls = snapshot.callers.some(
-      (caller) =>
-        caller.kind === 'production' &&
-        (caller.traffic === 'unresolved' ||
-          (caller.traffic === 'artemis-rest' &&
-            (caller.mapping !== 'resolved' ||
-              caller.transport === 'unresolved'))),
-    )
     const percentages = (
       measurements: z.infer<typeof measurementsSchema>,
       scopedOperations: z.infer<typeof operationSchema>[],
@@ -917,7 +925,13 @@ export const snapshotSchema = z
             'generated-client',
             'configuration',
           ])) ||
-        (adoption.state === 'eligible' && !validInputs())
+        (adoption.state === 'eligible' &&
+          !validInputs([
+            'server-source',
+            'production-client',
+            'generated-client',
+            'configuration',
+          ]))
       )
         fail(
           'Eligible percentages need all required matching available inputs for their measurement',
@@ -959,7 +973,7 @@ export const snapshotSchema = z
       )
       if (
         adoption.state === 'eligible' &&
-        (unresolvedCalls ||
+        (adoptionLimited(scopedOperations.map((operation) => operation.id)) ||
           scopedOperations.some(
             (operation) =>
               !['relevant', 'server-only'].includes(
@@ -1011,6 +1025,17 @@ export const snapshotSchema = z
             (!operationIds ||
               caller.operationIds.some((id) => operationIds.includes(id))),
         )
+        if (
+          measurement.state === 'measured' &&
+          measurement.completeness === 'complete' &&
+          adoptionLimited(
+            operationIds ??
+              snapshot.operations.map((operation) => operation.id),
+          )
+        )
+          fail(
+            'Complete call-site counts contain applicable unresolved source analysis',
+          )
         if (
           measurement.state === 'measured' &&
           measurement.value !== observed.length

@@ -199,13 +199,13 @@ test('template ambiguity and server/spec gaps are preserved without inventing an
   assert.match(generatedGap.callers[0].reason, /0 indexed/)
 })
 
-test('generated detection stays nonexclusive and absence of calls does not establish server-only or migration', () => {
+test('complete static generated usage and no-calls never establish runtime migration or server-only relevance', () => {
   const operation = { id: 'GET /api/items/{id}' } as Operation
   const direct = collect(
     `${imports} class Service { api = inject(Api); work(id: number) { this.api.read(id, ''); this.api.read(id, ''); } }`,
   )
   reconcileAdoption(operation, direct)
-  assert.equal(operation.adoption.state, 'generated-detected')
+  assert.equal(operation.adoption.state, 'generated-only')
   if ('callerIds' in operation.adoption)
     assert.equal(operation.adoption.callerIds.length, 2)
   const absent = {
@@ -213,7 +213,7 @@ test('generated detection stays nonexclusive and absence of calls does not estab
     webRelevance: { state: 'unassessed', reason: 'No supporting metadata' },
   } as Operation
   reconcileAdoption(absent, direct)
-  assert.equal(absent.adoption.state, 'unassessed')
+  assert.equal(absent.adoption.state, 'no-calls')
   assert.equal(absent.webRelevance.state, 'unassessed')
 })
 
