@@ -30,7 +30,9 @@ export function CollectionStatusBanner() {
   if (!status || !failures?.length) return null
   return (
     <aside
-      role="status"
+      aria-label="Collection status"
+      aria-live="polite"
+      aria-atomic="true"
       className="mx-auto max-w-[1440px] m-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
     >
       <strong>Some reports could not update.</strong>{' '}

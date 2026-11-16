@@ -54,6 +54,54 @@ test('lock globs come from the no-bootstrap-classes block only', () => {
   )
 })
 
+test('lock globs expand shared module lists and exclude generated inline-template locks', () => {
+  const config = [
+    "import tseslint from 'typescript-eslint'",
+    "const migratedModules = ['account', 'admin']",
+    "const migratedComponentFolders = ['core/alert']",
+    'const migratedFolders = (extension) => [...migratedModules, ...migratedComponentFolders].map((folder) => `src/main/webapp/app/${folder}/**/*.${extension}`)',
+    'export default tseslint.config(',
+    `{ files: ['${app}/exam/manage/**/*.html', ...migratedFolders('html')], rules: { 'localRules/no-bootstrap-classes': 'error' } },`,
+    "{ files: migratedFolders('lock-template'), rules: { 'localRules/no-bootstrap-classes': 'error' } },",
+    "{ files: migratedFolders('ts'), rules: { 'localRules/no-bootstrap-classes-in-code': 'error' } })",
+  ].join('\n')
+  assert.deepEqual(parseLockGlobs(config), [
+    `${app}/exam/manage/**/*.html`,
+    `${app}/account/**/*.html`,
+    `${app}/admin/**/*.html`,
+    `${app}/core/alert/**/*.html`,
+  ])
+  assert.deepEqual(
+    parseLockGlobs(
+      config.replace(
+        `['${app}/exam/manage/**/*.html', ...migratedFolders('html')]`,
+        "migratedFolders('html')",
+      ),
+    ),
+    [
+      `${app}/account/**/*.html`,
+      `${app}/admin/**/*.html`,
+      `${app}/core/alert/**/*.html`,
+    ],
+  )
+})
+
+test('lock globs reject unresolved or executable expressions instead of losing locks', () => {
+  for (const expression of [
+    "...unknownFolders('html')",
+    '...process.exit(1)',
+    '...modules.filter(Boolean)',
+    '...cycle',
+  ])
+    assert.throws(
+      () =>
+        parseLockGlobs(
+          `const cycle = cycle; const modules = ['admin']; export default [{ files: ['${app}/account/**/*.html', ${expression}], rules: { 'localRules/no-bootstrap-classes': 'error' } }]`,
+        ),
+      /non-literal/,
+    )
+})
+
 test('tailwind sources ignore negations and inline sources', () => {
   assert.deepEqual(
     parseTailwindSources(files['src/main/webapp/tailwind.css']),

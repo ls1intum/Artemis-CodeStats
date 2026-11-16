@@ -985,8 +985,10 @@ test('a failed collection is visible without hiding the last-good dashboard', as
   )
   await page.goto('./#/openapi')
   await loaded(page)
+  const warning = page.getByRole('complementary', { name: 'Collection status' })
+  await expect(warning).toHaveAttribute('aria-live', 'polite')
   await expect(
-    page.getByText('Some reports could not update.', { exact: true }),
+    warning.getByText('Some reports could not update.', { exact: true }),
   ).toBeVisible()
   await expect(
     page.getByRole('link', { name: 'Check the collection log' }),

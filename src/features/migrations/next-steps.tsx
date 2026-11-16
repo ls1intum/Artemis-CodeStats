@@ -114,7 +114,7 @@ function QuickWins({ detail }: { detail: DetailView }) {
       header: 'Routed page',
       accessorFn: (u) => (u.route !== undefined ? 1 : 0),
       meta: {
-        className: 'max-w-56 whitespace-normal [overflow-wrap:anywhere]',
+        className: 'max-w-56 whitespace-normal [overflow-wrap:anywhere] pr-5',
       },
       cell: ({ row }) =>
         row.original.route !== undefined && (

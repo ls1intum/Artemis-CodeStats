@@ -171,6 +171,96 @@ export function parseLockGlobs(eslintConfig: string): string[] {
     ts.ScriptTarget.Latest,
     true,
   )
+  // Read only the static subset used by Artemis's shared lock lists. Importing the config
+  // would execute it and require every historical commit's ESLint plugins to be installed.
+  const constants = new Map<string, ts.Expression>()
+  for (const statement of file.statements)
+    if (
+      ts.isVariableStatement(statement) &&
+      statement.declarationList.flags & ts.NodeFlags.Const
+    )
+      for (const declaration of statement.declarationList.declarations)
+        if (ts.isIdentifier(declaration.name) && declaration.initializer)
+          constants.set(declaration.name.text, declaration.initializer)
+  type Value = string | string[]
+  const unsupported = (node: ts.Node): never => {
+    throw new Error(
+      `Lock list contains a non-literal entry: ${node.getText(file)}`,
+    )
+  }
+  const strings = (value: Value, node: ts.Node): string[] =>
+    Array.isArray(value) ? value : unsupported(node)
+  const evaluate = (
+    node: ts.Expression,
+    bindings = new Map<string, Value>(),
+    ancestors = new Set<ts.Expression>(),
+  ): Value => {
+    if (ancestors.has(node)) return unsupported(node)
+    const seen = new Set(ancestors).add(node)
+    const read = (expression: ts.Expression) =>
+      evaluate(expression, bindings, seen)
+    const literal = stringText(node)
+    if (literal !== undefined) return literal
+    if (ts.isIdentifier(node)) {
+      const value = bindings.get(node.text)
+      if (value !== undefined) return value
+      const initializer = constants.get(node.text)
+      if (initializer) return read(initializer)
+    }
+    if (ts.isArrayLiteralExpression(node))
+      return node.elements.flatMap((entry) => {
+        if (ts.isSpreadElement(entry))
+          return strings(read(entry.expression), entry)
+        const value = read(entry)
+        return typeof value === 'string' ? [value] : unsupported(entry)
+      })
+    if (ts.isTemplateExpression(node))
+      return (
+        node.head.text +
+        node.templateSpans
+          .map((span) => {
+            const value = read(span.expression)
+            return typeof value === 'string'
+              ? value + span.literal.text
+              : unsupported(span.expression)
+          })
+          .join('')
+      )
+    if (ts.isCallExpression(node)) {
+      const invoke = (fn: ts.Expression | undefined, args: Value[]): Value => {
+        if (
+          !fn ||
+          !ts.isArrowFunction(fn) ||
+          !ts.isExpression(fn.body) ||
+          fn.parameters.length !== args.length
+        )
+          return unsupported(node)
+        const scope = new Map(bindings)
+        fn.parameters.forEach((parameter, index) => {
+          if (!ts.isIdentifier(parameter.name)) return unsupported(parameter)
+          scope.set(parameter.name.text, args[index])
+        })
+        return evaluate(fn.body, scope, seen)
+      }
+      if (ts.isIdentifier(node.expression))
+        return invoke(
+          constants.get(node.expression.text),
+          node.arguments.map(read),
+        )
+      if (
+        ts.isPropertyAccessExpression(node.expression) &&
+        node.expression.name.text === 'map' &&
+        node.arguments.length === 1
+      )
+        return strings(read(node.expression.expression), node.expression).map(
+          (value) => {
+            const result = invoke(node.arguments[0], [value])
+            return typeof result === 'string' ? result : unsupported(node)
+          },
+        )
+    }
+    return unsupported(node)
+  }
   const blocks: string[][] = []
   const visit = (node: ts.Node) => {
     if (ts.isObjectLiteralExpression(node)) {
@@ -189,17 +279,16 @@ export function parseLockGlobs(eslintConfig: string): string[] {
             ts.isPropertyAssignment(p) &&
             propertyName(p.name) === 'localRules/no-bootstrap-classes',
         ) &&
-        files &&
-        ts.isArrayLiteralExpression(files)
-      )
-        blocks.push(
-          files.elements.map((e) => {
-            const text = stringText(e)
-            if (text === undefined)
-              throw new Error('Lock list contains a non-literal entry')
-            return text
-          }),
+        files
+      ) {
+        const globs = strings(evaluate(files), files)
+        // Inline templates have a separate virtual-file block using the same rule.
+        if (
+          !globs.length ||
+          !globs.every((glob) => glob.endsWith('.lock-template'))
         )
+          blocks.push(globs)
+      }
     }
     ts.forEachChild(node, visit)
   }
